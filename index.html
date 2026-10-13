@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#16110d" />
+    <title>Rot &amp; Bloom</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="top">
+        <div class="brand">
+          <h1 class="brand-name">Rot <span class="amp">&amp;</span> Bloom</h1>
+          <p class="jar-name" id="jarName">Jar I · Forest Floor</p>
+        </div>
+        <div class="counter">
+          <p class="amount"><span id="amount">0</span> <span class="unit">nutrients</span></p>
+          <p class="rate"><span id="rate">0</span> per second</p>
+        </div>
+      </header>
+      <section class="stage" aria-label="The terrarium">
+        <canvas id="jar" tabindex="0" aria-label="Terrarium. Tap, or press Space, to digest fallen leaves."></canvas>
+        <p class="frenzy" id="frenzy" hidden></p>
+        <p class="hint" id="hint">Tap the soil to digest fallen leaves</p>
+        <p class="toast" id="toast" role="status" hidden></p>
+      </section>
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button type="button" id="tab-grow" role="tab" data-tab="grow"><span class="tab-label">Grow<span class="badge" hidden></span></span></button>
+        <button type="button" id="tab-evolve" role="tab" data-tab="evolve"><span class="tab-label">Evolve<span class="badge" hidden></span></span></button>
+        <button type="button" id="tab-cultivate" role="tab" data-tab="cultivate"><span class="tab-label">Cultivate<span class="badge" hidden></span></span></button>
+        <button type="button" id="tab-spores" role="tab" data-tab="spores"><span class="tab-label">Spores<span class="badge" hidden></span></span></button>
+        <button type="button" id="tab-journal" role="tab" data-tab="journal"><span class="tab-label">Journal<span class="badge" hidden></span></span></button>
+      </nav>
+      <main class="panel" id="panel" role="tabpanel"></main>
+    </div>
+    <div class="modal" id="modal" hidden></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
