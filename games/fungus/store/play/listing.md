@@ -16,7 +16,7 @@ Copy these into Play Console. Every field fits Google's limits.
 | Target audience | 13 and over (simplest review). Choosing younger ages adds Google's Families policy checks. |
 | Data safety | No data collected, no data shared. Data is not encrypted in transit because none is sent. |
 | Privacy policy URL | where you host `site/humongous-fungus/privacy.html` |
-| Contact email | the address you put in the privacy and support pages |
+| Contact email | northfieldhemp@gmail.com |
 
 ## Short description (80)
 

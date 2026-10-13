@@ -92,8 +92,8 @@ Public repositories build for free.
 
 Apple needs a public URL for each.
 
-- In `site/humongous-fungus/privacy.html` and `support.html`, replace
-  `SUPPORT_EMAIL` with the address you want players to write to.
+- The pages in `site/humongous-fungus/` list northfieldhemp@gmail.com as the
+  contact address. Ask Claude to swap it if you set up a dedicated address.
 - Host the `site/` folder anywhere free. The quickest is to drag it onto
   [app.netlify.com/drop](https://app.netlify.com/drop). GitHub Pages also
   works if the repository is public.
