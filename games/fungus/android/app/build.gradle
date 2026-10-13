@@ -7,7 +7,8 @@ android {
         applicationId "com.muffindevelopment.humongousfungus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        // CI passes VERSION_CODE (the workflow run number) so every upload is newer.
+        versionCode((System.getenv("VERSION_CODE") ?: "1").toInteger())
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -16,8 +17,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Release builds are signed with the Play upload key when CI provides it
+    // (see .github/workflows/android-humongous-fungus.yml). Without it the
+    // bundle is built unsigned, which is enough to check that it compiles.
+    def uploadKeystore = System.getenv("ANDROID_KEYSTORE_FILE")
+    signingConfigs {
+        release {
+            if (uploadKeystore) {
+                storeFile file(uploadKeystore)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
+            if (uploadKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

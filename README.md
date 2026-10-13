@@ -24,11 +24,12 @@ npm run sim              # Humongous Fungus pacing simulator: npm run sim -- [ta
 Humongous Fungus is packaged for iOS and Android with [Capacitor](https://capacitorjs.com):
 the native projects are in `games/fungus/ios` and `games/fungus/android`, and
 `games/fungus/src/native.ts` adds the phone-only features (durable saves,
-reminder notifications, haptics). iPhone builds run on GitHub Actions
-(`.github/workflows/ios-humongous-fungus.yml`) and upload to TestFlight.
+reminder notifications, haptics). Builds run on GitHub Actions: iPhone builds
+upload to TestFlight (`ios-humongous-fungus.yml`), and Android builds produce a
+signed bundle for Google Play (`android-humongous-fungus.yml`).
 
-- **Getting it on the App Store:** [docs/app-store-checklist.md](docs/app-store-checklist.md)
-- **Store text and screenshots:** `games/fungus/store/`
+- **Getting it on the App Store and Google Play:** [docs/app-store-checklist.md](docs/app-store-checklist.md)
+- **Store text and screenshots:** `games/fungus/store/` (Apple) and `games/fungus/store/play/` (Google)
 - **Privacy policy and support pages:** `site/humongous-fungus/`
 
 After changing the game, copy it into the native projects with

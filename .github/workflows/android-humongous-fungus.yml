@@ -1,0 +1,112 @@
+name: Android · Humongous Fungus
+
+# Builds the Android App Bundle (.aab) for Google Play.
+# - On every push that touches the game it builds an unsigned bundle, to
+#   check that the Android app still compiles.
+# - Run it by hand (Actions tab → Run workflow) to build a bundle signed with
+#   your upload key. Download it from the run's "Artifacts" section and upload
+#   it in Play Console, or tick "upload" once Play API access is set up.
+# Secrets (see docs/app-store-checklist.md):
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
+#   ANDROID_KEY_PASSWORD, and for uploads PLAY_SERVICE_ACCOUNT_JSON
+on:
+  push:
+    paths:
+      - games/fungus/**
+      - shared/**
+      - package-lock.json
+      - .github/workflows/android-humongous-fungus.yml
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: Upload to Google Play as a draft on the track below
+        type: boolean
+        default: false
+      track:
+        description: Play track
+        type: choice
+        options: [internal, alpha, beta, production]
+        default: internal
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SIGNED: ${{ github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install
+        run: npm ci
+
+      - name: Build the game
+        run: GAME=fungus npx vite build
+
+      - name: Copy the game into the Android project
+        working-directory: games/fungus
+        run: npx cap sync android
+
+      - name: Write the upload key
+        if: env.SIGNED == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Missing repository secret ANDROID_KEYSTORE_BASE64 (see docs/app-store-checklist.md)"; exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/keys/upload.jks"
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/keys/upload.jks" >> "$GITHUB_ENV"
+
+      - name: Build the bundle
+        working-directory: games/fungus/android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon bundleRelease
+          ls -la app/build/outputs/bundle/release/
+
+      - name: Keep the bundle
+        if: env.SIGNED == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: humongous-fungus-${{ github.run_number }}.aab
+          path: games/fungus/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Upload to Google Play
+        if: env.SIGNED == 'true' && inputs.upload
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.muffindevelopment.humongousfungus
+          releaseFiles: games/fungus/android/app/build/outputs/bundle/release/app-release.aab
+          track: ${{ inputs.track }}
+          status: draft
+
+      - name: Summary
+        if: env.SIGNED == 'true'
+        run: echo "Built signed bundle with version code ${{ github.run_number }}. Download it from Artifacts above." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"

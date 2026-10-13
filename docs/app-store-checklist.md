@@ -1,8 +1,15 @@
-# Getting Humongous Fungus onto the App Store
+# Getting Humongous Fungus onto the App Store and Google Play
 
-Everything in the code is ready: the iPhone project, icon, launch screen,
-privacy manifest, store text and screenshots. These are the steps only the
-account owner can do. Most are five-minute forms; the waits are Apple's.
+Everything in the code is ready: the iPhone and Android projects, icons,
+launch screens, store text and screenshots. These are the steps only the
+account owner can do. Most are five-minute forms; the waits are Apple's and
+Google's.
+
+Part 1 is Apple, part 2 is Google. They don't depend on each other, so you
+can do both at once. Start Google early: new accounts must run a 14-day test
+before they can publish.
+
+# Part 1: Apple App Store
 
 ## 1. Join the Apple Developer Program
 
@@ -107,13 +114,94 @@ Everything to paste is in `games/fungus/store/listing.md`.
 - **Add for Review → Submit.** Reviews usually take a day or two. If Apple
   asks for changes, paste their message to Claude.
 
+# Part 2: Google Play
+
+## A. Create a Google Play developer account
+
+- Go to [play.google.com/console/signup](https://play.google.com/console/signup)
+  and sign in with a Google account.
+- Choose a **personal** account. Pay the one-time $25 fee and verify your
+  identity with a government ID. Google may also ask you to confirm you own an
+  Android phone by installing the Play Console app on it.
+- Verification can take a few days.
+
+## B. Create the app
+
+- Play Console → Create app. Name: `Humongous Fungus`. Language: English (US).
+  App or game: Game. Free. Accept the declarations.
+- The package name is set by the first upload: `com.muffindevelopment.humongousfungus`.
+
+## C. Give GitHub your upload key
+
+Claude made an upload key and sent it to you as two files:
+`humongous-fungus-upload.jks` (the key) and `android-upload-key.txt`
+(its password and the text to paste). **Keep both somewhere safe**, such as a
+password manager. If the key is ever lost, Play Console support can reset it,
+because Google holds the real app signing key.
+
+On GitHub: Settings → Secrets and variables → Actions → New repository secret.
+
+| Name | Value |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | The long block of text in `android-upload-key.txt` |
+| `ANDROID_KEYSTORE_PASSWORD` | The password in `android-upload-key.txt` |
+| `ANDROID_KEY_PASSWORD` | The same password |
+| `ANDROID_KEY_ALIAS` | `upload` |
+
+## D. Build the app bundle
+
+- GitHub → Actions → **Android · Humongous Fungus** → Run workflow (leave
+  "upload" off). Like the iPhone build, this button appears once the workflow
+  is on `main`.
+- When it finishes (about 5 minutes), open the run and download
+  `humongous-fungus-<number>.aab` from Artifacts. It downloads as a zip;
+  unzip it to get the .aab file.
+
+## E. Start the 14-day closed test
+
+New personal accounts must have **12 testers opted in for 14 days in a row**
+before Google allows a public release.
+
+- Play Console → Test and release → Testing → Closed testing → Create track.
+- Upload the .aab, give the release a name like `1.0 (1)`, and save.
+- Testers: add a list of email addresses (12 or more Google accounts:
+  friends, family). Copy the opt-in link and send it to them. Each tester
+  opens the link, joins, and installs the game from Play.
+- Start the rollout to the closed track. The 14 days count from when 12
+  testers have opted in.
+
+## F. Fill in the store page (during the 14 days)
+
+Everything to paste is in `games/fungus/store/play/listing.md`:
+
+- Main store listing: name, short and full description, icon, feature
+  graphic, phone screenshots.
+- App content: privacy policy URL, ads (none), app access (no login),
+  content rating questionnaire, target audience, data safety (no data
+  collected or shared).
+
+## G. Go live
+
+- After 14 days, Play Console → Dashboard → Apply for production. Answer
+  Google's questions about the test (what testers said, what you changed).
+- Once approved: Production → Create new release → add the .aab (or promote
+  the closed-test release) → Roll out. Review usually takes a few days for a
+  new app.
+
+## Optional: upload straight from GitHub
+
+After the first manual upload, the workflow can upload new versions itself.
+Play Console → Setup → API access → create a Google Cloud service account,
+grant it Release manager in Play Console, download its JSON key, and save it
+as the repository secret `PLAY_SERVICE_ACCOUNT_JSON`. Then run the workflow
+with "upload" ticked: the bundle arrives as a draft on the chosen track.
+
 ## After launch
 
 - **Updates:** Claude bumps the version (for example 1.0 → 1.1) and you run
   the workflow again. Build numbers count up by themselves.
-- **Google Play** ($25, once): new personal accounts must run a closed test
-  with 12 testers for 14 days before the public release, so recruit friends
-  early. The Android project is already in `games/fungus/android`.
+- **Android updates** work the same way: run the Android workflow, then
+  upload the new .aab (or let the workflow upload it).
 
 ## Regenerating the art
 

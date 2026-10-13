@@ -13,6 +13,7 @@ const page = await browser.newPage({ viewport: { width: 1100, height: 1100 }, de
 for (const [kind, files] of [
   ['icon', ['icon-only.png']],
   ['splash', ['splash.png', 'splash-dark.png']],
+  ['feature', ['../store/play/feature-graphic.png']],
 ]) {
   await page.goto(`${base}/tools/art.html?kind=${kind}`);
   await page.waitForSelector('body[data-ready="1"]', { timeout: 30_000 });

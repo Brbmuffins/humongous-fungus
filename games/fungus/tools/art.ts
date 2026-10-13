@@ -2,6 +2,7 @@
 // Served by Vite (npm run dev), opened by scripts/make-art.mjs:
 //   /tools/art.html?kind=icon     1024×1024, opaque
 //   /tools/art.html?kind=splash   2732×2732, jar and wordmark in the middle
+//   /tools/art.html?kind=feature  1024×500, Google Play feature graphic
 import '@fontsource/instrument-serif/latin-400.css';
 import '@fontsource/instrument-serif/latin-400-italic.css';
 import { JarRenderer, type WorldView } from '../src/render/jar';
@@ -59,6 +60,37 @@ async function main(): Promise<void> {
     v.addColorStop(1, BG);
     ctx.fillStyle = v;
     ctx.fillRect(0, 0, 1024, 1024);
+  } else if (kind === 'feature') {
+    out.width = 1024;
+    out.height = 500;
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, 1024, 500);
+    const jar = await jarCanvas(1024);
+    const size = 480;
+    const cx = 270;
+    const cy = 250;
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 330);
+    glow.addColorStop(0, 'rgba(233,179,95,0.14)');
+    glow.addColorStop(1, 'rgba(233,179,95,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, 1024, 500);
+    ctx.drawImage(jar, cx - size / 2, cy - size / 2, size, size);
+    const fade = ctx.createRadialGradient(cx, cy - 10, size * 0.34, cx, cy, size * 0.6);
+    fade.addColorStop(0, 'rgba(22,17,13,0)');
+    fade.addColorStop(1, BG);
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, 0, 1024, 500);
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#efe6d6';
+    ctx.font = '400 84px "Instrument Serif"';
+    ctx.fillText('Humongous', 540, 228);
+    ctx.fillStyle = '#eab460';
+    ctx.font = 'italic 400 84px "Instrument Serif"';
+    ctx.fillText('Fungus', 540, 306);
+    ctx.fillStyle = '#a9ae98';
+    ctx.font = 'italic 400 34px "Instrument Serif"';
+    ctx.fillText('Small jar. Humongous fungus.', 542, 360);
   } else {
     out.width = out.height = 2732;
     ctx.fillStyle = BG;

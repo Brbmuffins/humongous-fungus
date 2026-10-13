@@ -90,8 +90,9 @@ button {
   min-width: 0;
 }
 .brand-name {
-  font: 400 26px/1 var(--font-display);
+  font: 400 clamp(21px, 6.6vw, 26px) / 1 var(--font-display);
   letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 .brand-name em {
   font-style: italic;
@@ -111,7 +112,7 @@ button {
   min-width: 0;
 }
 .amount {
-  font: 400 36px/1 var(--font-display);
+  font: 400 clamp(28px, 9vw, 36px) / 1 var(--font-display);
   white-space: nowrap;
 }
 .amount .unit {
