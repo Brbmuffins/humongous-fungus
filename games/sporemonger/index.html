@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d1120" />
+    <title>Sporemonger</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="top">
+        <canvas id="scene" tabindex="0" aria-label="The night market. Tap, or press Space, to forage for caps."></canvas>
+        <div class="top-overlay">
+          <div class="brand">
+            <h1 class="brand-name">Sporemonger</h1>
+            <p class="rank"><span id="rank">Basket peddler</span></p>
+            <span class="bar rank-bar" aria-hidden="true"><span class="bar-fill" id="rankFill"></span></span>
+          </div>
+          <div class="purse">
+            <p class="caps"><span id="caps">0</span> <span class="unit">caps</span></p>
+            <p class="worth">worth <span id="worth">0</span></p>
+          </div>
+        </div>
+        <p class="hint" id="hint">Tap the woods to forage for caps</p>
+        <p class="toast" id="toast" role="status" hidden></p>
+      </header>
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button type="button" id="tab-trade" role="tab" data-tab="trade"><span class="tab-label">Trade<span class="badge" hidden></span></span></button>
+        <button type="button" id="tab-gossip" role="tab" data-tab="gossip"><span class="tab-label">Gossip<span class="badge" hidden></span></span></button>
+        <button type="button" id="tab-stall" role="tab" data-tab="stall"><span class="tab-label">Stall<span class="badge" hidden></span></span></button>
+      </nav>
+      <main class="panel" id="panel" role="tabpanel"></main>
+    </div>
+    <div class="modal" id="modal" hidden></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

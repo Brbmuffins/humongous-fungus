@@ -1,0 +1,33 @@
+{
+  "appId": "com.muffindevelopment.humongousfungus",
+  "appName": "Humongous Fungus",
+  "webDir": "../../dist/fungus",
+  "backgroundColor": "#16110d",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#16110d"
+  },
+  "android": {
+    "backgroundColor": "#16110d"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "launchAutoHide": true,
+      "backgroundColor": "#16110d",
+      "showSpinner": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_fungus",
+      "iconColor": "#eab460"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

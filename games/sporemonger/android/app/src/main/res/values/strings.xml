@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sporemonger</string>
+    <string name="title_activity_main">Sporemonger</string>
+    <string name="package_name">com.muffindevelopment.sporemonger</string>
+    <string name="custom_url_scheme">com.muffindevelopment.sporemonger</string>
+</resources>
