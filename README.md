@@ -1,37 +1,37 @@
-# Rot & Bloom
+# Fungus games
 
-An idle game for phones. You are a mycelium network living in the soil of a
-sealed terrarium. Tap to digest fallen leaves, spend nutrients to grow moss,
-mushrooms, ferns and animals, and watch the jar fill up in real time, including
-while the game is closed. Trade apples, morels, truffles and honey on a live
-market, if you can sell before they rot.
+Two mobile games that share one codebase.
 
-Working title. The repo is still named `RoD-Online` and can be renamed.
+| Game | What it is | Folder |
+|---|---|---|
+| **Humongous Fungus** | Idle game: you are a mycelium network growing a terrarium in real time, even while the game is closed | `games/fungus` |
+| **Sporeggar** (working title) | Trading game: buy and sell goods on a live market in a mushroom town, before they rot | `games/sporeggar` |
 
 ## Run it
 
 ```sh
 npm install
-npm run dev            # local server; open the printed URL on your phone (same Wi-Fi)
-npm test               # unit tests for the economy, away time, prestige and saves
-npm run build          # type-check, then build one self-contained dist/index.html
-npm run build:artifact # also writes dist/artifact.html for sharing as a claude.ai page
-npm run sim            # pacing simulator: npm run sim -- [taps/s] [hours] [gap min] [session min]
+npm run dev              # Humongous Fungus on a local server; open the URL on your phone (same Wi-Fi)
+npm run dev:sporeggar    # Sporeggar
+npm test                 # unit tests for both games and the shared code
+npm run build            # type-check, then build each game into one self-contained dist/<game>/index.html
+npm run build:artifact   # also writes dist/<game>/artifact.html for sharing as claude.ai pages
+npm run sim              # Humongous Fungus pacing simulator: npm run sim -- [taps/s] [hours] [gap min] [session min]
 ```
 
 ## Layout
 
 | Path | What it holds |
 |---|---|
-| `src/game/defs.ts` | All content and tuning: producers, upgrades, specimens, constants |
-| `src/game/economy.ts` | Pure game rules: costs, rates, time away, cultivation, sealing jars |
-| `src/game/market.ts` | The forest market: seeded price walk, trades, rot |
-| `src/game/state.ts` | Save format, validation, choosing between saves |
-| `src/render/` | Canvas drawing: the jar scene and every organism, procedurally |
-| `src/ui/` | DOM panels (Grow, Evolve, Cultivate, Spores, Journal) and dialogs |
-| `src/storage.ts` | Local save, plus an optional per-player cloud copy when hosted as an artifact |
-| `scripts/simulate.ts` | Greedy-player simulator used to tune pacing |
-| `docs/DESIGN.md` | Game design notes and the road to the app stores |
+| `games/fungus/src/game/` | Humongous Fungus rules and content: producers, upgrades, specimens, away time, sealing jars |
+| `games/fungus/src/render/` | The jar scene and every organism, drawn procedurally on a canvas |
+| `games/fungus/src/ui/` | Panels (Grow, Evolve, Cultivate, Spores, Journal) and dialogs |
+| `games/sporeggar/src/` | Sporeggar rules (`game.ts`), content (`defs.ts`), banner art (`scene.ts`) and screens (`ui.ts`) |
+| `shared/market.ts` | Live market engine: seeded price walk, moods, trades, rot |
+| `shared/chart.ts` | Live price chart with crosshair readout |
+| `shared/storage.ts` | Local save, plus an optional per-player cloud copy when hosted as an artifact |
+| `shared/` (rest) | Number formatting, seeded random numbers, DOM helpers |
+| `docs/` | Design notes for each game and the road to the app stores |
 
-No framework and no runtime dependencies: TypeScript, Canvas 2D and Vite.
-The build is a single HTML file with fonts inlined, so it runs fully offline.
+No framework and no runtime dependencies: TypeScript, Canvas 2D and Vite. Each
+build is a single HTML file with fonts inlined, so it runs fully offline.

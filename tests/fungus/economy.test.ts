@@ -6,7 +6,7 @@ import {
   PRODUCER_BY_ID,
   SPECIMENS,
   SPORE_REQUIREMENT,
-} from '../src/game/defs';
+} from '../../games/fungus/src/game/defs';
 import {
   availableUpgrades,
   awayCapSeconds,
@@ -26,8 +26,8 @@ import {
   tapValue,
   totalRate,
   unitRate,
-} from '../src/game/economy';
-import { newGame } from '../src/game/state';
+} from '../../games/fungus/src/game/economy';
+import { newGame } from '../../games/fungus/src/game/state';
 
 const T0 = 1_700_000_000_000;
 const game = () => newGame(T0, 7);

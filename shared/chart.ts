@@ -1,8 +1,8 @@
 // Live price chart for one market good: a 2px line with a faint area wash,
 // hairline gridlines, the latest price marked, an optional "your price" line,
 // and a crosshair readout on hover, touch or arrow keys.
-import { MARKET_TICK_MS } from '../game/defs';
-import { fmt, fmtDuration } from '../game/format';
+import { fmt, fmtDuration } from './format';
+import { MARKET_TICK_MS } from './market';
 
 const css = (name: string, fallback: string): string =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
@@ -19,12 +19,13 @@ export class PriceChart {
   private paid: number | null = null;
   private hover: number | null = null;
   private label = '';
+  // Each game sets these tokens on :root to theme the chart.
   private colors = {
-    line: css('--amber', '#eab460'),
-    grid: css('--bark', '#45372a'),
-    text: css('--bone', '#efe6d6'),
-    muted: css('--lichen', '#a9ae98'),
-    surface: css('--soil', '#16110d'),
+    line: css('--chart-line', '#eab460'),
+    grid: css('--chart-grid', '#45372a'),
+    text: css('--chart-text', '#efe6d6'),
+    muted: css('--chart-muted', '#a9ae98'),
+    surface: css('--chart-surface', '#16110d'),
   };
 
   constructor() {

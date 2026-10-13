@@ -2,7 +2,7 @@
 // The player opens the game every `gap` minutes for `session` minutes,
 // tapping `taps` times a second while it is open.
 // Usage: npm run sim -- [taps=3] [hours=24] [gap=60] [session=3]
-import { PRODUCERS, PRODUCER_BY_ID, SPECIMENS, SPORE_REQUIREMENT } from '../src/game/defs';
+import { PRODUCERS, PRODUCER_BY_ID, SPECIMENS, SPORE_REQUIREMENT } from '../games/fungus/src/game/defs';
 import {
   availableUpgrades,
   baseRate,
@@ -16,9 +16,9 @@ import {
   step,
   tapValue,
   earn,
-} from '../src/game/economy';
-import { fmt, fmtDuration } from '../src/game/format';
-import { newGame, type GameState } from '../src/game/state';
+} from '../games/fungus/src/game/economy';
+import { fmt, fmtDuration } from '@shared/format';
+import { newGame, type GameState } from '../games/fungus/src/game/state';
 
 const taps = Number(process.argv[2] ?? 3);
 const hours = Number(process.argv[3] ?? 24);

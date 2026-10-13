@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fmt, fmtCountdown, fmtDuration, fmtRate } from '../src/game/format';
+import { fmt, fmtCountdown, fmtDuration, fmtRate } from '@shared/format';
 
 describe('fmt', () => {
   it('shows small numbers as whole numbers', () => {

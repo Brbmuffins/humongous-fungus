@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deserialize, newGame, pickBest, serialize } from '../src/game/state';
+import { deserialize, newGame, pickBest, serialize } from '../../games/fungus/src/game/state';
 
 describe('saves', () => {
   it('round-trips', () => {

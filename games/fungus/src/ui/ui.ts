@@ -1,8 +1,4 @@
 import {
-  GOODS,
-  GOOD_BY_ID,
-  MARKET_SPREAD,
-  MARKET_UNLOCK,
   PRODUCERS,
   PRODUCER_BY_ID,
   SPECIMENS,
@@ -12,7 +8,6 @@ import {
   UPGRADES,
   biomeName,
   jarLabel,
-  type GoodId,
   type ProducerId,
   type UpgradeGroup,
 } from '../game/defs';
@@ -22,7 +17,6 @@ import {
   baseRate,
   costOf,
   frenzyActive,
-  marketScale,
   maxBuyable,
   nextMilestone,
   owned,
@@ -33,14 +27,12 @@ import {
   unitRate,
   type AwayReport,
 } from '../game/economy';
-import { fmt, fmtCountdown, fmtDuration, fmtRate } from '../game/format';
-import { holdingChange, maxBuy, paidIndex, saleValue, windowChange } from '../game/market';
+import { fmt, fmtCountdown, fmtDuration, fmtRate } from '@shared/format';
+import { h, setDisabled, setText } from '@shared/dom';
 import type { GameState } from '../game/state';
-import { PriceChart } from './chart';
-import { h, setDisabled, setText } from './dom';
 
 export type BuyAmount = 1 | 10 | 100 | 'max';
-export type Tab = 'grow' | 'evolve' | 'market' | 'cultivate' | 'spores' | 'journal';
+export type Tab = 'grow' | 'evolve' | 'cultivate' | 'spores' | 'journal';
 
 export interface Controller {
   readonly state: GameState;
@@ -48,8 +40,6 @@ export interface Controller {
   setBuyAmount(a: BuyAmount): void;
   buyProducer(id: ProducerId): void;
   buyUpgrade(id: string): void;
-  buyGood(id: GoodId, amount: number | 'max'): void;
-  sellGood(id: GoodId, amount: number | 'all'): void;
   cultivate(id: string): void;
   harvest(): void;
   seal(): void;
@@ -243,201 +233,6 @@ class EvolvePanel implements Panel {
       const can = s.nutrients >= card.cost;
       setDisabled(card.btn, !can);
       card.btn.classList.toggle('affordable', can);
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-
-/** ▲ 12% / ▼ 4.5%: arrow and sign, so the direction never relies on color. */
-function change(f: number): string {
-  const pct = Math.abs(f * 100);
-  return `${f >= 0 ? '▲' : '▼'} ${pct < 10 ? pct.toFixed(1) : Math.round(pct)}%`;
-}
-
-function setChange(el: HTMLElement, f: number): void {
-  setText(el, change(f));
-  el.classList.toggle('up', f >= 0);
-  el.classList.toggle('down', f < 0);
-}
-
-// Stock rots continuously, so show and trade it rounded: 9.98 crates is "10".
-const amountText = (n: number): string => (n > 0 && n < 0.5 ? 'less than 1' : fmt(Math.round(n)));
-
-class MarketPanel implements Panel {
-  private selected: GoodId = 'apples';
-  private chart = new PriceChart();
-  private chartKey = '';
-  private chips: { id: GoodId; btn: HTMLButtonElement; price: HTMLElement; move: HTMLElement }[] = [];
-  private refs: {
-    price: HTMLElement;
-    move: HTMLElement;
-    held: HTMLElement;
-    worth: HTMLElement;
-    worthMove: HTMLElement;
-    buy: { n: number | 'max'; btn: HTMLButtonElement; sub: HTMLElement }[];
-    sell: { n: number | 'all'; btn: HTMLButtonElement; sub: HTMLElement }[];
-  } | null = null;
-
-  constructor(private c: Controller) {}
-
-  private lock: { left: HTMLElement; fill: HTMLElement } | null = null;
-
-  key(): string {
-    const s = this.c.state;
-    return `${this.selected}|${s.market.goods[this.selected].held > 0}|${s.marketOpen}`;
-  }
-
-  build(root: HTMLElement): void {
-    const def = GOOD_BY_ID[this.selected];
-    this.chartKey = '';
-    this.chips = GOODS.map((g) => {
-      const price = h('span', { class: 'chip-price' });
-      const move = h('span', { class: 'chip-move' });
-      const btn = h(
-        'button',
-        {
-          class: 'chip',
-          type: 'button',
-          'aria-pressed': String(g.id === this.selected),
-          onclick: () => {
-            this.selected = g.id;
-            this.c.refresh();
-          },
-        },
-        h('span', { class: 'chip-name' }, g.name),
-        h('span', { class: 'chip-line' }, price, move),
-      );
-      return { id: g.id, btn, price, move };
-    });
-
-    const price = h('span', { class: 'quote-price' });
-    const move = h('span', { class: 'quote-move' });
-    const held = h('span');
-    const worth = h('span');
-    const worthMove = h('span', { class: 'quote-move' });
-
-    const tradeBtn = (label: string, onclick: () => void) => {
-      const sub = h('span', { class: 'trade-sub' });
-      const btn = h('button', { class: 'trade-btn', type: 'button', onclick }, h('span', { class: 'trade-label' }, label), sub);
-      return { btn, sub };
-    };
-    const buy = ([1, 10, 'max'] as const).map((n) => ({
-      n,
-      ...tradeBtn(n === 'max' ? 'Buy max' : `Buy ${n}`, () => this.c.buyGood(this.selected, n)),
-    }));
-    const sell = ([1, 10, 'all'] as const).map((n) => ({
-      n,
-      ...tradeBtn(n === 'all' ? 'Sell all' : `Sell ${n}`, () => this.c.sellGood(this.selected, n)),
-    }));
-
-    const rot =
-      def.rotPerHour > 0
-        ? `Rots about ${Math.round(def.rotPerHour * 100)}% an hour while you hold it, even while you're away. You digest rotten stock for a quarter of its value.`
-        : 'Never spoils.';
-
-    const open = this.c.state.marketOpen;
-    this.lock = null;
-    let locked: HTMLElement | null = null;
-    if (!open) {
-      const left = h('strong');
-      const b = bar();
-      this.lock = { left, fill: b.fill };
-      locked = h(
-        'section',
-        { class: 'bed' },
-        h('p', { class: 'eyebrow' }, 'Opening soon'),
-        h('p', { class: 'bed-copy' }, `Trading opens once this jar has digested ${fmt(MARKET_UNLOCK)} nutrients: `, left, ' to go. Watch the prices in the meantime.'),
-        b.el,
-      );
-    }
-
-    root.append(
-      h(
-        'div',
-        { class: 'panel-head' },
-        h(
-          'p',
-          { class: 'panel-note' },
-          `Prices change every few seconds, even while the game is closed. Buy low, sell high. The market keeps ${Math.round(MARKET_SPREAD * 100)}% of every sale.`,
-        ),
-      ),
-      ...(locked ? [locked] : []),
-      h('div', { class: 'chips', role: 'group', 'aria-label': 'Goods' }, ...this.chips.map((x) => x.btn)),
-      h(
-        'section',
-        { class: 'quote', 'aria-label': def.name },
-        h(
-          'div',
-          { class: 'quote-head' },
-          h('div', { class: 'quote-name' }, h('h3', { class: 'sub' }, def.name), def.latin ? h('span', { class: 'latin' }, def.latin) : null),
-          h('p', { class: 'quote-line' }, price, h('span', { class: 'quote-unit' }, ` per ${def.unit}`), move),
-        ),
-        this.chart.el,
-        h('p', { class: 'quote-blurb' }, def.blurb),
-      ),
-      h(
-        'section',
-        { class: 'holding', 'aria-label': 'Your stock' },
-        h('p', null, held),
-        h('p', null, worth, ' ', worthMove),
-        h('p', { class: 'holding-note' }, rot),
-      ),
-      ...(open ? [h('div', { class: 'trade' }, ...buy.map((b) => b.btn), ...sell.map((b) => b.btn))] : []),
-    );
-    this.refs = { price, move, held, worth, worthMove, buy, sell };
-  }
-
-  sync(): void {
-    const s = this.c.state;
-    const m = s.market;
-    const scale = marketScale(s);
-    for (const chip of this.chips) {
-      const g = m.goods[chip.id];
-      chip.btn.setAttribute('aria-pressed', String(chip.id === this.selected));
-      setText(chip.price, fmt(g.price * scale));
-      setChange(chip.move, windowChange(m, chip.id));
-    }
-    if (this.lock) {
-      setText(this.lock.left, fmt(Math.max(0, MARKET_UNLOCK - s.jarTotal)));
-      setBar(this.lock.fill, s.jarTotal / MARKET_UNLOCK);
-    }
-    const r = this.refs;
-    if (!r) return;
-    const id = this.selected;
-    const def = GOOD_BY_ID[id];
-    const g = m.goods[id];
-    setText(r.price, fmt(g.price * scale));
-    setChange(r.move, windowChange(m, id));
-
-    const paid = paidIndex(m, id);
-    const key = `${m.tickAt}|${id}|${paid}|${fmt(scale)}`;
-    if (key !== this.chartKey) {
-      this.chartKey = key;
-      this.chart.setData(g.history, scale, paid, def.name);
-    }
-
-    if (g.held > 0) {
-      setText(r.held, `You hold ${amountText(g.held)} of ${def.cap} ${def.units}.`);
-      setText(r.worth, `Worth ${fmt(saleValue(m, id, g.held))} now. You paid ${fmt(g.paid)}.`);
-      setChange(r.worthMove, holdingChange(m, id) ?? 0);
-      r.worthMove.hidden = false;
-    } else {
-      setText(r.held, `You hold no ${def.units}. Room for ${def.cap}.`);
-      setText(r.worth, `One ${def.unit} costs ${fmt(g.price * scale)} right now.`);
-      r.worthMove.hidden = true;
-    }
-
-    const most = maxBuy(m, id, scale, s.nutrients);
-    for (const b of r.buy) {
-      const n = b.n === 'max' ? most : b.n;
-      setDisabled(b.btn, b.n === 'max' ? most < 1 : most < b.n);
-      setText(b.sub, n > 0 ? (b.n === 'max' ? `${n} · ${fmt(n * g.price * scale)}` : fmt(n * g.price * scale)) : 'none');
-    }
-    for (const b of r.sell) {
-      const n = b.n === 'all' ? g.held : Math.min(b.n, g.held);
-      setDisabled(b.btn, b.n === 'all' ? g.held <= 0 : Math.round(g.held) < b.n);
-      setText(b.sub, n > 0 ? fmt(saleValue(m, id, n)) : '—');
     }
   }
 }
@@ -650,7 +445,7 @@ class SporesPanel implements Panel {
       h(
         'div',
         { class: 'keeps' },
-        h('div', null, h('p', { class: 'eyebrow' }, 'Starts over'), h('p', null, 'Nutrients, everything you grew, market stock, and most upgrades.')),
+        h('div', null, h('p', { class: 'eyebrow' }, 'Starts over'), h('p', null, 'Nutrients, everything you grew, and most upgrades.')),
         h(
           'div',
           null,
@@ -783,7 +578,6 @@ export class GameUI {
   private builtKey = '';
   private toastTimer = 0;
   private modalClose: (() => void) | null = null;
-  private marketUnseen = false;
 
   private amount = document.getElementById('amount')!;
   private rate = document.getElementById('rate')!;
@@ -799,7 +593,6 @@ export class GameUI {
     this.panels = {
       grow: new GrowPanel(c),
       evolve: new EvolvePanel(c),
-      market: new MarketPanel(c),
       cultivate: new CultivatePanel(c),
       spores: new SporesPanel(c),
       journal: new JournalPanel(c),
@@ -820,9 +613,7 @@ export class GameUI {
   }
 
   setTab(tab: Tab): void {
-    if (tab === 'market') this.marketUnseen = false;
     this.tab = tab;
-    document.getElementById('app')!.dataset.tab = tab;
     for (const t of this.tabs) {
       const on = t.dataset.tab === tab;
       t.setAttribute('aria-selected', String(on));
@@ -831,12 +622,6 @@ export class GameUI {
     this.panel.setAttribute('aria-labelledby', `tab-${tab}`);
     this.panel.scrollTop = 0;
     this.sync(true);
-  }
-
-  /** The market just opened: show its tab with a dot until it is visited. */
-  announceMarket(): void {
-    this.marketUnseen = true;
-    this.sync();
   }
 
   /** Refresh the open panel and the tab badges. Rebuilds only when its contents change. */
@@ -867,7 +652,6 @@ export class GameUI {
     const badges: Record<Tab, string> = {
       grow: '',
       evolve: affordable ? String(affordable) : '',
-      market: GOODS.some((g) => (holdingChange(s.market, g.id) ?? 0) >= 0.1) ? 'ready' : this.marketUnseen ? 'dot' : '',
       cultivate: ready ? 'ready' : canPlant ? 'dot' : '',
       spores: sporesOnSeal(s) > 0 ? 'ready' : '',
       journal: '',
@@ -933,7 +717,7 @@ export class GameUI {
     this.showModal(
       [
         h('p', { class: 'eyebrow' }, `${jarLabel(0)} · ${biomeName(0)}`),
-        h('h2', { id: 'modal-title' }, 'You are the rot in the jar'),
+        h('h2', { id: 'modal-title' }, 'Small jar. Humongous fungus.'),
         h(
           'p',
           null,
@@ -965,17 +749,6 @@ export class GameUI {
           `Only the first ${fmtDuration(r.credited)} counted. Dormancy upgrades in Evolve let the jar keep working longer.`,
         ),
       );
-    }
-    const moves = r.market.filter((mv) => mv.heldBefore > 0);
-    if (moves.length) {
-      const lines = moves.map((mv) => {
-        const def = GOOD_BY_ID[mv.id];
-        const rotted = mv.heldBefore - mv.heldAfter;
-        const rot = rotted >= 1 ? `, ${fmt(rotted)} rotted` : '';
-        return `${def.name} ${change(mv.to / mv.from - 1)}${rot}`;
-      });
-      const salvage = r.salvage >= 1 ? ` You digested ${fmt(r.salvage)} from rotten stock.` : '';
-      children.push(h('p', { class: 'modal-note' }, `Market: ${lines.join(' · ')}.${salvage}`));
     }
     if (r.specimenReady) {
       const sp = SPECIMEN_BY_ID.get(r.specimenReady);

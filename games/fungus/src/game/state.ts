@@ -1,5 +1,4 @@
 import { PRODUCER_IDS, SPECIMEN_BY_ID, UPGRADE_BY_ID, type ProducerId } from './defs';
-import { deserializeMarket, newMarket, type MarketState } from './market';
 
 export interface Cultivation {
   id: string;
@@ -29,9 +28,6 @@ export interface GameState {
   createdAt: number;
   /** Seeds the jar's layout. Changes with each new jar. */
   seed: number;
-  market: MarketState;
-  /** The market tab has opened (stays open across jars). */
-  marketOpen: boolean;
   stats: {
     taps: number;
     blooms: number;
@@ -57,8 +53,6 @@ export function newGame(now: number, seed = Math.floor(Math.random() * 2 ** 31))
     updatedAt: now,
     createdAt: now,
     seed,
-    market: newMarket(now, seed),
-    marketOpen: false,
     stats: { taps: 0, blooms: 0, playSeconds: 0, bestRate: 0 },
   };
 }
@@ -121,8 +115,6 @@ export function deserialize(raw: string): GameState | null {
     discovered: ids(d.discovered, (id) => isProducer(id) || SPECIMEN_BY_ID.has(id)),
     frenzyUntil: num(d.frenzyUntil, 0),
     updatedAt: num(d.updatedAt, now),
-    market: deserializeMarket(d.market, now, base.seed),
-    marketOpen: d.marketOpen === true,
     stats: {
       taps: Math.floor(num(stats.taps, 0)),
       blooms: Math.floor(num(stats.blooms, 0)),

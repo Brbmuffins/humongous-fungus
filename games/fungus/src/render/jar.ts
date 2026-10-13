@@ -1,7 +1,7 @@
 // Draws the terrarium: a glass jar on a shelf, a soil cross-section with the
 // player's mycelium network, and everything the network has grown.
 import type { ProducerId } from '../game/defs';
-import { mulberry32 } from '../game/rng';
+import { mulberry32 } from '@shared/rng';
 import * as O from './organisms';
 import { paletteFor, type Palette } from './palette';
 

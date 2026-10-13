@@ -1,32 +1,46 @@
-// Saves. Always kept in local storage; when the game runs as a claude.ai
+// Saves. Always kept in local storage; when a game runs as a claude.ai
 // artifact it also keeps a private copy per player in the artifact's db, so
 // progress follows the player between devices and survives cleared storage.
 
-const KEY = 'rotbloom.save.v1';
+export interface LocalSave {
+  load(): string | null;
+  save(raw: string): void;
+  clear(): void;
+}
 
-export const localSave = {
-  load(): string | null {
-    try {
-      return localStorage.getItem(KEY);
-    } catch {
+/** A local-storage slot. Older keys are read (once) if the main key is empty. */
+export function localSave(key: string, legacyKeys: string[] = []): LocalSave {
+  return {
+    load() {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) return raw;
+        for (const old of legacyKeys) {
+          const legacy = localStorage.getItem(old);
+          if (legacy) return legacy;
+        }
+      } catch {
+        // Blocked storage: start fresh (the cloud copy may still load).
+      }
       return null;
-    }
-  },
-  save(raw: string): void {
-    try {
-      localStorage.setItem(KEY, raw);
-    } catch {
-      // Storage full or blocked: the cloud copy (if any) still works.
-    }
-  },
-  clear(): void {
-    try {
-      localStorage.removeItem(KEY);
-    } catch {
-      // Nothing to clear.
-    }
-  },
-};
+    },
+    save(raw) {
+      try {
+        localStorage.setItem(key, raw);
+      } catch {
+        // Storage full or blocked: the cloud copy (if any) still works.
+      }
+    },
+    clear() {
+      try {
+        localStorage.removeItem(key);
+        for (const old of legacyKeys) localStorage.removeItem(old);
+      } catch {
+        // Nothing to clear.
+      }
+    },
+  };
+}
 
 interface DocSnapshot {
   exists: boolean;
