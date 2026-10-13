@@ -2,13 +2,13 @@
   "name": "fungus-games",
   "private": true,
   "version": "0.1.0",
-  "description": "Two mobile games: Humongous Fungus (idle terrarium) and Sporeggar (mushroom market trading).",
+  "description": "Two mobile games: Humongous Fungus (idle terrarium) and Sporemonger (mushroom market trading).",
   "type": "module",
   "scripts": {
     "dev": "GAME=fungus vite --host",
-    "dev:sporeggar": "GAME=sporeggar vite --host",
-    "build": "tsc --noEmit && GAME=fungus vite build && GAME=sporeggar vite build",
-    "build:artifact": "npm run build && node scripts/make-artifact.mjs fungus && node scripts/make-artifact.mjs sporeggar",
+    "dev:sporemonger": "GAME=sporemonger vite --host",
+    "build": "tsc --noEmit && GAME=fungus vite build && GAME=sporemonger vite build",
+    "build:artifact": "npm run build && node scripts/make-artifact.mjs fungus && node scripts/make-artifact.mjs sporemonger",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "sim": "tsx scripts/simulate.ts"
@@ -29,6 +29,7 @@
     "vitest": "^5.0.4"
   },
   "workspaces": [
-    "games/fungus"
+    "games/fungus",
+    "games/sporemonger"
   ]
 }

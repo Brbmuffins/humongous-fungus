@@ -1,7 +1,7 @@
 // Turns dist/<game>/index.html into dist/<game>/artifact.html: the same game
 // without the <html>/<head>/<body> wrapper, for publishing as a claude.ai
 // artifact (the host adds its own document skeleton).
-// Usage: node scripts/make-artifact.mjs <fungus|sporeggar>
+// Usage: node scripts/make-artifact.mjs <fungus|sporemonger>
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const game = process.argv[2] ?? 'fungus';

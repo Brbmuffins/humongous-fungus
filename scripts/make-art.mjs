@@ -1,13 +1,18 @@
-// Renders the Humongous Fungus icon and splash into games/fungus/assets/,
-// ready for `npx capacitor-assets generate`. Needs the dev server running:
-//   npm run dev   (then)   node scripts/make-art.mjs [http://localhost:5173]
+// Renders a game's icon and splash into games/<game>/assets/, ready for
+// `npx capacitor-assets generate`, and its Play feature graphic into
+// games/<game>/store/play/. Needs that game's dev server running:
+//   npm run dev               (then)   node scripts/make-art.mjs fungus
+//   npm run dev:sporemonger   (then)   node scripts/make-art.mjs sporemonger
+// A second argument overrides the server URL (default http://localhost:5173).
 // Uses Playwright from the environment; pass CHROMIUM=/path/to/chrome if needed.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
-const base = process.argv[2] ?? 'http://localhost:5173';
-const out = 'games/fungus/assets';
+const game = process.argv[2] ?? 'fungus';
+const base = process.argv[3] ?? 'http://localhost:5173';
+const out = `games/${game}/assets`;
 mkdirSync(out, { recursive: true });
+mkdirSync(`games/${game}/store/play`, { recursive: true });
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const page = await browser.newPage({ viewport: { width: 1100, height: 1100 }, deviceScaleFactor: 1 });
 for (const [kind, files] of [

@@ -1,0 +1,33 @@
+{
+  "appId": "com.muffindevelopment.sporemonger",
+  "appName": "Sporemonger",
+  "webDir": "../../dist/sporemonger",
+  "backgroundColor": "#0d1120",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0d1120"
+  },
+  "android": {
+    "backgroundColor": "#0d1120"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "launchAutoHide": true,
+      "backgroundColor": "#0d1120",
+      "showSpinner": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_sporemonger",
+      "iconColor": "#f6b95c"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

@@ -1,13 +1,14 @@
-# Getting Humongous Fungus onto the App Store and Google Play
+# Getting the games onto the App Store and Google Play
 
-Everything in the code is ready: the iPhone and Android projects, icons,
-launch screens, store text and screenshots. These are the steps only the
-account owner can do. Most are five-minute forms; the waits are Apple's and
-Google's.
+Everything in the code is ready for both games: the iPhone and Android
+projects, icons, launch screens, store text and screenshots. These are the
+steps only the account owner can do. Most are five-minute forms; the waits are
+Apple's and Google's.
 
-Part 1 is Apple, part 2 is Google. They don't depend on each other, so you
-can do both at once. Start Google early: new accounts must run a 14-day test
-before they can publish.
+Part 1 is Apple, part 2 is Google, both written for Humongous Fungus. They
+don't depend on each other, so you can do both at once. Start Google early:
+new accounts must run a 14-day test before they can publish. Part 3 adds
+Sporemonger, which reuses the accounts, keys and secrets from parts 1 and 2.
 
 # Part 1: Apple App Store
 
@@ -203,10 +204,51 @@ with "upload" ticked: the bundle arrives as a draft on the chosen track.
 - **Android updates** work the same way: run the Android workflow, then
   upload the new .aab (or let the workflow upload it).
 
+# Part 3: Sporemonger
+
+Sporemonger is set up the same way: its own app on each store, built by its
+own workflows (**iOS · Sporemonger** and **Android · Sporemonger**). The
+developer accounts, the App Store Connect key, the Android upload key and all
+GitHub secrets from parts 1 and 2 are shared, so there is nothing new to set
+up in GitHub.
+
+## Apple
+
+- **Register the app's ID** (step 2): Description `Sporemonger`, Bundle ID
+  `com.muffindevelopment.sporemonger`.
+- **Create the app** (step 3): Name `Sporemonger`, SKU `sporemonger-ios`. If
+  the name is taken, try `Sporemonger: Night Market`.
+- **Build** (step 6): Actions → **iOS · Sporemonger** → Run workflow, then
+  install it from TestFlight. On the phone, check that buying something asks
+  to allow notifications, and that leaving the app while holding stock brings
+  a reminder later when it's up.
+- **Pages** (step 7): `site/sporemonger/privacy.html` and `support.html`,
+  hosted along with the rest of `site/`.
+- **Store page** (step 8): everything to paste is in
+  `games/sporemonger/store/listing.md`, screenshots in
+  `games/sporemonger/store/screenshots/`. App Privacy, age rating and pricing
+  get the same answers as Humongous Fungus.
+
+## Google
+
+- **Create the app** (step B): Name `Sporemonger`, Game, Free. The package name
+  is `com.muffindevelopment.sporemonger`.
+- **Build** (step D): Actions → **Android · Sporemonger** → Run workflow, and
+  download `sporemonger-<number>.aab`. It is signed with the same upload key
+  as Humongous Fungus, which Google allows.
+- **Closed test** (step E): every new app on a personal account needs its own
+  14 days with 12 testers. The same testers can join both games' tests at
+  once.
+- **Store page** (step F): everything to paste is in
+  `games/sporemonger/store/play/listing.md`.
+
 ## Regenerating the art
 
-- Icon and launch screen: `npm run dev`, then
-  `node scripts/make-art.mjs` (needs Playwright), then in `games/fungus`:
-  `npx capacitor-assets generate --ios --android --iconBackgroundColor '#16110d' --iconBackgroundColorDark '#16110d' --splashBackgroundColor '#16110d' --splashBackgroundColorDark '#16110d'`
-- Screenshots: 440×956 browser window at 3× scale, saved as RGB PNGs at
-  1320×2868.
+- Icon and launch screen: start the game's dev server (`npm run dev` for
+  Humongous Fungus, `npm run dev:sporemonger` for Sporemonger), then
+  `node scripts/make-art.mjs fungus` or `node scripts/make-art.mjs sporemonger`
+  (needs Playwright). Then in the game's folder, with its background colour
+  (`#16110d` for Humongous Fungus, `#0d1120` for Sporemonger):
+  `npx capacitor-assets generate --ios --android --iconBackgroundColor '<colour>' --iconBackgroundColorDark '<colour>' --splashBackgroundColor '<colour>' --splashBackgroundColorDark '<colour>'`
+- Screenshots: 440×956 browser window at 3× scale for Apple (1320×2868), and
+  360×640 at 3× for Google Play (1080×1920), saved as RGB PNGs.
