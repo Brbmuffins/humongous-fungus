@@ -9,3 +9,12 @@ export function mulberry32(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+/** One mulberry32 step on a stored state. Returns [nextState, value 0..1]. */
+export function rngStep(state: number): [number, number] {
+  const a = (state + 0x6d2b79f5) >>> 0;
+  let t = a;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return [a, ((t ^ (t >>> 14)) >>> 0) / 4294967296];
+}

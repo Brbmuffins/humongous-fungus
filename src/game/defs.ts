@@ -446,3 +446,121 @@ export function roman(n: number): string {
   }
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// The forest market: goods with live prices. Buy low, sell high, and mind the
+// rot. Prices are an index around each good's `mean`; one index point costs
+// one second of your production, locked in when you buy.
+
+export type GoodId = 'apples' | 'morels' | 'truffles' | 'honey';
+export type Mood = 'calm' | 'rising' | 'falling' | 'boom' | 'crash' | 'wild';
+
+export interface GoodDef {
+  id: GoodId;
+  name: string;
+  unit: string;
+  units: string;
+  latin?: string;
+  blurb: string;
+  /** Long-run average price index. */
+  mean: number;
+  /** Random swing per tick (log scale). */
+  vol: number;
+  /** Pull back toward the mean per tick. */
+  revert: number;
+  /** Share of held stock that rots per hour. */
+  rotPerHour: number;
+  /** Most you can hold. */
+  cap: number;
+  /** How long moods last, relative to the base. */
+  moodLength: number;
+  moods: Record<Mood, number>;
+}
+
+export const GOODS: readonly GoodDef[] = [
+  {
+    id: 'apples',
+    name: 'Windfall apples',
+    unit: 'crate',
+    units: 'crates',
+    latin: 'Malus domestica',
+    blurb: 'Cheap and jumpy. They rot fast, so sell before they turn.',
+    mean: 10,
+    vol: 0.012,
+    revert: 0.012,
+    rotPerHour: 0.4,
+    cap: 400,
+    moodLength: 0.8,
+    moods: { calm: 2, rising: 2, falling: 2, boom: 1, crash: 1, wild: 3 },
+  },
+  {
+    id: 'morels',
+    name: 'Morels',
+    unit: 'basket',
+    units: 'baskets',
+    latin: 'Morchella esculenta',
+    blurb: 'Prized and seasonal. When a flush comes in, prices can boom.',
+    mean: 40,
+    vol: 0.009,
+    revert: 0.008,
+    rotPerHour: 0.12,
+    cap: 120,
+    moodLength: 1,
+    moods: { calm: 2, rising: 2, falling: 2, boom: 2.5, crash: 1.5, wild: 1 },
+  },
+  {
+    id: 'truffles',
+    name: 'Black truffles',
+    unit: 'truffle',
+    units: 'truffles',
+    latin: 'Tuber melanosporum',
+    blurb: 'Expensive and slow. Trends last a long time, up or down.',
+    mean: 250,
+    vol: 0.005,
+    revert: 0.003,
+    rotPerHour: 0.03,
+    cap: 20,
+    moodLength: 2,
+    moods: { calm: 2, rising: 3, falling: 3, boom: 0.6, crash: 0.6, wild: 0.4 },
+  },
+  {
+    id: 'honey',
+    name: 'Wildflower honey',
+    unit: 'pot',
+    units: 'pots',
+    blurb: 'Slow, and it never spoils. Buy it cheap before bed and sell it high tomorrow.',
+    mean: 60,
+    vol: 0.004,
+    revert: 0.004,
+    rotPerHour: 0,
+    cap: 80,
+    moodLength: 3,
+    moods: { calm: 5, rising: 1.5, falling: 1.5, boom: 0.3, crash: 0.3, wild: 0.2 },
+  },
+];
+
+export const GOOD_IDS: readonly GoodId[] = GOODS.map((g) => g.id);
+export const GOOD_BY_ID = Object.fromEntries(GOODS.map((g) => [g.id, g])) as Record<GoodId, GoodDef>;
+
+/** Drift per tick for a good with vol 0.01; scaled by each good's own vol. */
+export const MOODS: Record<Mood, { drift: number; vol: number }> = {
+  calm: { drift: 0, vol: 0.6 },
+  rising: { drift: 0.0014, vol: 1 },
+  falling: { drift: -0.0014, vol: 1 },
+  boom: { drift: 0.005, vol: 1.3 },
+  crash: { drift: -0.006, vol: 1.4 },
+  wild: { drift: 0, vol: 2.4 },
+};
+
+/** Real time between price changes. */
+export const MARKET_TICK_MS = 3000;
+/** Prices kept for the chart: 160 ticks is 8 minutes. */
+export const MARKET_HISTORY = 160;
+/** At most this much time away is simulated (older ticks are skipped). */
+export const MARKET_MAX_CATCHUP_TICKS = (7 * 24 * 3600 * 1000) / MARKET_TICK_MS;
+/** The market keeps this share of every sale. */
+export const MARKET_SPREAD = 0.03;
+/** Rotten stock is digested for this share of its value. */
+export const ROT_SALVAGE = 0.25;
+/** The market opens once a jar has digested this much. */
+export const MARKET_UNLOCK = 5_000;

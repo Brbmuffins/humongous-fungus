@@ -8,11 +8,14 @@ import './styles.css';
 import {
   BLOOM_INTERVAL,
   BLOOM_LIFETIME_SECONDS,
+  GOOD_BY_ID,
+  MARKET_UNLOCK,
   PRODUCER_BY_ID,
   PRODUCER_IDS,
   SPECIMEN_BY_ID,
   biomeName,
   jarLabel,
+  type GoodId,
   type ProducerId,
 } from './game/defs';
 import {
@@ -31,8 +34,12 @@ import {
   step,
   tapValue,
   totalRate,
+  tradeBuy,
+  tradeSell,
+  marketScale,
   type AwayReport,
 } from './game/economy';
+import { maxBuy } from './game/market';
 import { fmt } from './game/format';
 import { deserialize, newGame, pickBest, serialize, type GameState } from './game/state';
 import { JarRenderer, type WorldView } from './render/jar';
@@ -94,6 +101,7 @@ class Game implements Controller {
     const now = Date.now();
     const report = step(this.state, now);
     if (report && report.elapsed >= WELCOME_SECONDS) this.welcome(report);
+    this.checkUnlocks();
     this.updateBloom(now);
     this.renderer.setView(this.view(now));
     this.renderer.draw(t);
@@ -122,6 +130,16 @@ class Game implements Controller {
       bloom: this.bloom,
       now,
     };
+  }
+
+  private checkUnlocks(): void {
+    const s = this.state;
+    if (!s.marketOpen && s.jarTotal >= MARKET_UNLOCK) {
+      s.marketOpen = true;
+      this.ui.announceMarket();
+      this.ui.toast('The forest market opened. Buy low, sell high, and watch for rot.');
+      this.cloudDirty = true;
+    }
   }
 
   private welcome(report: AwayReport): void {
@@ -243,6 +261,25 @@ class Game implements Controller {
   buyUpgrade(id: string): void {
     if (!buyUpgrade(this.state, id)) return;
     this.renderer.burst(10);
+    this.changed();
+  }
+
+  buyGood(id: GoodId, amount: number | 'max'): void {
+    const s = this.state;
+    const n = amount === 'max' ? maxBuy(s.market, id, marketScale(s), s.nutrients) : amount;
+    if (!tradeBuy(s, id, n)) return;
+    this.changed();
+  }
+
+  sellGood(id: GoodId, amount: number | 'all'): void {
+    const s = this.state;
+    const held = s.market.goods[id].held;
+    // "Sell 10" of 9.98 rotting crates sells them all.
+    const n = amount === 'all' || amount >= Math.round(held) ? held : amount;
+    const value = tradeSell(s, id, n);
+    if (value <= 0) return;
+    const def = GOOD_BY_ID[id];
+    if (amount === 'all' || held <= 1) this.ui.toast(`Sold your ${def.units} for ${fmt(value)}`);
     this.changed();
   }
 

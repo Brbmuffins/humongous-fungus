@@ -15,7 +15,10 @@ the soil and feeds you, so the jar fills with life the longer you play.
    stronger taps, whole-jar bonuses, longer time away).
 4. **Cultivate** rare specimens that take real time to grow (5 minutes up to 24
    hours) and give permanent bonuses. One bed, one at a time.
-5. **Seal the jar** (prestige) once a jar has digested 10B nutrients: release
+5. **Trade** at the forest market (opens at 5K digested). Prices move every
+   3 seconds, even while the game is closed. Buy low, sell high, and mind the
+   rot: most goods spoil while you hold them.
+6. **Seal the jar** (prestige) once a jar has digested 10B nutrients: release
    spores (+10% production each, forever) and start a new jar in a new biome.
 
 ## Things that make waiting feel good
@@ -45,6 +48,30 @@ the soil and feeds you, so the jar fills with life the longer you play.
 
 Specimens: Glowcap (5m), Cape sundew (30m), Pixie-cup lichen (2h),
 Coral fungus (4h), Ghost pipe (8h), Golden stag beetle (24h).
+
+## The forest market
+
+| Good | Personality | Typical 8-min move | Rots per hour |
+|---|---|---|---|
+| Windfall apples | Cheap, jumpy, sell fast | 17% (1 in 10: 50%) | 40% |
+| Morels | Booms when a flush comes in | 19% (1 in 10: 54%) | 12% |
+| Black truffles | Expensive, long trends | 8% | 3% |
+| Wildflower honey | Slow cycles over hours, never spoils | 4% | none |
+
+- Prices are an index around each good's mean, driven by a seeded random walk
+  with mean reversion and "moods" (calm, rising, falling, boom, crash, wild)
+  that last 1–8 minutes. The random state lives in the save, so reloading never
+  rerolls a price, and time away is simulated tick by tick.
+- One price point costs one second of your production, locked in when you buy.
+  Profit comes only from price moves, never from your jar growing meanwhile.
+- The market keeps 3% of each sale, so tiny wiggles don't pay.
+- Rotten stock is digested for a quarter of its value.
+- Only profit counts toward spores, so buying and selling can't farm them.
+- Holdings are capped per good (roughly an hour of production at a full
+  position). Sealing a jar empties the cellar; prices carry on.
+- The welcome-back screen reports how your goods moved and what rotted.
+- Measure the tuning with the volatility numbers above before changing
+  `vol`, `revert` or `MOODS` in `defs.ts`.
 
 ## Pacing (from `npm run sim`)
 
@@ -87,6 +114,9 @@ Idle players accept a specific model, and it works offline:
    for 14 days before release, so recruit testers early.
 
 ## Ideas for later
+
+- Market rumors that hint at the coming mood ("word is morels are fruiting").
+- Bigger cellars bought with spores.
 
 - Biomes with real rules (Peat Bog: moss is stronger, frogs weaker).
 - A second cultivation bed bought with spores.

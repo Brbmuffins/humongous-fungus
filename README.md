@@ -3,7 +3,8 @@
 An idle game for phones. You are a mycelium network living in the soil of a
 sealed terrarium. Tap to digest fallen leaves, spend nutrients to grow moss,
 mushrooms, ferns and animals, and watch the jar fill up in real time, including
-while the game is closed.
+while the game is closed. Trade apples, morels, truffles and honey on a live
+market, if you can sell before they rot.
 
 Working title. The repo is still named `RoD-Online` and can be renamed.
 
@@ -24,6 +25,7 @@ npm run sim            # pacing simulator: npm run sim -- [taps/s] [hours] [gap 
 |---|---|
 | `src/game/defs.ts` | All content and tuning: producers, upgrades, specimens, constants |
 | `src/game/economy.ts` | Pure game rules: costs, rates, time away, cultivation, sealing jars |
+| `src/game/market.ts` | The forest market: seeded price walk, trades, rot |
 | `src/game/state.ts` | Save format, validation, choosing between saves |
 | `src/render/` | Canvas drawing: the jar scene and every organism, procedurally |
 | `src/ui/` | DOM panels (Grow, Evolve, Cultivate, Spores, Journal) and dialogs |

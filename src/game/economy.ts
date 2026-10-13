@@ -14,12 +14,15 @@ import {
   SPORE_REQUIREMENT,
   UPGRADES,
   UPGRADE_BY_ID,
+  GOODS,
   type Effect,
+  type GoodId,
   type ProducerDef,
   type ProducerId,
   type SpecimenDef,
   type UpgradeDef,
 } from './defs';
+import { buyGood, clearHolding, sellGood, stepMarket } from './market';
 import type { GameState } from './state';
 
 // ---------------------------------------------------------------------------
@@ -139,6 +142,14 @@ export function earn(s: GameState, amount: number): void {
   s.lifetime += amount;
 }
 
+export interface MarketMove {
+  id: GoodId;
+  from: number;
+  to: number;
+  heldBefore: number;
+  heldAfter: number;
+}
+
 export interface AwayReport {
   /** Seconds since the state was last simulated. */
   elapsed: number;
@@ -148,6 +159,10 @@ export interface AwayReport {
   capped: boolean;
   /** Specimen that finished growing while away. */
   specimenReady: string | null;
+  /** Price moves on goods you were holding. */
+  market: MarketMove[];
+  /** Nutrients digested from market stock that rotted. */
+  salvage: number;
 }
 
 /**
@@ -157,6 +172,14 @@ export interface AwayReport {
  */
 export function step(s: GameState, now: number): AwayReport | null {
   const dtMs = now - s.updatedAt;
+  const before = GOODS.filter((g) => s.market.goods[g.id].held > 0).map((g) => ({
+    id: g.id,
+    from: s.market.goods[g.id].price,
+    heldBefore: s.market.goods[g.id].held,
+  }));
+  // Rotten stock is digested: it refills nutrients but is not new digestion.
+  const { salvage } = stepMarket(s.market, now);
+  s.nutrients += salvage;
   if (dtMs <= 0) {
     // Clock moved backwards: resync without paying out.
     s.updatedAt = now;
@@ -179,7 +202,12 @@ export function step(s: GameState, now: number): AwayReport | null {
   const specimenReady = c && c.endsAt > s.updatedAt && c.endsAt <= now ? c.id : null;
   if (s.frenzyUntil <= now) s.frenzyUntil = 0;
   s.updatedAt = now;
-  return { elapsed: dt, credited, earned, capped: dt > cap, specimenReady };
+  const market = before.map((b) => ({
+    ...b,
+    to: s.market.goods[b.id].price,
+    heldAfter: s.market.goods[b.id].held,
+  }));
+  return { elapsed: dt, credited, earned, capped: dt > cap, specimenReady, market, salvage };
 }
 
 // ---------------------------------------------------------------------------
@@ -281,9 +309,37 @@ export function sealJar(s: GameState, newSeed: number): number {
   s.upgrades = s.upgrades.filter((id) => UPGRADE_BY_ID.get(id)?.keep);
   s.frenzyUntil = 0;
   s.seed = newSeed;
+  for (const g of GOODS) clearHolding(s.market.goods[g.id]);
   return gain;
 }
 
 export function startFrenzy(s: GameState, now: number): void {
   s.frenzyUntil = now + FRENZY_SECONDS * 1000;
+}
+
+// ---------------------------------------------------------------------------
+// Market trades
+
+/** Nutrients per price point when buying now: one second of production. */
+export function marketScale(s: GameState): number {
+  return Math.max(1, baseRate(s));
+}
+
+export function tradeBuy(s: GameState, id: GoodId, amount: number): boolean {
+  const spent = buyGood(s.market, id, amount, marketScale(s), s.nutrients);
+  if (spent <= 0) return false;
+  s.nutrients -= spent;
+  return true;
+}
+
+/** Sell up to `amount`. Only profit counts as digested (toward spores). */
+export function tradeSell(s: GameState, id: GoodId, amount: number): number {
+  const { value, profit } = sellGood(s.market, id, amount);
+  if (value <= 0) return 0;
+  s.nutrients += value;
+  if (profit > 0) {
+    s.jarTotal += profit;
+    s.lifetime += profit;
+  }
+  return value;
 }
