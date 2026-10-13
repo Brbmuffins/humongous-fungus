@@ -16,6 +16,7 @@ import {
   type ProducerId,
 } from './game/defs';
 import {
+  awayCapSeconds,
   baseRate,
   bloomRateMult,
   buyProducer,
@@ -37,10 +38,11 @@ import { fmt } from '@shared/format';
 import { CloudSave, localSave as makeLocalSave } from '@shared/storage';
 import { deserialize, newGame, pickBest, serialize, type GameState } from './game/state';
 import { JarRenderer, type WorldView } from './render/jar';
+import { GameUI, type BuyAmount, type Controller } from './ui/ui';
+import { askForReminders, buzz, clearReminders, isNative, nativeSave, onAppState, scheduleReminders } from './native';
 
 // The game was called Rot & Bloom before; keep reading that save.
 const localSave = makeLocalSave('humongous.save.v1', ['rotbloom.save.v1']);
-import { GameUI, type BuyAmount, type Controller } from './ui/ui';
 
 /** Gaps at least this long get the welcome-back screen. */
 const WELCOME_SECONDS = 60;
@@ -49,6 +51,8 @@ const CLOUD_SAVE_MS = 60_000;
 
 interface HotData {
   save?: string;
+  /** Save from the phone's own storage (native app only). */
+  native?: string | null;
 }
 interface HotApi {
   ready?: (start: (data?: HotData) => void) => void;
@@ -72,7 +76,7 @@ class Game implements Controller {
   private pendingWelcome: AwayReport | null = null;
 
   constructor(hot: HotData) {
-    const saves = [hot.save, localSave.load()]
+    const saves = [hot.save, hot.native, localSave.load()]
       .map((raw) => (raw ? deserialize(raw) : null))
       .filter((s): s is GameState => s !== null);
     const loaded = pickBest(saves);
@@ -86,8 +90,23 @@ class Game implements Controller {
     this.scheduleBloom(Date.now(), true);
 
     this.bindInput();
-    void this.connectCloud();
+    void clearReminders();
+    if (!isNative) void this.connectCloud();
     requestAnimationFrame(this.frame);
+  }
+
+  /** What to remind the player about once the app is in the background. */
+  private reminder() {
+    const s = this.state;
+    const now = Date.now();
+    const c = s.cultivating;
+    const sp = c ? SPECIMEN_BY_ID.get(c.id) : undefined;
+    const cap = awayCapSeconds(s);
+    return {
+      specimen: c && sp && c.endsAt > now ? { name: sp.name, at: c.endsAt } : null,
+      jarFullAt: baseRate(s) > 0 ? now + cap * 1000 : null,
+      awayHours: Math.round(cap / 3600),
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -173,6 +192,7 @@ class Game implements Controller {
     this.bloom = null;
     this.scheduleBloom(now);
     s.stats.blooms += 1;
+    buzz.success();
     if (Math.random() < 0.55) {
       startFrenzy(s, now);
       this.ui.toast('Frenzy: production ×7 for 30 seconds');
@@ -213,6 +233,18 @@ class Game implements Controller {
       if (document.visibilityState === 'hidden') this.persist();
     });
     window.addEventListener('pagehide', () => this.persist());
+    onAppState({
+      background: () => {
+        this.persist();
+        void scheduleReminders(this.reminder());
+      },
+      foreground: () => void clearReminders(),
+      back: () => {
+        if (!this.ui.modalOpen) return false;
+        this.ui.closeModal();
+        return true;
+      },
+    });
   }
 
   private tap(x: number, y: number, now: number): void {
@@ -221,6 +253,7 @@ class Game implements Controller {
     earn(s, value);
     s.stats.taps += 1;
     this.renderer.tap(x, y, `+${fmt(value)}`);
+    buzz.tap();
     this.cloudDirty = true;
   }
 
@@ -238,6 +271,7 @@ class Game implements Controller {
     const n = this.buyAmount === 'max' ? maxBuyable(def, owned(s, id), s.nutrients) : this.buyAmount;
     const first = owned(s, id) === 0;
     if (!buyProducer(s, id, n)) return;
+    buzz.buy();
     this.renderer.burst(first ? 20 : 8);
     if (first && s.jarIndex === 0 && id !== 'hyphae') this.ui.toast(`${def.plural} moved into the jar`);
     this.changed();
@@ -245,12 +279,16 @@ class Game implements Controller {
 
   buyUpgrade(id: string): void {
     if (!buyUpgrade(this.state, id)) return;
+    buzz.buy();
     this.renderer.burst(10);
     this.changed();
   }
 
   cultivate(id: string): void {
     if (!startCultivation(this.state, id, Date.now())) return;
+    buzz.buy();
+    // The first time something takes real hours is the moment to offer reminders.
+    void askForReminders();
     const sp = SPECIMEN_BY_ID.get(id);
     this.ui.toast(`${sp?.name ?? 'Specimen'} planted. Come back when it is grown.`);
     this.changed(true);
@@ -259,6 +297,7 @@ class Game implements Controller {
   harvest(): void {
     const id = harvest(this.state, Date.now());
     if (!id) return;
+    buzz.success();
     const sp = SPECIMEN_BY_ID.get(id);
     this.renderer.burst(30);
     this.ui.toast(`${sp?.name ?? 'Specimen'} harvested. ${sp?.effectText ?? ''}`.trim());
@@ -268,6 +307,7 @@ class Game implements Controller {
   seal(): void {
     const gain = sealJar(this.state, Math.floor(Math.random() * 2 ** 31));
     if (!gain) return;
+    buzz.success();
     const s = this.state;
     this.bloom = null;
     this.ui.setTab('grow');
@@ -280,6 +320,7 @@ class Game implements Controller {
     Object.assign(this.state, fresh);
     this.bloom = null;
     localSave.clear();
+    nativeSave.clear();
     this.ui.setTab('grow');
     this.changed(true);
     this.ui.showIntro();
@@ -304,7 +345,9 @@ class Game implements Controller {
   // Saving
 
   private saveLocal(now: number): void {
-    localSave.save(serialize(this.state));
+    const raw = serialize(this.state);
+    localSave.save(raw);
+    nativeSave.save(raw);
     this.lastLocalSave = now;
   }
 
@@ -346,11 +389,12 @@ class Game implements Controller {
   }
 }
 
-function start(data?: HotData): void {
-  const game = new Game(data ?? {});
+async function start(data?: HotData): Promise<void> {
+  const native = await nativeSave.load();
+  const game = new Game({ ...data, native });
   hot?.snapshot?.(() => game.snapshot());
 }
 
 const hot = (window as unknown as { claude?: { hot?: HotApi } }).claude?.hot;
-if (hot?.ready) hot.ready(start);
-else start(hot?.data ?? {});
+if (hot?.ready) hot.ready((data) => void start(data));
+else void start(hot?.data ?? {});

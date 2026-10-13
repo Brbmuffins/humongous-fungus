@@ -19,6 +19,21 @@ npm run build:artifact   # also writes dist/<game>/artifact.html for sharing as 
 npm run sim              # Humongous Fungus pacing simulator: npm run sim -- [taps/s] [hours] [gap min] [session min]
 ```
 
+## Phone apps
+
+Humongous Fungus is packaged for iOS and Android with [Capacitor](https://capacitorjs.com):
+the native projects are in `games/fungus/ios` and `games/fungus/android`, and
+`games/fungus/src/native.ts` adds the phone-only features (durable saves,
+reminder notifications, haptics). iPhone builds run on GitHub Actions
+(`.github/workflows/ios-humongous-fungus.yml`) and upload to TestFlight.
+
+- **Getting it on the App Store:** [docs/app-store-checklist.md](docs/app-store-checklist.md)
+- **Store text and screenshots:** `games/fungus/store/`
+- **Privacy policy and support pages:** `site/humongous-fungus/`
+
+After changing the game, copy it into the native projects with
+`cd games/fungus && npm run sync`.
+
 ## Layout
 
 | Path | What it holds |
@@ -26,6 +41,9 @@ npm run sim              # Humongous Fungus pacing simulator: npm run sim -- [ta
 | `games/fungus/src/game/` | Humongous Fungus rules and content: producers, upgrades, specimens, away time, sealing jars |
 | `games/fungus/src/render/` | The jar scene and every organism, drawn procedurally on a canvas |
 | `games/fungus/src/ui/` | Panels (Grow, Evolve, Cultivate, Spores, Journal) and dialogs |
+| `games/fungus/src/native.ts` | Phone-only features through Capacitor; no-ops in a browser |
+| `games/fungus/ios`, `android` | Native app projects (Capacitor) |
+| `games/fungus/tools/` | Renders the app icon and launch screen from the game's own art |
 | `games/sporeggar/src/` | Sporeggar rules (`game.ts`), content (`defs.ts`), banner art (`scene.ts`) and screens (`ui.ts`) |
 | `shared/market.ts` | Live market engine: seeded price walk, moods, trades, rot |
 | `shared/chart.ts` | Live price chart with crosshair readout |
