@@ -2,6 +2,7 @@ import {
   GOODS,
   GOOD_BY_ID,
   MARKET_SPREAD,
+  MARKET_UNLOCK,
   PRODUCERS,
   PRODUCER_BY_ID,
   SPECIMENS,
@@ -280,8 +281,11 @@ class MarketPanel implements Panel {
 
   constructor(private c: Controller) {}
 
+  private lock: { left: HTMLElement; fill: HTMLElement } | null = null;
+
   key(): string {
-    return `${this.selected}|${this.c.state.market.goods[this.selected].held > 0}`;
+    const s = this.c.state;
+    return `${this.selected}|${s.market.goods[this.selected].held > 0}|${s.marketOpen}`;
   }
 
   build(root: HTMLElement): void {
@@ -332,6 +336,22 @@ class MarketPanel implements Panel {
         ? `Rots about ${Math.round(def.rotPerHour * 100)}% an hour while you hold it, even while you're away. You digest rotten stock for a quarter of its value.`
         : 'Never spoils.';
 
+    const open = this.c.state.marketOpen;
+    this.lock = null;
+    let locked: HTMLElement | null = null;
+    if (!open) {
+      const left = h('strong');
+      const b = bar();
+      this.lock = { left, fill: b.fill };
+      locked = h(
+        'section',
+        { class: 'bed' },
+        h('p', { class: 'eyebrow' }, 'Opening soon'),
+        h('p', { class: 'bed-copy' }, `Trading opens once this jar has digested ${fmt(MARKET_UNLOCK)} nutrients: `, left, ' to go. Watch the prices in the meantime.'),
+        b.el,
+      );
+    }
+
     root.append(
       h(
         'div',
@@ -342,6 +362,7 @@ class MarketPanel implements Panel {
           `Prices change every few seconds, even while the game is closed. Buy low, sell high. The market keeps ${Math.round(MARKET_SPREAD * 100)}% of every sale.`,
         ),
       ),
+      ...(locked ? [locked] : []),
       h('div', { class: 'chips', role: 'group', 'aria-label': 'Goods' }, ...this.chips.map((x) => x.btn)),
       h(
         'section',
@@ -362,7 +383,7 @@ class MarketPanel implements Panel {
         h('p', null, worth, ' ', worthMove),
         h('p', { class: 'holding-note' }, rot),
       ),
-      h('div', { class: 'trade' }, ...buy.map((b) => b.btn), ...sell.map((b) => b.btn)),
+      ...(open ? [h('div', { class: 'trade' }, ...buy.map((b) => b.btn), ...sell.map((b) => b.btn))] : []),
     );
     this.refs = { price, move, held, worth, worthMove, buy, sell };
   }
@@ -376,6 +397,10 @@ class MarketPanel implements Panel {
       chip.btn.setAttribute('aria-pressed', String(chip.id === this.selected));
       setText(chip.price, fmt(g.price * scale));
       setChange(chip.move, windowChange(m, chip.id));
+    }
+    if (this.lock) {
+      setText(this.lock.left, fmt(Math.max(0, MARKET_UNLOCK - s.jarTotal)));
+      setBar(this.lock.fill, s.jarTotal / MARKET_UNLOCK);
     }
     const r = this.refs;
     if (!r) return;
@@ -795,7 +820,6 @@ export class GameUI {
   }
 
   setTab(tab: Tab): void {
-    if (tab === 'market' && !this.c.state.marketOpen) tab = 'grow';
     if (tab === 'market') this.marketUnseen = false;
     this.tab = tab;
     document.getElementById('app')!.dataset.tab = tab;
@@ -817,12 +841,6 @@ export class GameUI {
 
   /** Refresh the open panel and the tab badges. Rebuilds only when its contents change. */
   sync(force = false): void {
-    const marketTab = this.tabs.find((t) => t.dataset.tab === 'market');
-    if (marketTab) marketTab.hidden = !this.c.state.marketOpen;
-    if (this.tab === 'market' && !this.c.state.marketOpen) {
-      this.setTab('grow');
-      return;
-    }
     const p = this.panels[this.tab];
     const key = `${this.tab}|${p.key()}`;
     if (force || key !== this.builtKey) {

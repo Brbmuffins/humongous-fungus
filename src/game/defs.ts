@@ -562,5 +562,5 @@ export const MARKET_MAX_CATCHUP_TICKS = (7 * 24 * 3600 * 1000) / MARKET_TICK_MS;
 export const MARKET_SPREAD = 0.03;
 /** Rotten stock is digested for this share of its value. */
 export const ROT_SALVAGE = 0.25;
-/** The market opens once a jar has digested this much. */
-export const MARKET_UNLOCK = 5_000;
+/** Trading opens once a jar has digested this much (prices are always visible). */
+export const MARKET_UNLOCK = 1_000;

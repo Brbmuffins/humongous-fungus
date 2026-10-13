@@ -137,7 +137,7 @@ class Game implements Controller {
     if (!s.marketOpen && s.jarTotal >= MARKET_UNLOCK) {
       s.marketOpen = true;
       this.ui.announceMarket();
-      this.ui.toast('The forest market opened. Buy low, sell high, and watch for rot.');
+      this.ui.toast('Trading is open in the Market tab. Buy low, sell high, and watch for rot.');
       this.cloudDirty = true;
     }
   }
