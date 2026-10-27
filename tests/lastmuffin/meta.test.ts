@@ -100,3 +100,13 @@ describe('automation settings', () => {
     expect(back.pantry.autopick).toBe(1);
   });
 });
+
+describe('game speed', () => {
+  it('defaults to Fast, and keeps a valid choice', () => {
+    const m = newMeta(0);
+    expect(m.speed).toBe('fast');
+    m.speed = 'turbo';
+    expect(deserialize(serialize(m))!.speed).toBe('turbo');
+    expect(deserialize(JSON.stringify({ version: 1, speed: 'ludicrous' }))!.speed).toBe('fast');
+  });
+});

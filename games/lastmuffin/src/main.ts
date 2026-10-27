@@ -5,7 +5,7 @@ import '@fontsource/rubik/latin-700.css';
 import './styles.css';
 
 import { CloudSave, localSave as makeLocalSave } from '@shared/storage';
-import { ENEMY_BY_ID, MUFFIN_BY_ID, PANTRY_BY_ID, PASSIVE_BY_ID, WEAPON_BY_ID, WIN_CRUMBS, type EnemyId, type MuffinId, type PantryId } from './defs';
+import { ENEMY_BY_ID, GAME_SPEEDS, MUFFIN_BY_ID, PANTRY_BY_ID, PASSIVE_BY_ID, WEAPON_BY_ID, WIN_CRUMBS, type EnemyId, type GameSpeed, type MuffinId, type PantryId } from './defs';
 import { Controls } from './input';
 import { autoPicking, bankRun, bankUnbanked, buyPantry, deserialize, newMeta, pick, serialize, unlock, type MetaState } from './meta';
 import { buzz, isNative, nativeSave, onAppState } from './native';
@@ -144,9 +144,11 @@ class Game implements Controller {
     const run = this.run;
     if (run) {
       const input = this.controls.read();
-      const steps = Math.ceil(real / STEP);
+      // Game speed: the night plays faster than real time.
+      const play = real * GAME_SPEEDS[this.meta.speed].scale;
+      const steps = Math.ceil(play / STEP);
       for (let i = 0; i < steps && run.state === 'playing' && this.ui.current === null; i++) {
-        const events = run.step(real / steps, i === 0 ? input : { ...input, hop: false });
+        const events = run.step(play / steps, i === 0 ? input : { ...input, hop: false });
         this.view.consume(events, run, t);
         this.react(events);
         this.afterStep(run);
@@ -243,7 +245,7 @@ class Game implements Controller {
           sfx.boss();
           buzz.heavy();
           this.met.add(e.enemy);
-          this.ui.warn(`${ENEMY_BY_ID[e.enemy].name} is here!`, 3000);
+          this.ui.banner('Here comes', ENEMY_BY_ID[e.enemy].name);
           break;
         case 'bossDown':
           buzz.success();
@@ -436,6 +438,14 @@ class Game implements Controller {
       this.resume();
       return;
     }
+    this.ui.show(this.ui.current);
+  }
+
+  cycleSpeed(): void {
+    const order: GameSpeed[] = ['normal', 'fast', 'turbo'];
+    this.meta.speed = order[(order.indexOf(this.meta.speed) + 1) % order.length];
+    sfx.click();
+    this.save();
     this.ui.show(this.ui.current);
   }
 

@@ -96,7 +96,10 @@ button {
   pointer-events: none;
 }
 .night {
-  background: radial-gradient(ellipse at 50% 50%, rgba(18, 8, 28, 0) 45%, rgba(18, 8, 28, 0.7) 100%);
+  /* A warm glow around the muffin (always mid-screen), night at the edges. */
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 196, 120, 0.16) 0, rgba(255, 196, 120, 0.06) 22%, rgba(255, 196, 120, 0) 40%),
+    radial-gradient(ellipse at 50% 50%, rgba(18, 8, 28, 0) 42%, rgba(18, 8, 28, 0.72) 100%);
 }
 .ouch {
   opacity: 0;
@@ -333,6 +336,50 @@ button {
 @media (pointer: coarse) {
   .hop .key {
     display: none;
+  }
+}
+
+/* A boss arrives: its name, big, across the middle of the screen. */
+.banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 34%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 16px;
+  background: linear-gradient(90deg, transparent, rgba(20, 10, 6, 0.8) 20%, rgba(20, 10, 6, 0.8) 80%, transparent);
+  pointer-events: none;
+  animation: banner 2.6s ease-out forwards;
+}
+.banner-sub {
+  font: 700 12px/1 var(--font-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.banner-name {
+  font: 400 clamp(30px, 10vw, 46px)/1 var(--font-display);
+  color: #ffb0a8;
+  text-shadow: 0 4px 0 var(--ink), 0 0 18px rgba(255, 92, 92, 0.6);
+}
+@keyframes banner {
+  0% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
   }
 }
 
@@ -919,7 +966,8 @@ button {
   font-weight: 700;
   color: var(--muted);
 }
-.toggle[aria-checked='true'] .toggle-state {
+.toggle[aria-checked='true'] .toggle-state,
+.toggle-state.speed {
   color: var(--mint);
 }
 .confirm {

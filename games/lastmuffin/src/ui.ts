@@ -6,6 +6,7 @@ import { fmt } from '@shared/format';
 import {
   DEATH_LINES,
   ENEMIES,
+  GAME_SPEEDS,
   MAX_LEVEL,
   MUFFIN_BY_ID,
   MUFFINS,
@@ -50,6 +51,7 @@ export interface Controller {
   toggleSound(): void;
   toggleAutoPick(): void;
   toggleAutoHop(): void;
+  cycleSpeed(): void;
   eraseSave(): void;
 }
 
@@ -112,6 +114,8 @@ export class UI {
   private bossFill = document.getElementById('boss-fill')!;
   private warningEl = document.getElementById('warning')!;
   private hopEl = document.getElementById('hop')!;
+  private bannerEl = document.getElementById('banner')!;
+  private bannerTimer = 0;
   private loadoutKey = '';
   private warnTimer = 0;
   current: Screen = null;
@@ -158,6 +162,19 @@ export class UI {
         ...run.passives.map((p) => h('span', { class: 'slot passive', title: PASSIVE_BY_ID[p.id].name }, icon('passive', p.id, 22), h('b', null, String(p.level)))),
       );
     }
+  }
+
+  /** A boss's name across the screen. */
+  banner(sub: string, name: string): void {
+    setText(document.getElementById('banner-sub')!, sub);
+    setText(document.getElementById('banner-name')!, name);
+    const el = this.bannerEl;
+    el.hidden = false;
+    el.style.animation = 'none';
+    void el.offsetWidth;
+    el.style.animation = '';
+    clearTimeout(this.bannerTimer);
+    this.bannerTimer = window.setTimeout(() => (el.hidden = true), 2700);
   }
 
   warn(text: string, ms = 2200): void {
@@ -280,6 +297,17 @@ export class UI {
     );
   }
 
+  /** The game speed switch: Normal, Fast, Turbo. */
+  private speedSwitch(): HTMLElement {
+    const sp = GAME_SPEEDS[this.c.meta.speed];
+    return h(
+      'button',
+      { class: 'toggle', type: 'button', onclick: () => this.c.cycleSpeed(), 'aria-label': `Game speed: ${sp.name}. Tap to change.` },
+      h('span', null, 'Game speed'),
+      h('span', { class: 'toggle-state speed' }, `${sp.name} · ${sp.scale}×`),
+    );
+  }
+
   /** On/off switches for what the Pantry has automated. */
   private automationToggles(): HTMLElement | null {
     const m = this.c.meta;
@@ -369,6 +397,7 @@ export class UI {
       pests,
       h('h3', null, 'Settings'),
       h('button', { class: 'toggle', type: 'button', role: 'switch', 'aria-checked': String(m.sound), onclick: () => this.c.toggleSound() }, h('span', null, 'Sound'), h('span', { class: 'toggle-state' }, m.sound ? 'On' : 'Off')),
+      this.speedSwitch(),
       this.automationToggles(),
       erase,
     );
@@ -462,6 +491,7 @@ export class UI {
       run.passives.length ? h('p', { class: 'passives-line' }, ...run.passives.map((p) => h('span', null, icon('passive', p.id, 18), `${PASSIVE_BY_ID[p.id].name} ${p.level}`))) : null,
       this.btn('Keep going', () => this.c.resume(), 'btn btn-big', true),
       h('div', { class: 'confirm-row' }, this.btn(`Sound: ${m.sound ? 'on' : 'off'}`, () => this.c.toggleSound(), 'btn btn-quiet'), this.btn('Give up', () => this.c.giveUp(), 'btn btn-quiet')),
+      this.speedSwitch(),
       this.automationToggles(),
     );
   }

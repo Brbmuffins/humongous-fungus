@@ -3,12 +3,14 @@
 // game closes mid-run, the crumbs you'd collected are banked next time.
 import {
   ENEMIES,
+  GAME_SPEEDS,
   MUFFIN_BY_ID,
   MUFFINS,
   PANTRY,
   PANTRY_BY_ID,
   WEAPONS,
   type EnemyId,
+  type GameSpeed,
   type MuffinId,
   type PantryId,
   type WeaponId,
@@ -41,6 +43,8 @@ export interface MetaState {
   /** Automation settings, for when the Pantry has them. */
   autoPick: boolean;
   autoHop: boolean;
+  /** How fast the night plays. */
+  speed: GameSpeed;
   updatedAt: number;
 }
 
@@ -61,6 +65,7 @@ export function newMeta(now: number): MetaState {
     sound: true,
     autoPick: true,
     autoHop: true,
+    speed: 'fast',
     updatedAt: now,
   };
 }
@@ -101,6 +106,7 @@ export function deserialize(raw: string): MetaState | null {
   m.sound = d.sound !== false;
   m.autoPick = d.autoPick !== false;
   m.autoHop = d.autoHop !== false;
+  m.speed = typeof d.speed === 'string' && d.speed in GAME_SPEEDS ? (d.speed as GameSpeed) : 'fast';
   return m;
 }
 

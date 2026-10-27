@@ -16,7 +16,7 @@ export const MAX_LEVEL = 5;
 export const PLAYER = {
   hp: 100,
   /** World units a second. The screen shows about 420 across its short side. */
-  speed: 140,
+  speed: 150,
   radius: 13,
   /** Sprinkles closer than this fly to you. */
   magnet: 62,
@@ -25,6 +25,14 @@ export const PLAYER = {
   bonkDamage: 3,
   /** An enemy can only hurt you this often. */
   contactCooldown: 0.6,
+};
+
+/** Game speed settings: everything (you, pests, weapons, the clock) runs this much faster. */
+export type GameSpeed = 'normal' | 'fast' | 'turbo';
+export const GAME_SPEEDS: Record<GameSpeed, { name: string; scale: number }> = {
+  normal: { name: 'Normal', scale: 1 },
+  fast: { name: 'Fast', scale: 1.25 },
+  turbo: { name: 'Turbo', scale: 1.5 },
 };
 
 /** The hop: a quick dash you can't be hurt during. */

@@ -108,6 +108,18 @@ armor, speed, pickup range, sprinkles, crumbs, cooldowns, rerolls and one
 revive a run (Day-Old Discount: back at half health, everything nearby
 knocked away).
 
+## Looks
+
+Everything is drawn in code (`draw.ts` for characters and pickups, `deco.ts`
+for scenery). The floor is endless kitchen tile with flour, scattered with
+props that stay put so you can feel yourself moving: flour sacks, a bitten
+cookie, sugar spills, wooden spoons, chocolate chips, milk, a cracked egg,
+cherries, butter and a forgotten baking tray. A warm glow follows the muffin
+and the night closes in at the edges. Shots streak, hits spark, pests bob as
+they scurry and pop when squashed, the muffin leans into its run and kicks
+up dust, level-ups throw confetti sprinkles, bosses arrive with their name
+across the screen, and when the muffin goes down it crumbles.
+
 ## Automation
 
 Combat is already automatic. These take care of the rest, so a night can be
@@ -122,6 +134,10 @@ mostly steering:
 | Auto-Hop | Pantry: 400 | Hops away by itself when a pest or a slice of toast is about to touch you, whenever the hop is ready. Can be switched off too |
 
 ## Pace
+
+**Game speed** (Pause or Records): Normal, Fast or Turbo plays everything (you,
+the pests, the weapons and the clock) 1, 1.25 or 1.5 times as fast. Fast is
+the default, so a night takes about 9.5 minutes of real time.
 
 The night starts busy: ten pests are already on their way at midnight, and
 they appear just past the edge of the screen (not on a circle around it, which

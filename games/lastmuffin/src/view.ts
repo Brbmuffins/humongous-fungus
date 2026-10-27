@@ -3,6 +3,7 @@
 // BONK!). Sprites are drawn once per size into little canvases and reused.
 import { ENEMY_BY_ID, MUFFIN_BY_ID, PLAYER, WEAPON_BY_ID, type EnemyId, type MuffinId } from './defs';
 import { INK, drawBerry, drawChef, drawChest, drawCrumb, drawEnemy, drawKnife, drawMagnet, drawMilk, drawMuffin, drawPin, drawSprinkle, drawToast, type MuffinFace } from './draw';
+import { CHUNK, drawProp, propsIn } from './deco';
 import type { Controls } from './input';
 import type { Run, RunEvent } from './run';
 
@@ -40,7 +41,11 @@ interface Bit {
   life: number;
   color: string;
   r: number;
+  /** Falls (crumbs), or floats and spreads (dust), or twinkles (sparks). */
+  kind?: 'crumb' | 'dust' | 'spark';
 }
+
+const CONFETTI = ['#ff6fa8', '#7cc8ff', '#ffd34d', '#b5e33b', '#c58aff', '#ffffff'];
 
 interface Num {
   x: number;
@@ -98,6 +103,10 @@ export class View {
   private hurtAt = -1e9;
   private shake = 0;
   private levelAt = -1e9;
+  /** Sparks on screen (they're capped). */
+  private sparks = 0;
+  /** When the muffin last kicked up dust. */
+  private dustAt = 0;
   private camX = 0;
   private camY = 0;
   private readonly calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -248,6 +257,28 @@ export class View {
     if (alpha !== 1) c.globalAlpha = 1;
   }
 
+  /** Flour sacks, cookies and spills on the floor in view. */
+  private drawProps(): void {
+    const v = this.worldView;
+    const x0 = Math.floor((this.camX - v.w / 2 - 60) / CHUNK);
+    const x1 = Math.floor((this.camX + v.w / 2 + 60) / CHUNK);
+    const y0 = Math.floor((this.camY - v.h / 2 - 60) / CHUNK);
+    const y1 = Math.floor((this.camY + v.h / 2 + 60) / CHUNK);
+    for (let cx = x0; cx <= x1; cx++) {
+      for (let cy = y0; cy <= y1; cy++) {
+        for (const p of propsIn(cx, cy)) {
+          const rot = Math.round(p.rot * 8) / 8;
+          const size = Math.round(p.s);
+          const sp = this.sprite(`prop:${p.kind}:${size}:${rot}`, size, size * 2.2, (cc, ss) => {
+            cc.rotate(rot);
+            drawProp(cc, p.kind, ss);
+          });
+          this.blit(sp, p.x, p.y, 0, 0.82);
+        }
+      }
+    }
+  }
+
   private enemySprite(id: EnemyId, frame: number, flash: boolean, left: boolean): Sprite {
     const s = ENEMY_BY_ID[id].radius * LOOK;
     return this.sprite(
@@ -341,6 +372,11 @@ export class View {
     for (const e of events) {
       switch (e.type) {
         case 'hit':
+          // A little spark where it landed.
+          if (this.sparks < 24) {
+            this.sparks++;
+            this.bits.push({ x: e.x + (Math.random() - 0.5) * 8, y: e.y + 6, vx: 0, vy: 0, born: t, life: e.bonk ? 0.3 : 0.16, color: e.bonk ? '#ffd34d' : '#fff6e0', r: e.bonk ? 9 : 5, kind: 'spark' });
+          }
           if (!this.numbers && !e.bonk) break;
           if (this.nums.length > 46 && !e.bonk) break;
           this.nums.push({ x: e.x + (Math.random() - 0.5) * 10, y: e.y, born: t, text: String(Math.max(1, Math.round(e.damage))), bonk: e.bonk });
@@ -371,7 +407,29 @@ export class View {
           break;
         case 'levelup':
           this.levelAt = t;
+          // Confetti sprinkles.
+          for (let i = 0; i < (this.calm ? 8 : 28); i++) {
+            const a = Math.random() * TAU;
+            const sp = 120 + Math.random() * 200;
+            this.bits.push({ x: run.x, y: run.y - 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 160, born: t, life: 0.9, color: CONFETTI[i % CONFETTI.length], r: 2.2 });
+          }
           break;
+        case 'hop':
+          for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * TAU;
+            this.bits.push({ x: run.x + Math.cos(a) * 6, y: run.y + 14, vx: Math.cos(a) * 50, vy: Math.sin(a) * 20, born: t, life: 0.45, color: 'rgba(250,240,225,0.55)', r: 5, kind: 'dust' });
+          }
+          break;
+        case 'dead': {
+          // The muffin crumbles.
+          const m = MUFFIN_BY_ID[run.muffin];
+          for (let i = 0; i < 36; i++) {
+            const a = Math.random() * TAU;
+            const sp = 60 + Math.random() * 160;
+            this.bits.push({ x: run.x, y: run.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120, born: t, life: 1.1, color: [m.top, m.liner, m.spots][i % 3], r: 2 + Math.random() * 2.5 });
+          }
+          break;
+        }
         case 'revive':
           this.flashes.push({ kind: 'ring', x: run.x, y: run.y, r: 220, angle: 0, w: 0, h: 0, born: t, evolved: false });
           break;
@@ -410,6 +468,9 @@ export class View {
     const ox = ((((-this.camX * z + this.W / 2) % fs) + fs) % fs) - fs;
     const oy = ((((-this.camY * z + this.H / 2) % fs) + fs) % fs) - fs;
     for (let x = ox; x < this.W; x += fs) for (let y = oy; y < this.H; y += fs) c.drawImage(this.floor, x, y, fs, fs);
+
+    // Scenery on the floor.
+    this.drawProps();
 
     // Frosting puddles and coffee steam, under everything.
     this.world();
@@ -461,7 +522,9 @@ export class View {
     const list = run.enemies.slice().sort((a, b) => a.y - b.y);
     for (const e of list) {
       const left = e.flock ? e.flock.vx < 0 : e.x > run.x;
-      this.blit(this.enemySprite(e.def.id, (frame + (e.uid & 1)) % 2, run.t < e.flashUntil, left), e.x, e.y);
+      // A little bob as they scurry.
+      const bob = e.def.boss ? 0 : Math.abs(Math.sin(t * 0.014 + e.uid)) * -1.6;
+      this.blit(this.enemySprite(e.def.id, (frame + (e.uid & 1)) % 2, run.t < e.flashUntil, left), e.x, e.y + bob);
     }
     this.pops = this.pops.filter((p) => {
       const k = (t - p.born) / 160;
@@ -473,7 +536,19 @@ export class View {
     // The muffin.
     if (player) this.drawMuffin(run, t, frame);
 
-    // Shots and orbiting knives.
+    // Shots and orbiting knives, with a streak behind the fast ones.
+    this.world();
+    c.lineCap = 'round';
+    for (const sh of run.shots) {
+      if (sh.kind !== 'berry' && sh.kind !== 'crumb') continue;
+      const evolved = run.weapons[sh.slot]?.evolved;
+      c.strokeStyle = sh.kind === 'berry' ? (evolved ? 'rgba(160,130,255,0.45)' : 'rgba(110,140,255,0.4)') : 'rgba(240,190,120,0.35)';
+      c.lineWidth = sh.r * 1.3;
+      c.beginPath();
+      c.moveTo(sh.x - sh.vx * 0.045, sh.y - sh.vy * 0.045);
+      c.lineTo(sh.x, sh.y);
+      c.stroke();
+    }
     for (const sh of run.shots) {
       const w = run.weapons[sh.slot];
       if (sh.kind === 'berry') {
@@ -516,6 +591,10 @@ export class View {
 
   private drawMuffin(run: Run, t: number, frame: number): void {
     const c = this.ctx;
+    if (run.moving && run.state === 'playing' && t - this.dustAt > 140) {
+      this.dustAt = t;
+      this.bits.push({ x: run.x - run.fx * 8, y: run.y + 15, vx: -run.fx * 20, vy: -6, born: t, life: 0.4, color: 'rgba(250,240,225,0.45)', r: 3.5, kind: 'dust' });
+    }
     const s = PLAYER.radius * LOOK;
     const def = MUFFIN_BY_ID[run.muffin];
     const hurt = t - this.hurtAt < 250;
@@ -533,7 +612,11 @@ export class View {
     // Blink while you can't be hurt.
     const safe = run.t < run.safeUntil && run.t >= run.hopUntil;
     const alpha = safe && Math.floor(t / 80) % 2 ? 0.45 : 1;
-    this.blit(img, run.x, run.y - lift - s * 0.1, 0, alpha);
+    // Leans into a run, bounces a little while walking.
+    const walking = run.moving && run.t >= run.hopUntil;
+    const lean = walking ? Math.sin(t * 0.018) * 0.07 + run.fx * 0.06 : 0;
+    const bounce = walking ? Math.abs(Math.sin(t * 0.018)) * 2.2 : 0;
+    this.blit(img, run.x, run.y - lift - bounce - s * 0.1, lean, alpha);
     // Health under the muffin, and the hop recharging.
     this.world();
     const w = 30;
@@ -667,13 +750,41 @@ export class View {
   private drawBits(t: number, dt: number): void {
     const c = this.ctx;
     this.world();
+    this.sparks = 0;
     this.bits = this.bits.filter((b) => {
       const age = (t - b.born) / 1000;
       if (age > b.life) return false;
+      const k = age / b.life;
+      if (b.kind === 'spark') {
+        // A four-point twinkle that opens up and fades.
+        this.sparks++;
+        const r = b.r * (0.5 + k);
+        c.globalAlpha = 1 - k;
+        c.strokeStyle = b.color;
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(b.x - r, b.y);
+        c.lineTo(b.x + r, b.y);
+        c.moveTo(b.x, b.y - r);
+        c.lineTo(b.x, b.y + r);
+        c.stroke();
+        return true;
+      }
+      if (b.kind === 'dust') {
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        b.vx *= Math.exp(-dt * 4);
+        c.globalAlpha = (1 - k) * 0.9;
+        c.fillStyle = b.color;
+        c.beginPath();
+        c.arc(b.x, b.y, b.r * (1 + k * 1.4), 0, TAU);
+        c.fill();
+        return true;
+      }
       b.vy += 300 * dt;
       b.x += b.vx * dt;
       b.y += b.vy * dt;
-      c.globalAlpha = 1 - age / b.life;
+      c.globalAlpha = 1 - k;
       c.fillStyle = b.color;
       c.fillRect(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
       return true;
