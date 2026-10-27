@@ -260,7 +260,7 @@ export class Store {
   }
 
   me(p: Player): Me {
-    return { id: p.id, name: p.name, emoji: p.emoji, coins: p.coins, topUps: p.topUps, stats: structuredClone(p.stats.arcade) };
+    return { id: p.id, name: p.name, emoji: p.emoji, coins: p.coins, topUps: p.topUps, riding: this.hasStake(p), stats: structuredClone(p.stats.arcade) };
   }
 
   // Coins -----------------------------------------------------------------------

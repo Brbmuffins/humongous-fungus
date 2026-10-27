@@ -38,6 +38,8 @@ export interface Me {
   emoji: string;
   coins: number;
   topUps: number;
+  /** Coins are riding on a round that hasn't finished (so there is no top-up yet). */
+  riding: boolean;
   stats: Record<ArcadeGame, BetStats>;
 }
 

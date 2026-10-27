@@ -6,13 +6,10 @@ import { ARCADE, MIN_BET, noBets, payOut, placeBet, refundBet, type ArcadeGame, 
 import type { ArcadeHost } from '@hammygotchi/arcadeview';
 import type { FitId, FormId } from '@hammygotchi/defs';
 import { localSave, type LocalSave } from '@shared/storage';
+import { MAX_COINS, START_COINS, TOP_UP_COINS } from '../shared/protocol';
 
-/** What a new player starts with. */
-export const START_COINS = 1000;
-/** What the free top-up gives, when you're out. */
-export const TOP_UP_COINS = 500;
-/** Play money never gets silly: no more than this in a wallet. */
-export const MAX_COINS = 1e15;
+// The same numbers the server uses (what a new player starts with, the free top-up, the cap).
+export { MAX_COINS, START_COINS, TOP_UP_COINS };
 
 const SAVE_KEY = 'hammys-arcade.save.v1';
 

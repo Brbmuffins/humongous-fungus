@@ -9,6 +9,7 @@ import { CROSS_DONE, CROSS_SAFE, CROSS_START, DIFFICULTIES, DIFFICULTY_BY_ID, VE
 import { isAlive } from './alive';
 import { EXTENTS, defaultLook, drawHammy } from './hammy';
 import { buzz } from './haptics';
+import type { CrossingSource } from './roundsource';
 import { sfx } from './sound';
 
 /** Kept between sittings while the page is open (not saved). */
@@ -60,15 +61,31 @@ export class CrossingApp implements ArcadeScreen {
   private carW = 0.18;
   private stopAt = 0.38;
   private road: CanvasPattern | null = null;
+  // Only when the rounds come from a server (see roundsource.ts).
+  private roundId = -1;
+  private pending = false;
+  /** The road you are on, as the server has it. */
+  private rd: Difficulty | null = null;
+  private seenLanes = 0;
+  /** The lane you last said Go for. */
+  private went = 0;
+  private counted = 0;
+  private queued = false;
+  private wasOnline = true;
+  private othersKey = '';
 
   private canvas = h('canvas', { class: 'crossing-road', role: 'img', 'aria-label': 'Hammy at the side of a busy road' });
   private status = h('p', { class: 'arcade-status', 'aria-live': 'polite' });
   private go = h('button', { class: 'btn btn-cheese arcade-go', type: 'button' });
   private cash = h('button', { class: 'btn btn-quiet arcade-go2', type: 'button' });
+  private fairEl = h('p', { class: 'fair-line' });
+  private othersEl = h('ul', { class: 'rocket-crowd crossing-crowd', 'aria-label': 'Who else is crossing' });
 
+  /** `src`: one road shared with everyone, decided on a server, instead of rolled here. */
   constructor(
     private host: ArcadeHost,
     close: () => void,
+    private src?: CrossingSource,
   ) {
     this.ledger = new Ledger(host, 'crossing');
     this.picker = new BetPicker(() => host.state.coins);
@@ -83,7 +100,18 @@ export class CrossingApp implements ArcadeScreen {
     );
     this.go.addEventListener('click', () => this.action());
     this.cash.addEventListener('click', () => this.bail());
-    const { card, syncCoins } = arcadeCard('crossing', close, this.canvas, this.status, h('div', { class: 'arcade-buttons' }, this.go, this.cash), this.choice.el, this.picker.el);
+    const { card, syncCoins } = arcadeCard(
+      'crossing',
+      close,
+      this.canvas,
+      this.status,
+      h('div', { class: 'arcade-buttons' }, this.go, this.cash),
+      this.choice.el,
+      this.picker.el,
+      src ? h('h3', { class: 'arcade-sub' }, 'Also crossing') : null,
+      src ? this.othersEl : null,
+      src ? this.fairEl : null,
+    );
     this.card = card;
     this.syncCoins = syncCoins;
     this.card.addEventListener('keydown', (e) => {
@@ -93,7 +121,7 @@ export class CrossingApp implements ArcadeScreen {
       }
     });
     this.reset();
-    setText(this.status, 'Pick a road, bet, and walk him across. Cash out on any lane.');
+    setText(this.status, src ? 'Pick a road and bet. Everyone crosses the same road, and the road decides each lane for all of you at once.' : 'Pick a road, bet, and walk him across. Cash out on any lane.');
     this.last = performance.now();
     this.raf = requestAnimationFrame(this.frame);
   }
@@ -104,6 +132,13 @@ export class CrossingApp implements ArcadeScreen {
 
   close(): ArcadeSession {
     if (this.closed) return this.ledger.session;
+    if (this.src) {
+      // Leaving the road: take the bet back if the road hasn't opened, otherwise cash out where you stand.
+      if (this.bet && !this.over) void (this.src.round()?.phase === 'bet' ? this.src.unbet() : this.src.cash());
+      this.closed = true;
+      cancelAnimationFrame(this.raf);
+      return this.ledger.session;
+    }
     // A step already under way finishes the way it was going to.
     if (this.step) this.land(performance.now(), true);
     if (this.bet && !this.over) {
@@ -116,7 +151,7 @@ export class CrossingApp implements ArcadeScreen {
   }
 
   private get d(): Difficulty {
-    return prefs.difficulty;
+    return this.rd ?? prefs.difficulty;
   }
 
   private reset(): void {
@@ -132,8 +167,9 @@ export class CrossingApp implements ArcadeScreen {
   }
 
   private action(): void {
-    if (this.closed || this.step) return;
+    if (this.closed || this.step || this.pending) return;
     const now = performance.now();
+    if (this.src) return this.act(this.src, now);
     if (!this.bet || this.over) {
       if (this.over) this.reset();
       const amount = this.ledger.bet(this.picker.amount);
@@ -157,6 +193,17 @@ export class CrossingApp implements ArcadeScreen {
 
   private bail(): void {
     if (this.closed || this.step || !this.bet || this.over) return;
+    if (this.src) {
+      if (this.pending) return;
+      this.pending = true;
+      const src = this.src;
+      const betting = src.round()?.phase === 'bet';
+      void (betting ? src.unbet() : src.cash()).then((r) => {
+        this.pending = false;
+        setText(this.status, r.ok ? (betting ? 'Bet taken back.' : this.status.textContent ?? '') : r.message);
+      });
+      return;
+    }
     if (!this.lane) {
       this.ledger.refund(this.bet);
       this.bet = 0;
@@ -168,7 +215,9 @@ export class CrossingApp implements ArcadeScreen {
 
   private cashOut(now: number): void {
     const mult = laneMultiplier(this.d, this.lane);
-    this.won = this.ledger.pay(this.bet, mult);
+    // Online the server has paid already: this is only the show.
+    this.won = this.src ? Math.floor(this.bet * mult) : this.ledger.pay(this.bet, mult);
+    if (this.src) this.ledger.session.net += this.won;
     this.over = { won: true, at: now, lane: this.lane };
     sfx.kaching();
     buzz.success();
@@ -212,6 +261,145 @@ export class CrossingApp implements ArcadeScreen {
     this.bubbleLine = { text, until: now + 2200 };
   }
 
+  // One road for everyone ------------------------------------------------------
+
+  /** The button: bet, say Go for the lane the road is about to decide, or line up for the next road. */
+  private act(src: CrossingSource, now: number): void {
+    const r = src.round();
+    if (!r) return;
+    const mine = r.crossers.find((x) => x.id === src.me);
+    if (!mine || this.over) {
+      if (r.phase !== 'bet') {
+        this.queued = !this.queued;
+        setText(this.status, this.queued ? 'You’re in line for the next road.' : 'Not betting on the next one.');
+      } else this.placeRemote(src, now);
+      return;
+    }
+    if (r.phase === 'cross' && mine.state === 'alive' && r.lane === this.lane + 1 && this.went !== r.lane) {
+      const lane = r.lane;
+      this.pending = true;
+      void src.go(lane).then((res) => {
+        this.pending = false;
+        if (res.ok) {
+          this.went = lane;
+          sfx.boing();
+        } else setText(this.status, res.message);
+      });
+    }
+  }
+
+  private placeRemote(src: CrossingSource, now: number): void {
+    const amount = this.picker.amount;
+    if (!this.picker.affordable) {
+      setText(this.status, 'Not enough coins for that bet.');
+      return;
+    }
+    this.pending = true;
+    void src.bet(amount, prefs.difficulty).then((r) => {
+      this.pending = false;
+      if (r.ok) {
+        sfx.coin();
+        this.say(pick(CROSS_START), performance.now());
+      } else setText(this.status, r.message);
+    });
+    void now;
+  }
+
+  /** Follow the shared road: who is on it, which lanes the road has decided, and what that did to you. */
+  private follow(now: number): void {
+    const src = this.src;
+    if (!src) return;
+    const online = src.online();
+    if (online !== this.wasOnline) {
+      this.wasOnline = online;
+      setText(this.status, online ? 'Back on the road.' : 'Lost the road. Reconnecting…');
+    }
+    const r = src.round();
+    if (!r) return;
+    const srv = src.now();
+    if (r.id !== this.roundId) {
+      this.roundId = r.id;
+      this.reset();
+      this.rd = null;
+      this.won = 0;
+      this.counted = 0;
+      this.went = 0;
+      this.seenLanes = r.lanes.length;
+      if (this.queued && r.phase === 'bet') {
+        this.queued = false;
+        this.placeRemote(src, now);
+      }
+    }
+    const mine = r.crossers.find((x) => x.id === src.me);
+    this.bet = mine?.bet ?? 0;
+    this.rd = mine ? (mine.difficulty as Difficulty) : null;
+    if (this.bet !== this.counted) {
+      const s = this.ledger.session;
+      if (this.bet && !this.counted) s.rounds += 1;
+      else if (!this.bet && this.counted) s.rounds -= 1;
+      s.net -= this.bet - this.counted;
+      this.counted = this.bet;
+    }
+    // Lanes the road has decided since we last looked: one hop at a time.
+    while (this.seenLanes < r.lanes.length && !this.step) {
+      const l = r.lanes[this.seenLanes++];
+      const res = l.results.find((x) => x.id === src.me);
+      if (!res || !mine || this.over || res.state === 'cashed') continue;
+      const v = VEHICLES.find((c) => c.id === l.truck) ?? VEHICLES[0];
+      const safe = res.state !== 'flat';
+      if (srv - l.at > 2500) {
+        // We weren't looking: skip the hop.
+        if (safe) {
+          this.lane = l.lane;
+          this.parked.set(l.lane, v);
+        } else this.over = { won: false, at: now, lane: l.lane };
+        continue;
+      }
+      this.step = { from: this.lane, at: now, safe, v };
+      this.cars = this.cars.filter((c) => c.lane !== this.lane + 1);
+      this.cars.push({ lane: this.lane + 1, y: -0.02, v, hero: true });
+      sfx.boing();
+    }
+    // Cashed out (by you, by not saying Go, or by getting all the way across).
+    if (mine && !this.step && !this.over && (mine.state === 'cashed' || mine.state === 'done')) {
+      this.lane = mine.lane;
+      this.cashOut(now);
+    }
+    // What's happening, with the clock.
+    if (!this.step && !this.over) {
+      const total = DIFFICULTY_BY_ID[this.d].lanes;
+      if (r.phase === 'bet') {
+        const left = Math.max(0, Math.ceil((r.goAt - srv) / 1000));
+        setText(this.status, mine ? `You’re in for ${fmt(mine.bet)} on ${DIFFICULTY_BY_ID[this.d].name}. The road opens in ${left}s.` : `Pick a road and bet. It opens in ${left}s.`);
+      } else if (r.phase === 'cross' && mine?.state === 'alive') {
+        const left = Math.max(0, Math.ceil((r.goAt + r.lane * r.laneMs - srv) / 1000));
+        setText(this.status, this.went === r.lane ? `Lane ${r.lane} of ${total}: he steps out in ${left}s…` : `Lane ${r.lane} of ${total}: ${left}s. Tap Go, or you cash out at ${x2(laneMultiplier(this.d, this.lane))}.`);
+      } else if (!mine) setText(this.status, r.phase === 'cross' ? 'A road is on. Bet on the next one.' : 'That road is done. The next one opens soon.');
+    }
+    this.renderOthers(r, src.me);
+    setText(this.fairEl, src.fair());
+  }
+
+  private renderOthers(r: NonNullable<ReturnType<CrossingSource['round']>>, me: string): void {
+    const rows = r.crossers.filter((x) => x.id !== me).sort((a, b) => Number(b.real) - Number(a.real));
+    const how = (x: (typeof rows)[number]) =>
+      x.state === 'flat' ? 'flattened' : x.state === 'cashed' ? `cashed ${x2(x.mult)}` : x.state === 'done' ? `made it ${x2(x.mult)}` : x.lane ? `lane ${x.lane} · ${x2(x.mult)}` : r.phase === 'bet' ? 'waiting' : 'at the curb';
+    const key = rows.map((x) => `${x.id}:${how(x)}`).join('|');
+    if (key === this.othersKey) return;
+    this.othersKey = key;
+    this.othersEl.replaceChildren(
+      ...rows.map((x) =>
+        h(
+          'li',
+          { class: `${x.real ? 'real ' : ''}${x.state === 'flat' ? 'lost' : x.state === 'cashed' || x.state === 'done' ? 'won' : ''}`.trim() || null },
+          h('span', { class: 'rocket-who' }, `${x.emoji} ${x.name}`),
+          h('span', { class: 'rocket-bet' }, `${fmt(x.bet)} · ${DIFFICULTY_BY_ID[x.difficulty as Difficulty]?.name ?? x.difficulty} · ${how(x)}`),
+        ),
+      ),
+    );
+    if (!rows.length) this.othersEl.append(h('li', { class: 'none' }, 'Just you, for now'));
+  }
+
   // Each frame ----------------------------------------------------------------
 
   private frame = (now: number): void => {
@@ -232,6 +420,7 @@ export class CrossingApp implements ArcadeScreen {
   }
 
   private tick(now: number, dt: number): void {
+    if (this.src) this.follow(now);
     if (this.step && now - this.step.at >= HOP_MS + ARRIVE_MS) this.land(now);
     const p = this.pos(now);
     this.cam += (p - this.cam) * Math.min(1, dt * 6);
@@ -265,12 +454,33 @@ export class CrossingApp implements ArcadeScreen {
     this.picker.lock(playing);
     this.choice.lock(playing);
     this.choice.sync();
+    if (this.src) return this.syncRemote(this.src, playing);
     const next = laneMultiplier(this.d, this.lane + 1);
     setText(this.go, playing ? `Go → ${x2(next)}` : this.over ? `Bet ${fmt(this.picker.amount)} and cross again` : `Bet ${fmt(this.picker.amount)} and cross`);
     setDisabled(this.go, !!this.step || !isAlive(s) || (!playing && !this.picker.affordable));
     this.cash.hidden = !playing;
     setText(this.cash, this.lane ? `Cash out ${fmt(Math.floor(this.bet * laneMultiplier(this.d, this.lane)))}` : `Take back ${fmt(this.bet)}`);
     setDisabled(this.cash, !!this.step);
+    this.cash.classList.toggle('bail', this.lane > 0);
+  }
+
+  private syncRemote(src: CrossingSource, playing: boolean): void {
+    const r = src.round();
+    const mine = r?.crossers.find((x) => x.id === src.me);
+    const up = src.online();
+    if (!playing) {
+      setText(this.go, this.queued ? 'Betting on the next road… (cancel)' : r?.phase === 'bet' ? `Bet ${fmt(this.picker.amount)} and cross` : `Bet ${fmt(this.picker.amount)} on the next road`);
+      setDisabled(this.go, this.pending || !up || (!this.queued && !this.picker.affordable));
+      this.cash.hidden = true;
+      return;
+    }
+    const betting = r?.phase === 'bet';
+    const canGo = !!r && !betting && mine?.state === 'alive' && r.lane === this.lane + 1 && this.went !== r.lane && !this.step;
+    setText(this.go, betting ? 'Waiting for the road to open…' : canGo ? `Go → ${x2(laneMultiplier(this.d, this.lane + 1))}` : this.went === r?.lane ? 'He’s going…' : 'Waiting for the next lane…');
+    setDisabled(this.go, !canGo || this.pending || !up);
+    this.cash.hidden = false;
+    setText(this.cash, betting || !this.lane ? `Take back ${fmt(this.bet)}` : `Cash out ${fmt(Math.floor(this.bet * laneMultiplier(this.d, this.lane)))}`);
+    setDisabled(this.cash, !!this.step || this.pending || !up);
     this.cash.classList.toggle('bail', this.lane > 0);
   }
 
