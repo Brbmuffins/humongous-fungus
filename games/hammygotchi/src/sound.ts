@@ -274,4 +274,15 @@ export const sfx = {
     tone('square', 1320, 1320, 0, 0.06, 0.05);
     tone('square', 990, 990, 0.08, 0.08, 0.05);
   },
+  /** Trash down the chute: a flap, then a long rattle into the dark. */
+  chute(): void {
+    tone('triangle', 260, 140, 0, 0.06, 0.12);
+    hiss(0.05, 0.35, 700, 0.05);
+    tone('square', 180, 90, 0.32, 0.05, 0.04);
+  },
+  /** A poop dropped into the bowl from a height. */
+  plunk(): void {
+    tone('sine', 520, 140, 0, 0.12, 0.22);
+    hiss(0.02, 0.18, 2400, 0.06, 'highpass');
+  },
 };

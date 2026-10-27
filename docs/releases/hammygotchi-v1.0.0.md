@@ -1,25 +1,32 @@
 # Hammygotchi 1.0.0
 
 The first release. A virtual pet who is a lot. Hammy lives in a two-floor
-human containment unit, eats like a raccoon, farts like a weather system and
-is too lazy to use the toilet on his own.
+human containment unit, eats like a raccoon, farts like a weather system,
+never flushes and leaves his trash everywhere.
 
 ## What's in it
 
-- The containment unit: shower, toilet, armchair, fridge, oven and ladder
-  downstairs; bed, plant and a gaming PC on the loft; a scientist behind the
-  window who puts on a gas mask and, if it gets bad enough, evacuates.
+- The containment unit: it comes with a toilet and a shower, and you furnish
+  the rest from the Shop: an armchair, a fridge and an oven downstairs, a
+  bed, a plant and a gaming PC on the loft. A scientist behind the window
+  puts on a gas mask and, if it gets bad enough, evacuates.
+- He lives like a Sim, badly: he naps, games and raids the fridge on his own,
+  walks to the toilet himself and never flushes, and leaves his trash
+  (wrappers, pizza boxes, cans, socks, tissues) wherever he's done with it,
+  also overnight. Drag his floor poop into the toilet and flush it before it
+  clogs, tap the trash to throw it down the chute, and see what he got up
+  to while you were gone.
 - Four needs: belly, freshness, mood and health. Order food on DoorDosh, cook
-  steaks on the oven (or burn them), carry him to the shower, and get him to
-  the toilet in time or it lands on the floor.
+  steaks on the oven (or burn them), carry him to the shower, and clean up
+  after him.
 - Cube Hammy most days, and some days a hamster, a meatball sub or a train.
 - A toy box: a feather, bouncy balls, a boxing glove on a spring, water
   balloons, cream pies, a whoopee cushion, a magnet and firecrackers. Or just
   throw him around the unit.
 - His phone: he texts you, calls you and orders food for himself with your
   coins.
-- Coins from his stream, fits to dress him in, robot vacuums and soap for
-  the unit.
+- Coins from his stream, furniture for the unit, fits to dress him in,
+  robot vacuums (they pick up his trash, never his poop) and soap.
 - A new look in this release: lit rooms with lamps, shadows and reflections,
   a lab that dims in the evening by your own clock, a wall clock on real time,
   and a lot more detail in every piece of furniture.

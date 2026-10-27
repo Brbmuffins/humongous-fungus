@@ -1,12 +1,15 @@
 # Hammygotchi — design notes
 
 A virtual pet who is a burden. Cube Hammy lives in a human containment unit:
-two floors behind glass, with a bed, an armchair, a gaming PC, a toilet, a
-shower, a fridge and an oven. He only eats delivery (DoorDosh, mostly
-Dorkitos) or what you cook him, he farts, he stinks, and he's too lazy to use
-the toilet or the shower by himself. The scientist watching him through the
-window can't stand him. Keep him fed, clean and happy, or he dies, rots,
-turns into mushrooms, and leaves a skeleton that says YOU LOSE.
+two floors behind glass that come with a toilet and a shower, and you buy
+the rest (a bed, an armchair, a gaming PC, a fridge, an oven, a plant). He
+lives like a Sim, badly: he goes about his day on his own, walks to the
+toilet himself and never flushes, and leaves his trash wherever he's done
+with it, so you go to sleep and wake up to a mess. He only eats delivery
+(DoorDosh, mostly Dorkitos) or what you cook him, he farts, he stinks, and
+he won't shower. The scientist watching him through the window can't stand
+him. Keep him fed, clean and happy, and clean up after him, or he dies,
+rots, turns into mushrooms, and leaves a skeleton that says YOU LOSE.
 
 He's based on a real person, War, who asked for all of this.
 
@@ -19,21 +22,38 @@ Four meters, all full is good:
 | Meter | Drains | Fills from |
 |---|---|---|
 | Belly | 7 an hour | DoorDosh orders, steak from the oven |
-| Fresh | 2 an hour, plus 2.5 an hour for each poop on the floor, plus every fart | Scooping poop, the shower, the toilet, a side salad |
+| Fresh | 2 an hour, plus 2.5 an hour for each poop on the floor, 1.5 for each load in the toilet nobody flushed, 0.25 for each piece of trash, plus every fart | Flushing, binning poop and trash, the shower, the toilet, a side salad |
 | Mood | 5 an hour, faster with a pile of unread texts, and 3 for each missed call | Texts, calls, petting, throwing him, his bed, chair and PC, most food |
 | Health | Only while a need is empty: 5 an hour for each empty one | Recovers 10 an hour while every need is at least 25 |
 
 From full, about a day of complete neglect kills him: mood runs out first, at
 about 10 hours, then fresh, and he dies at about 23. A night's sleep leaves him
-sad but alive.
+sad but alive, in a mess: about ten pieces of trash, an unflushed toilet and
+whatever didn't make it there.
 
 ## The containment unit
 
 Two floors. Downstairs: the shower, the toilet, his armchair, the fridge, the
 oven and a ladder. Upstairs, on a loft: his bed, a plant and his gaming PC.
-The scientist's window is in the back wall downstairs, and DoorDosh comes
-through a hatch in the ceiling. Everything is drawn in `src/room.ts`;
-`src/scene.ts` runs it.
+The scientist's window is in the back wall downstairs, DoorDosh comes
+through a hatch in the ceiling, and a trash chute is on the stairwell wall.
+Everything is drawn in `src/room.ts`; `src/scene.ts` runs it.
+
+A new unit comes with the plumbing only: the toilet and the shower. Where
+the rest goes there's floor tape and a stencil (+ BED, + GAMING PC); tap one
+and the Shop opens. Furniture arrives in a puff of smoke, stays when he
+dies, and only what's bought is there to use: no chair to sit in, no fridge
+to raid, no PC to stream from. Saves from before furniture was sold keep the
+fully furnished unit they had.
+
+| Furniture | Price | What it's for |
+|---|---|---|
+| Plant | 25 | Leans away from him and wilts when he stinks |
+| Armchair | 40 | Mood while he sits in it |
+| Bed | 80 | Mood while he naps |
+| Fridge | 90 | Raw steak, 5 coins each; he raids it himself when he's hungry |
+| Oven | 120 | Cooks the steak, or burns it |
+| Gaming PC | 250 | Mood, and his stream pays a coin every 30 seconds |
 
 Each piece of furniture is drawn to read at a glance on a phone: the toilet
 faces you with its lid up, water in the bowl, a plunger and a mat; the
@@ -52,16 +72,45 @@ oven glows when something's cooking. All of that is painted once into a
 cached layer (repainted only when the light level steps), so the frame cost is
 just the moving parts.
 
+## Living like a Sim, badly
+
 Hammy walks around on whichever floor he's on, sits in his chair, goes to bed
 and games at his PC on his own, and now and then climbs the ladder or walks
-off the edge of the loft. What he won't do by himself:
+off the edge of the loft. He takes care of himself, in his own way:
 
 - **The toilet.** Every meal comes out 2–5 minutes later. When one's due he
-  does a pee dance and tells you, and you have 75 seconds to pick him up and
-  drop him on the toilet (or tap Toilet in the Care tab): +4 coins and a
-  little freshness for each one. Too slow and it lands on the floor behind
-  him, on whichever floor he's on. Tap a poop to scoop it for 3 coins. Up to
-  8 on the floors.
+  does a pee dance, and 7 times in 10 he walks to the toilet himself (down
+  off the loft if he has to). He never flushes: "Not flushing that." The
+  other times he just stands there, and you have 75 seconds to pick him up
+  and drop him on it (or tap Toilet in the Care tab). Too slow and it lands
+  on the floor behind him, on whichever floor he's on. Up to 8 on the floors.
+- **Flushing is your job.** What's in the bowl stinks, with flies, until you
+  tap the toilet to flush it: +3 coins and a little freshness for each load.
+  At 4 loads it's clogged, a FLUSH ME sign comes up, nothing more goes in,
+  and he goes on the floor instead.
+- **Floor poop goes in the toilet.** Pick it up (he says "Ew, you touched
+  it") and drag it to the toilet: a dashed ring shows where it'll land, and
+  it plops in. Let go anywhere else and it drops to the floor under your
+  finger. Tapping one just reminds you to drag it.
+- **His trash.** He leaves it wherever he's done with it: the wrapper of
+  every meal where he ate it (a Dorkitos bag, a pizza box, burrito foil,
+  wing bones, a Glow Juice can, a sushi tray), a can when he gets up from
+  the PC, chips from the armchair, socks and tissues from the bed. While
+  you're away, something every 30 to 60 minutes, anywhere. Up to 14 pieces.
+  Tap one and it sails into the trash chute: +1 coin and a little freshness.
+- **The fridge.** When he's hungry and there's a fridge, he helps himself
+  (on your coins) and eats the steak raw where it lands.
+
+While you're away he goes to the toilet himself the same 7 times in 10
+(until it's clogged), and the welcome-back screen says what he got up to:
+"used the toilet 3 times and didn't flush once, pooped on the floor once,
+left 9 pieces of trash around." The Care tab has buttons for all of it too:
+carry him to the toilet or the shower, flush, put the floor poop in the
+toilet, tidy up. Its badge counts the mess, and the first time each chore
+comes up a hint over the unit says what to do.
+
+What he won't do by himself:
+
 - **The shower.** Drop him in it (or tap Shower): +40 fresh, a little mood
   lost, and the hot water needs 90 seconds to come back. Soap from the shop
   adds more fresh, and the better soaps stop him minding.
@@ -83,8 +132,8 @@ Hammy is gross even when he's clean, and the unit knows it:
   picking his nose (and flicking it), sniffing his armpit (and regretting it)
   or scratching his butt. He has a line for each.
 - Everything avoids him. The robot vacuums beep and back away when they get
-  close (and wait for him to move before getting the poop under him). The
-  plant on the loft leans away when he stands next to it.
+  close, and won't go near his poop either. The plant on the loft leans away
+  when he stands next to it.
 - **Dr. Moss**, the scientist behind the observation window, watches him all
   day. Her eyes follow him, she takes notes on her clipboard, and when he
   comes up to her glass she leans back, holds her nose and tells him to back
@@ -92,8 +141,7 @@ Hammy is gross even when he's clean, and the unit knows it:
   gets a word from her. She puts on a gas mask below 45% fresh and evacuates
   below 18%.
 - The room shows it: a grease stain where he sits in the armchair, drool on
-  his pillow, crumbs in the bed, a pizza box and crushed cans under the desk,
-  and a sock on the floor.
+  his pillow, crumbs in the bed, and whatever trash he left lying around.
 
 ## Being a burden
 
@@ -118,12 +166,13 @@ Hammy is gross even when he's clean, and the unit knows it:
 
 ## Stuff for the unit
 
-Bought with coins in the Shop, and kept when he dies:
+Upgrades, bought with coins in the Shop next to the furniture, and kept when
+he dies:
 
 | Item | Price | What it does |
 |---|---|---|
-| Robot vacuum | 150 | Drives around the ground floor and eats poop. While you're away, eats one every 45 seconds. |
-| Second robot vacuum | 400 | One on the loft too; away, they eat twice as fast |
+| Robot vacuum | 150 | Drives around the ground floor picking up his trash. Won't touch poop. While you're away, picks up a piece every 20 minutes (it charges in between). |
+| Second robot vacuum | 400 | One on the loft too; away, they pick up twice as fast |
 | Bar soap | 30 | Showers: +12 fresh |
 | Body wash | 90 | Showers: +24 fresh, and he minds less |
 | Fancy soap | 220 | Showers: +40 fresh, and he comes out happy |
@@ -169,7 +218,7 @@ unit. Pick one (a toast says what it does), then use it in the unit.
 
 | Toy | Price | How | Per hit |
 |---|---|---|---|
-| Hand | free | Drag to throw him or drop him on furniture, tap to pet, tap poop to scoop, tap the fridge, drag steaks | mood from throws and pets |
+| Hand | free | Drag to throw him or drop him on furniture, tap to pet, drag poop into the toilet, tap the toilet to flush, tap trash to bin it, tap the fridge, drag steaks | mood from throws and pets |
 | Feather | free | Rub it on him: he giggles | +3 mood, +1 coin |
 | Bouncy ball | free | Drag and let go to throw; he kicks resting balls back | +2 mood, +1 coin |
 | Boxing glove | 30 | Tap him: a glove on a spring punches out of the nearest wall | −5 mood, +3 coins |
@@ -186,7 +235,7 @@ when he dies.
 
 ## Hammy coins and fits
 
-Coins come from scooping poop, the toilet, texting, calls, toys, his stream,
+Coins come from flushing, binning trash, texting, calls, toys, his stream,
 and 12 an hour while he's in a good mood (he won't say how). They buy fits: Road trip (40), Gamer (90),
 Cowboy (150), Shroom hat (220), Hot dog (320), Astronaut (480, the stink
 fogs up the helmet), Wizard (650) and Golden Hammy (1000). Fits are kept

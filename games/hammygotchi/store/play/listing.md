@@ -21,7 +21,7 @@ Copy these into Play Console. Every field fits Google's limits.
 ## Short description (80)
 
 ```
-Keep Hammy alive. He's lazy, he farts, and he won't go to the toilet by himself.
+Keep Hammy alive. He farts, he never flushes, and he leaves trash everywhere.
 ```
 
 ## Full description (4000)
@@ -29,18 +29,21 @@ Keep Hammy alive. He's lazy, he farts, and he won't go to the toilet by himself.
 ```
 Meet Hammy. He's a cube. He lives in a containment unit now. He's a lot.
 
-The unit has everything he needs: a bed, an armchair, a gaming PC, a toilet, a shower, a fridge and an oven. He uses about half of it. He only eats delivery, mostly Dorkitos. He farts, a lot, and every fart sends him flying. The scientist watching him through the window puts on a gas mask, and eventually evacuates.
+The unit came with a toilet and a shower, and that's it. The bed, the armchair, the fridge, the oven and the gaming PC are on you. He only eats delivery, mostly Dorkitos. He farts, a lot, and every fart sends him flying. The scientist watching him through the window puts on a gas mask, and eventually evacuates.
 
 You have to keep him alive.
 
-HE'S LAZY
-He won't walk to the toilet. When he has to go, pick him up and drop him on it, or he goes on the floor. He won't shower either, so carry him in when he stinks. Put him to bed, sit him in his armchair, or leave him gaming at his PC, where his stream earns a few coins.
+HE LIVES LIKE A SIM. BADLY.
+He does his own thing: naps in his bed, sits in his armchair, games at his PC (his stream earns a few coins), raids the fridge and eats the steak raw. He walks to the toilet himself, usually, and never flushes. He leaves his trash wherever he's done with it: Dorkitos bags, pizza boxes, cans, socks, tissues. Go to sleep and wake up to a mess. He won't shower, so carry him in when he stinks.
 
 FEED HIM
 Order DoorDosh and it drops through the hatch. Or cook: tap the fridge for a raw steak and drag it onto the oven. Leave it too long and it's charcoal, and the smoke alarm goes off. He'll eat it raw if you let him. Let him get hungry and he orders for himself, on your coins, and tips the driver.
 
 CLEAN UP AFTER HIM
-Tap poop to scoop it, or buy a robot vacuum that does it for you, even while you're away. Better soap makes his showers count for more.
+Drag his floor poop into the toilet and flush it, before the toilet clogs. Tap his trash to throw it down the chute, or buy a robot vacuum that picks it up for you, even while you're away (it won't touch poop). Better soap makes his showers count for more.
+
+FURNISH THE UNIT
+Spend Hammy coins on the furniture: an armchair, a bed, a plant, a fridge, an oven and a gaming PC. It all stays, even when he doesn't.
 
 TEXT HIM. CALL HIM.
 Hammy has a phone, and he uses it. He texts you all day about whatever is going on ("the scientist put on a gas mask. rude"). Text him back, call him, and pick up when he calls you, or he gets sad. Spam him and he tells you to chill.

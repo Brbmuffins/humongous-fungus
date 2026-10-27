@@ -7,42 +7,64 @@ import './styles.css';
 
 import { fmt } from '@shared/format';
 import { CloudSave, localSave as makeLocalSave } from '@shared/storage';
-import { FIT_BY_ID, FOOD_BY_ID, FORM_BY_ID, TOILET_COINS, UPGRADE_BY_ID, VOICEMAIL, type FitId, type FoodId, type FormId, type ToyId, type UpgradeId } from './defs';
 import {
+  BOWL_MAX,
+  FIT_BY_ID,
+  FOOD_BY_ID,
+  FORM_BY_ID,
+  FURNITURE_BY_ID,
+  UPGRADE_BY_ID,
+  VOICEMAIL,
+  type FitId,
+  type FoodId,
+  type FormId,
+  type FurnitureId,
+  type ToyId,
+  type TrashKind,
+  type UpgradeId,
+} from './defs';
+import {
+  addTrash,
   adopt,
+  bowlFull,
   buyFit,
+  buyFurniture,
   buyMeat,
   buyToy,
   buyUpgrade,
   canCall,
   declineCall,
+  dumpAll,
+  dumpPoop,
   endCall,
   feed,
   fling,
+  flush,
   formFor,
   isAlive,
+  movePoop,
   order,
   pet,
   pickToy,
   play,
   rest,
-  scoop,
-  scoopAll,
   deadFor,
   sendText,
   shower,
   step,
+  tidy,
+  tidyAll,
   useToilet,
-  vacuumPoop,
+  vacuumTrash,
   wake,
   wearFit,
   type AwayReport,
   type HammyEvent,
 } from './game';
-import { TankScene } from './scene';
+import { TankScene, type ToiletResult } from './scene';
 import { setSound, sfx, unlock } from './sound';
 import { setVoice } from './voice';
-import { deserialize, newGame, serialize, type HammyState } from './state';
+import { deserialize, newGame, serialize, type HammyState, type Poop } from './state';
 import { GameUI, type Controller } from './ui';
 import { askForReminders, buzz, clearReminders, isNative, nativeSave, onAppState, scheduleReminders } from './native';
 
@@ -93,13 +115,19 @@ class Game implements Controller {
     this.scene = new TankScene(this.canvas, {
       pet: () => this.pet(),
       fling: (speed) => this.fling(speed),
-      scoop: (i) => this.scoopOne(i),
+      dump: (i) => this.dumped(i),
+      movePoop: (i, at) => this.movedPoop(i, at),
+      tidy: (i) => this.tidied(i),
+      flush: () => this.flushed(),
+      litter: (kind, at) => this.littered(kind, at),
       play: (toy) => this.played(toy),
-      spot: (id) => (id === 'shower' ? this.showered() : this.flushed()),
+      shower: () => this.showered(),
+      toilet: (self) => this.toileted(self),
       rest: (id) => this.rested(id),
       fridge: () => this.fridge(),
       eat: (kind) => this.ate(kind),
       vacuum: (i) => this.vacuumed(i),
+      shop: (id) => this.shopFor(id),
     });
     this.ui = new GameUI(this);
     const { away } = step(this.state, Date.now());
@@ -146,6 +174,9 @@ class Game implements Controller {
       mood: s.mood,
       health: s.health,
       poops: s.poops,
+      trash: s.trash,
+      bowl: s.bowl,
+      furniture: s.furniture,
       orders: s.orders,
       urge: s.urges.length > 0,
       vacuums: s.upgrades.vacuum,
@@ -176,13 +207,16 @@ class Game implements Controller {
         this.scene.poop();
         this.cloudDirty = true;
         break;
-      case 'urge':
-        this.scene.urge();
+      case 'urge': {
+        const full = bowlFull(s);
+        const going = this.scene.urge(full);
         buzz.tap();
-        if (this.ui.visibleTab !== 'care') this.ui.toast('Hammy needs to go. Drag him onto the toilet.');
+        if (full) this.ui.toast('Hammy needs to go and the toilet is full. Tap it to flush, fast.');
+        else if (!going && this.ui.visibleTab !== 'care') this.ui.toast('Hammy needs to go and he isn’t getting up. Drag him onto the toilet.');
         break;
+      }
       case 'delivery':
-        this.scene.deliver(e.food);
+        this.scene.deliver(e.food, e.live);
         if (e.self) this.ui.toast(`Hammy's own ${FOOD_BY_ID[e.food].name.toLowerCase()} showed up`);
         break;
       case 'selfOrder':
@@ -279,14 +313,47 @@ class Game implements Controller {
     this.cloudDirty = true;
   }
 
-  private scoopOne(i: number): void {
-    this.scene.scoopFx(i);
-    const got = scoop(this.state, i);
-    if (!got) return;
+  private dumped(i: number): boolean {
+    if (!dumpPoop(this.state, i)) {
+      buzz.bad();
+      return false;
+    }
+    buzz.tap();
+    this.changed();
+    return true;
+  }
+
+  private movedPoop(i: number, at: Poop): void {
+    if (movePoop(this.state, i, at.x, at.up)) this.cloudDirty = true;
+  }
+
+  private tidied(i: number): number {
+    const got = tidy(this.state, i);
+    if (!got) return 0;
     sfx.coin();
     buzz.tap();
-    this.scene.popup(`+${got}`);
     this.changed();
+    return got;
+  }
+
+  private flushed(): number {
+    const n = flush(this.state);
+    if (n) {
+      sfx.coin();
+      buzz.success();
+      this.changed();
+    }
+    return n;
+  }
+
+  private littered(kind: TrashKind, at: Poop): void {
+    if (addTrash(this.state, kind, at.x, at.up)) this.cloudDirty = true;
+  }
+
+  private shopFor(id: FurnitureId): void {
+    const f = FURNITURE_BY_ID[id];
+    this.ui.setTab('shop');
+    this.ui.toast(`${f.name}: ${f.price} coins in the Shop, under Furniture.`);
   }
 
   private played(toy: ToyId): void {
@@ -305,15 +372,16 @@ class Game implements Controller {
     return true;
   }
 
-  private flushed(): boolean {
-    const n = useToilet(this.state);
-    if (!n) return false;
-    const coins = n * TOILET_COINS;
-    this.scene.flushed(coins);
-    sfx.coin();
-    buzz.success();
+  /** He's on the toilet. What's left in it is your problem. */
+  private toileted(self: boolean): ToiletResult {
+    const s = this.state;
+    if (!s.urges.length) return 'nothing';
+    if (bowlFull(s)) return 'full';
+    if (!useToilet(s, self)) return 'nothing';
+    sfx.plop();
+    buzz.tap();
     this.changed();
-    return true;
+    return 'went';
   }
 
   private rested(id: 'bed' | 'chair' | 'pc'): void {
@@ -340,7 +408,7 @@ class Game implements Controller {
   }
 
   private vacuumed(i: number): void {
-    if (vacuumPoop(this.state, i)) this.cloudDirty = true;
+    if (vacuumTrash(this.state, i)) this.cloudDirty = true;
   }
 
   private sound(on: boolean): void {
@@ -383,13 +451,40 @@ class Game implements Controller {
     this.changed();
   }
 
-  scoopAll(): void {
-    this.state.poops.forEach((_, i) => this.scene.scoopFx(i));
-    const got = scoopAll(this.state);
+  /** The Care tab: every floor poop that fits goes in the toilet. */
+  cleanPoop(): void {
+    const s = this.state;
+    const room = Math.max(0, Math.min(s.poops.length, BOWL_MAX - s.bowl));
+    for (let i = 0; i < room; i++) this.scene.dumpFx(i);
+    const n = dumpAll(s);
+    if (!n) {
+      if (s.poops.length) this.ui.toast('The toilet is full. Flush it first.');
+      return;
+    }
+    buzz.tap();
+    this.changed();
+  }
+
+  flush(): void {
+    this.scene.flushed(this.flushed());
+  }
+
+  tidyAll(): void {
+    const s = this.state;
+    s.trash.forEach((_, i) => this.scene.tidyFx(i));
+    const got = tidyAll(s);
     if (!got) return;
     sfx.coin();
     this.scene.popup(`+${got}`);
     this.changed();
+  }
+
+  buyFurniture(id: FurnitureId): void {
+    if (!buyFurniture(this.state, id)) return;
+    sfx.buy();
+    buzz.success();
+    this.ui.toast(`${FURNITURE_BY_ID[id].name} delivered to the unit.`);
+    this.changed(true);
   }
 
   /** The Care tab's buttons: you carry him there. */

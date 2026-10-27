@@ -1,36 +1,46 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BOWL_MAX,
+  FLUSH_COINS,
   FOOD_BY_ID,
   FIT_BY_ID,
+  FURNITURE,
+  FURNITURE_BY_ID,
   MAX_ORDERS,
   MAX_TEXTS,
   MEAT_PRICE,
   PLAY_COOLDOWN,
   REST,
   ROT_SECONDS,
-  SCOOP_COINS,
   SELF_ORDER_TIP,
   SHOWER_COOLDOWN,
   SHOWER_FRESH,
   START_COINS,
-  TOILET_COINS,
+  TIDY_COINS,
   TOY_BY_ID,
   URGE_SECONDS,
   VACUUM_SECONDS,
 } from '../../games/hammygotchi/src/defs';
 import {
+  addTrash,
   adopt,
+  bowlFull,
   buyFit,
+  buyFurniture,
   buyMeat,
   buyToy,
   buyUpgrade,
   canCall,
   declineCall,
   endCall,
+  dumpAll,
+  dumpPoop,
   feed,
+  flush,
   formFor,
   formOnDay,
   shower,
+  hasFurniture,
   isAlive,
   needWord,
   order,
@@ -38,13 +48,14 @@ import {
   play,
   rest,
   rotDone,
-  scoop,
   sendText,
   step,
   textOptions,
+  tidy,
+  tidyAll,
   unread,
   useToilet,
-  vacuumPoop,
+  vacuumTrash,
   wearFit,
 } from '../../games/hammygotchi/src/game';
 import { deserialize, newGame, serialize } from '../../games/hammygotchi/src/state';
@@ -105,7 +116,8 @@ describe('DoorDosh', () => {
     expect(s.gas).toBeGreaterThan(0);
     expect(s.poopDue).toHaveLength(FOOD_BY_ID.burrito.poops);
     step(s, T0 + sec(20 + 600), half);
-    expect(s.poops).toHaveLength(2);
+    // In the toilet (he went himself) or on the floor.
+    expect(s.poops.length + s.bowl).toBe(2);
     expect(s.poopDue).toHaveLength(0);
   });
   it('no more than a few orders at once, and never without the coins', () => {
@@ -140,15 +152,57 @@ describe('DoorDosh', () => {
 });
 
 describe('cleaning up', () => {
-  it('scooping poop pays coins and freshens the tank', () => {
+  it('floor poop goes in the toilet, and flushing it pays', () => {
     const s = newGame(T0);
     s.poops = [{ x: 0.2, up: false }, { x: 0.5, up: true }];
     s.fresh = 50;
-    expect(scoop(s, 1)).toBe(SCOOP_COINS);
+    expect(dumpPoop(s, 1)).toBe(true);
     expect(s.poops).toEqual([{ x: 0.2, up: false }]);
-    expect(s.coins).toBe(START_COINS + SCOOP_COINS);
+    expect(s.bowl).toBe(1);
+    expect(s.coins).toBe(START_COINS);
     expect(s.fresh).toBeGreaterThan(50);
-    expect(scoop(s, 5)).toBe(0);
+    expect(dumpPoop(s, 5)).toBe(false);
+    expect(flush(s)).toBe(1);
+    expect(s.bowl).toBe(0);
+    expect(s.coins).toBe(START_COINS + FLUSH_COINS);
+    expect(flush(s)).toBe(0);
+    expect(s.coins).toBe(START_COINS + FLUSH_COINS);
+  });
+  it('the toilet clogs: nothing more goes in until you flush', () => {
+    const s = newGame(T0);
+    s.poops = Array.from({ length: BOWL_MAX + 2 }, (_, i) => ({ x: i / 10, up: false }));
+    expect(dumpAll(s)).toBe(BOWL_MAX);
+    expect(bowlFull(s)).toBe(true);
+    expect(s.poops).toHaveLength(2);
+    expect(dumpPoop(s, 0)).toBe(false);
+    flush(s);
+    expect(dumpAll(s)).toBe(2);
+    expect(s.poops).toHaveLength(0);
+  });
+  it('he leaves trash around; picking it up pays a coin', () => {
+    const s = newGame(T0);
+    expect(addTrash(s, 'sock', 0.4, false)).toBe(true);
+    expect(addTrash(s, 'can', 0.6, true)).toBe(true);
+    expect(s.stats.littered).toBe(2);
+    expect(tidy(s, 1)).toBe(TIDY_COINS);
+    expect(s.trash).toEqual([{ x: 0.4, up: false, kind: 'sock' }]);
+    expect(tidy(s, 3)).toBe(0);
+    expect(tidyAll(s)).toBe(TIDY_COINS);
+    expect(s.trash).toHaveLength(0);
+    expect(s.stats.tidied).toBe(2);
+    for (let i = 0; i < 40; i++) addTrash(s, 'tissue', 0.5, false);
+    expect(s.trash.length).toBeLessThan(40);
+  });
+  it('while you are away he leaves wrappers and socks lying around', () => {
+    const s = newGame(T0);
+    s.belly = 100;
+    s.mood = 100;
+    s.coins = 100;
+    order(s, 'pizza', T0, half);
+    const { away } = step(s, T0 + hours(8), half);
+    expect(s.trash.some((t) => t.kind === 'pizza')).toBe(true);
+    expect(s.trash.length).toBeGreaterThan(5);
+    expect(away!.littered).toBe(s.trash.length);
   });
   it('the shower cleans him, he grumbles, and it needs a minute', () => {
     const s = newGame(T0);
@@ -179,6 +233,16 @@ describe('cleaning up', () => {
     step(clean, T0 + hours(1), () => 0);
     step(dirty, T0 + hours(1), () => 0);
     expect(dirty.fresh).toBeLessThan(clean.fresh - 8);
+  });
+  it('so do an unflushed toilet and his trash', () => {
+    const clean = newGame(T0);
+    const bowl = newGame(T0);
+    const messy = newGame(T0);
+    bowl.bowl = BOWL_MAX;
+    for (let i = 0; i < 10; i++) addTrash(messy, 'chips', i / 10, false);
+    for (const s of [clean, bowl, messy]) step(s, T0 + sec(50 * 60), () => 0);
+    expect(bowl.fresh).toBeLessThan(clean.fresh - 4);
+    expect(messy.fresh).toBeLessThan(clean.fresh - 2);
   });
 });
 
@@ -316,6 +380,9 @@ describe('saves', () => {
     const s = newGame(T0);
     order(s, 'pizza', T0, half);
     s.poops = [{ x: 0.3, up: true }];
+    s.bowl = 2;
+    addTrash(s, 'foil', 0.7, false);
+    s.furniture = ['bed', 'chair'];
     buyFit(s, 'roadtrip');
     sendText(s, 'wyd', T0, half);
     expect(deserialize(serialize(s))).toEqual(s);
@@ -346,6 +413,23 @@ describe('saves', () => {
     expect(s.messages).toHaveLength(1);
     // Causes only mean something once he's dead.
     expect(s.causes).toEqual([]);
+  });
+  it('keep the furniture an older save already had', () => {
+    const raw = JSON.parse(serialize(newGame(T0)));
+    delete raw.furniture;
+    delete raw.trash;
+    delete raw.bowl;
+    const s = deserialize(JSON.stringify(raw))!;
+    expect(s.furniture).toEqual(FURNITURE.map((f) => f.id));
+    expect(s.trash).toEqual([]);
+    expect(s.bowl).toBe(0);
+    raw.furniture = ['bed', 'throne', 'bed'];
+    raw.trash = [{ x: 3, up: true, kind: 'can' }, { x: 0.5, kind: 'diamond' }, 'sock'];
+    raw.bowl = 99;
+    const t = deserialize(JSON.stringify(raw))!;
+    expect(t.furniture).toEqual(['bed']);
+    expect(t.trash).toEqual([{ x: 1, up: true, kind: 'can' }]);
+    expect(t.bowl).toBe(BOWL_MAX);
   });
 });
 
@@ -435,35 +519,73 @@ describe('the toilet', () => {
     expect(s.urges).toHaveLength(1);
     expect(s.poops).toHaveLength(0);
   });
-  it('put him on the toilet in time and nothing hits the floor', () => {
+  it('on the toilet in time and nothing hits the floor, but he never flushes', () => {
     const s = newGame(T0);
     s.poopDue = [T0 + sec(10)];
     step(s, T0 + sec(11), half);
     const coins = s.coins;
-    expect(useToilet(s)).toBe(1);
-    expect(s.coins).toBe(coins + TOILET_COINS);
+    expect(useToilet(s, true)).toBe(1);
+    expect(s.bowl).toBe(1);
+    expect(s.coins).toBe(coins);
     step(s, T0 + sec(10 + URGE_SECONDS + 5), half);
     expect(s.poops).toHaveLength(0);
     expect(s.stats.toilet).toBe(1);
+    expect(s.stats.selfToilet).toBe(1);
+    expect(flush(s)).toBe(1);
+    expect(s.coins).toBeCloseTo(coins + FLUSH_COINS, 0);
   });
   it('too late, and it ends up on the floor', () => {
     const s = newGame(T0);
     s.poopDue = [T0 + sec(10)];
     step(s, T0 + sec(11), half);
-    const { events } = step(s, T0 + sec(10 + URGE_SECONDS + 1), half);
+    // He couldn't be bothered.
+    const { events } = step(s, T0 + sec(10 + URGE_SECONDS + 1), () => 0.99);
     expect(events.some((e) => e.type === 'poop')).toBe(true);
     expect(s.poops).toHaveLength(1);
     expect(s.urges).toHaveLength(0);
   });
-  it('sitting there without needing to go does nothing', () => {
+  it('away, he usually walks there himself, until it is clogged', () => {
+    const s = newGame(T0);
+    s.poopDue = Array.from({ length: BOWL_MAX + 2 }, (_, i) => T0 + sec(10 + i));
+    step(s, T0 + sec(20), half);
+    step(s, T0 + sec(30 + URGE_SECONDS), half);
+    expect(s.bowl).toBe(BOWL_MAX);
+    expect(s.poops).toHaveLength(2);
+    expect(s.stats.selfToilet).toBe(BOWL_MAX);
+  });
+  it('sitting there without needing to go, or on a full toilet, does nothing', () => {
     const s = newGame(T0);
     expect(useToilet(s)).toBe(0);
+    s.urges = [T0 + sec(30)];
+    s.bowl = BOWL_MAX;
+    expect(useToilet(s)).toBe(0);
+    expect(s.urges).toHaveLength(1);
   });
 });
 
 describe('furniture', () => {
+  it('the unit comes with a toilet and a shower; the rest is bought, and stays', () => {
+    const s = newGame(T0);
+    expect(s.furniture).toEqual([]);
+    expect(hasFurniture(s, 'toilet')).toBe(true);
+    expect(hasFurniture(s, 'shower')).toBe(true);
+    expect(hasFurniture(s, 'bed')).toBe(false);
+    expect(rest(s, 'bed', T0)).toBeNull();
+    s.coins = FURNITURE_BY_ID.bed.price;
+    expect(buyFurniture(s, 'pc')).toBe(false);
+    expect(buyFurniture(s, 'bed')).toBe(true);
+    expect(s.coins).toBe(0);
+    expect(buyFurniture(s, 'bed')).toBe(false);
+    expect(hasFurniture(s, 'bed')).toBe(true);
+    s.belly = s.mood = s.fresh = 0;
+    s.health = 1;
+    step(s, T0 + hours(1), half);
+    adopt(s, T0 + hours(2));
+    expect(s.furniture).toEqual(['bed']);
+  });
   it('the bed lifts his mood, but only so far', () => {
     const s = newGame(T0);
+    s.furniture = ['bed'];
     s.mood = 30;
     expect(rest(s, 'bed', T0)).toEqual({ mood: REST.bed!.mood, coins: 0 });
     expect(rest(s, 'bed', T0 + 100)).toBeNull();
@@ -473,6 +595,7 @@ describe('furniture', () => {
   });
   it('at the PC his stream pays a coin now and then', () => {
     const s = newGame(T0);
+    s.furniture = ['pc'];
     s.mood = 40;
     const coins = s.coins;
     expect(rest(s, 'pc', T0)?.coins).toBe(1);
@@ -484,6 +607,8 @@ describe('furniture', () => {
 describe('cooking', () => {
   it('the fridge sells raw steak; cooked is much better than raw', () => {
     const s = newGame(T0);
+    expect(buyMeat(s)).toBe(false);
+    s.furniture = ['fridge'];
     expect(buyMeat(s)).toBe(true);
     expect(s.coins).toBe(START_COINS - MEAT_PRICE);
     const raw = newGame(T0);
@@ -499,30 +624,32 @@ describe('cooking', () => {
   it('only home food goes through feed, and not with an empty wallet', () => {
     const s = newGame(T0);
     expect(feed(s, 'pizza', T0, half)).toBe(false);
+    s.furniture = ['fridge'];
     s.coins = 1;
     expect(buyMeat(s)).toBe(false);
   });
 });
 
 describe('robot vacuums', () => {
-  it('eat floor poop while you are away', () => {
+  it('pick up his trash while you are away, but never poop', () => {
     const s = newGame(T0);
     s.coins = 1000;
     expect(buyUpgrade(s, 'vacuum')).toBe(true);
-    s.poops = [0.2, 0.4, 0.6].map((x) => ({ x, up: false }));
-    const { away } = step(s, T0 + sec(VACUUM_SECONDS * 4), half);
-    expect(s.poops).toHaveLength(0);
+    for (const x of [0.2, 0.4, 0.6]) addTrash(s, 'can', x, false);
+    s.poops = [{ x: 0.8, up: false }];
+    const { away } = step(s, T0 + sec(VACUUM_SECONDS * 3), half);
     expect(s.stats.vacuumed).toBe(3);
+    expect(s.poops).toHaveLength(1);
     // The welcome-back screen says so.
     expect(away?.vacuumed).toBe(3);
   });
-  it('and while you watch, when they drive into one', () => {
+  it('and while you watch, when they drive into some', () => {
     const s = newGame(T0);
-    s.poops = [{ x: 0.5, up: false }];
-    expect(vacuumPoop(s, 0)).toBe(false);
+    addTrash(s, 'chips', 0.5, false);
+    expect(vacuumTrash(s, 0)).toBe(false);
     s.upgrades.vacuum = 1;
-    expect(vacuumPoop(s, 0)).toBe(true);
-    expect(s.poops).toHaveLength(0);
+    expect(vacuumTrash(s, 0)).toBe(true);
+    expect(s.trash).toHaveLength(0);
   });
   it('have a level limit', () => {
     const s = newGame(T0);

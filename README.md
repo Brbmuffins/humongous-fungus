@@ -6,7 +6,7 @@ Three mobile games that share one codebase.
 |---|---|---|
 | **Humongous Fungus** | Idle game: you are a mycelium network growing a terrarium in real time, even while the game is closed | `games/fungus` |
 | **Sporemonger** | Trading game: buy and sell goods on a live market in a mushroom town, before they rot | `games/sporemonger` |
-| **Hammygotchi** | Virtual pet: keep Cube Hammy fed, showered, on the toilet and called in his containment unit, or he rots into mushrooms. Comes with a toy box and a kitchen; some days he's a meatball sub | `games/hammygotchi` |
+| **Hammygotchi** | Virtual pet: Cube Hammy lives like a Sim in his containment unit, badly. He never flushes and leaves his trash everywhere; keep him fed, showered, cleaned up after and called, and furnish the unit, or he rots into mushrooms. Comes with a toy box and a kitchen; some days he's a meatball sub | `games/hammygotchi` |
 
 ## Run it
 

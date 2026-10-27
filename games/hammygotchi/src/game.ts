@@ -6,6 +6,8 @@ import {
   AWAY_CALL_GAP_MIN,
   AWAY_CALL_GAP_RANGE,
   BELLY_PER_HOUR,
+  BOWL_MAX,
+  BOWL_STINK_PER_HOUR,
   CALL_COINS,
   CALL_COOLDOWN,
   CALL_GAP_MIN,
@@ -30,15 +32,21 @@ import {
   FART_STINK_PER_GAS,
   FIT_BY_ID,
   FLING_MOOD,
+  FLUSH_COINS,
+  FLUSH_FRESH,
   FOODS,
   FOOD_BY_ID,
   FORMS,
+  FURNITURE_BY_ID,
   FREE_UNREAD,
   FRESH_PER_HOUR,
   FUSS_COOLDOWN,
   HAMMY_TEXTS,
   HEALTH_DRAIN_PER_HOUR,
   HEALTH_REGEN_PER_HOUR,
+  LITTER,
+  LITTER_MIN,
+  LITTER_RANGE,
   LIVE_SECONDS,
   LONELY_PER_UNREAD,
   MAX_AWAY_SECONDS,
@@ -48,6 +56,7 @@ import {
   MAX_ORDERS,
   MAX_POOPS,
   MAX_TEXTS,
+  MAX_TRASH,
   MEAT_PRICE,
   MISSED_CALL_MOOD,
   MOOD_PER_HOUR,
@@ -61,12 +70,12 @@ import {
   REPLY_DELAY_RANGE,
   REST,
   ROT_SECONDS,
-  SCOOP_COINS,
   SCOOP_FRESH,
   SELF_ETA_MIN,
   SELF_ETA_RANGE,
   SELF_ORDER_BELOW,
   SELF_ORDER_TIP,
+  SELF_TOILET_CHANCE,
   SHOWER_COOLDOWN,
   SHOWER_FRESH,
   SHOWER_MOOD,
@@ -79,9 +88,11 @@ import {
   TEXT_MOOD,
   TEXT_OPTIONS,
   TEXT_REFILL_SECONDS,
-  TOILET_COINS,
+  TIDY_COINS,
+  TIDY_FRESH,
   TOILET_FRESH,
   TOY_BY_ID,
+  TRASH_STINK_PER_HOUR,
   UPGRADE_BY_ID,
   URGE_SECONDS,
   VACUUM_SECONDS,
@@ -90,10 +101,12 @@ import {
   type FitId,
   type FoodId,
   type FormId,
+  type FurnitureId,
   type Need,
   type SpotId,
   type TextOption,
   type ToyId,
+  type TrashKind,
   type UpgradeId,
 } from './defs';
 import { rngStep } from '@shared/rng';
@@ -142,6 +155,12 @@ export function deadFor(s: HammyState, now: number): number | null {
 
 export const rotDone = (s: HammyState, now: number): boolean => (deadFor(s, now) ?? 0) >= ROT_SECONDS;
 
+/** The unit came with a toilet and a shower; the rest has to be bought. */
+export const hasFurniture = (s: HammyState, id: FurnitureId | SpotId): boolean => id === 'toilet' || id === 'shower' || s.furniture.includes(id as FurnitureId);
+
+/** Too much in the toilet: it takes nothing more until you flush. */
+export const bowlFull = (s: HammyState): boolean => s.bowl >= BOWL_MAX;
+
 // ---------------------------------------------------------------------------
 // Time
 
@@ -149,7 +168,8 @@ export type HammyEvent =
   | { type: 'fart'; size: number }
   | { type: 'poop' }
   | { type: 'urge' }
-  | { type: 'delivery'; food: FoodId; self: boolean }
+  /** `live` when you saw it land: then the scene drops the wrapper where he eats it. */
+  | { type: 'delivery'; food: FoodId; self: boolean; live: boolean }
   | { type: 'selfOrder'; food: FoodId; cost: number }
   | { type: 'text'; text: string }
   | { type: 'ring' }
@@ -160,7 +180,12 @@ export interface AwayReport {
   elapsed: number;
   farts: number;
   poops: number;
-  /** Poops the robot vacuums ate. */
+  /** Trips to the toilet he made by himself (and didn't flush). */
+  selfToilet: number;
+  /** What's in the bowl now. */
+  bowl: number;
+  /** Trash he left lying around, and how much of it the robot vacuums got. */
+  littered: number;
   vacuumed: number;
   meals: number;
   texts: number;
@@ -222,6 +247,9 @@ function hammyText(s: HammyState, roll: Roll): string {
   if (s.mood < 30) moods.push('sad');
   if (s.poops.length >= 3) moods.push('poopy');
   if (s.urges.length) moods.push('urge');
+  if (s.bowl >= 2) moods.push('bowl');
+  if (s.trash.length >= 5) moods.push('messy');
+  if (s.furniture.length === 0) moods.push('bare');
   const pool = moods.length && roll() < 0.75 ? HAMMY_TEXTS[pick(moods, roll)] : HAMMY_TEXTS.any;
   const last = [...s.messages].reverse().find((m) => m.from === 'hammy')?.text;
   const fresh = pool.filter((t) => t !== last);
@@ -246,6 +274,20 @@ function selfOrder(s: HammyState, at: number, roll: Roll): HammyEvent | null {
   return { type: 'selfOrder', food: f.id, cost };
 }
 
+/** Drop a piece of trash on the floor. Returns false when the floors can't take any more. */
+export function addTrash(s: HammyState, kind: TrashKind, x: number, up: boolean): boolean {
+  if (!isAlive(s) || s.trash.length >= MAX_TRASH) return false;
+  s.trash.push({ x: Math.min(1, Math.max(0, x)), up, kind });
+  s.stats.littered += 1;
+  return true;
+}
+
+/** Somewhere he'd plausibly leave it: the loft if he has a bed or a PC up there. */
+function strew(s: HammyState, kind: TrashKind, roll: Roll): void {
+  const loft = hasFurniture(s, 'bed') || hasFurniture(s, 'pc');
+  addTrash(s, kind, 0.05 + roll() * 0.9, loft && roll() < 0.4);
+}
+
 function tick(s: HammyState, from: number, to: number, live: boolean, roll: Roll, events: HammyEvent[]): void {
   const dt = (to - from) / 1000;
   const h = dt / 3600;
@@ -256,7 +298,9 @@ function tick(s: HammyState, from: number, to: number, live: boolean, roll: Roll
     s.orders = s.orders.filter((o) => o.arriveAt > to);
     for (const o of due) {
       eat(s, o.food, o.arriveAt, roll);
-      events.push({ type: 'delivery', food: o.food, self: o.self });
+      // Watching, you see where he leaves the wrapper; away, it's wherever.
+      if (!live) strew(s, FOOD_BY_ID[o.food].trash, roll);
+      events.push({ type: 'delivery', food: o.food, self: o.self, live });
       // Only one thing on the menu can kill him on its own.
       if (s.health <= 0) {
         die(s, o.arriveAt, ['sushi']);
@@ -276,22 +320,37 @@ function tick(s: HammyState, from: number, to: number, live: boolean, roll: Roll
     const due = s.urges.filter((t) => t <= to);
     s.urges = s.urges.filter((t) => t > to);
     for (let i = 0; i < due.length; i++) {
+      // While you watch, the scene walks him there himself. Away, he usually
+      // goes too, and doesn't flush, until it's full.
+      if (!live && !bowlFull(s) && roll() < SELF_TOILET_CHANCE) {
+        s.bowl += 1;
+        s.fresh = clamp(s.fresh + TOILET_FRESH);
+        s.stats.toilet += 1;
+        s.stats.selfToilet += 1;
+        continue;
+      }
       if (s.poops.length >= MAX_POOPS) break;
       s.poops.push({ x: 0.12 + roll() * 0.76, up: false });
       events.push({ type: 'poop' });
     }
   }
-  // Robot vacuums. While you watch, they drive to the poop themselves.
+  // Away, he leaves things lying around. Watching, you see him do it.
+  if (!live && to >= s.litterAt) {
+    strew(s, pick(LITTER, roll), roll);
+    s.litterAt = to + (LITTER_MIN + roll() * LITTER_RANGE) * 1000;
+  }
+  // Robot vacuums pick up trash. While you watch, they drive to it themselves.
   const vacuums = s.upgrades.vacuum;
-  if (!live && vacuums > 0 && s.poops.length && to >= s.vacuumAt) {
+  if (!live && vacuums > 0 && s.trash.length && to >= s.vacuumAt) {
     s.vacuumAt = to + (VACUUM_SECONDS * 1000) / vacuums;
-    s.poops.shift();
+    s.trash.shift();
     s.stats.vacuumed += 1;
   }
 
   // Needs drain.
   s.belly = clamp(s.belly - BELLY_PER_HOUR * h);
-  s.fresh = clamp(s.fresh - (FRESH_PER_HOUR + POOP_STINK_PER_HOUR * s.poops.length) * h);
+  const mess = POOP_STINK_PER_HOUR * s.poops.length + BOWL_STINK_PER_HOUR * s.bowl + TRASH_STINK_PER_HOUR * s.trash.length;
+  s.fresh = clamp(s.fresh - (FRESH_PER_HOUR + mess) * h);
   const lonely = Math.min(MAX_LONELY, LONELY_PER_UNREAD * Math.max(0, unread(s, to) - FREE_UNREAD));
   s.mood = clamp(s.mood - (MOOD_PER_HOUR + lonely) * h);
 
@@ -372,6 +431,9 @@ export function step(s: HammyState, now: number, roll: Roll = Math.random): Step
       elapsed: gap,
       farts: s.stats.farts - stats.farts,
       poops: count('poop'),
+      selfToilet: s.stats.selfToilet - stats.selfToilet,
+      bowl: s.bowl,
+      littered: s.stats.littered - stats.littered,
       vacuumed: s.stats.vacuumed - stats.vacuumed,
       meals: s.stats.meals - stats.meals,
       texts: count('text'),
@@ -408,19 +470,54 @@ export function order(s: HammyState, id: FoodId, now: number, roll: Roll = Math.
   return true;
 }
 
-/** Pick up one poop. Returns coins found (there are always coins). */
-export function scoop(s: HammyState, index: number): number {
-  if (!isAlive(s) || index < 0 || index >= s.poops.length) return 0;
+/** A floor poop goes in the toilet. False if it's clogged: flush first. */
+export function dumpPoop(s: HammyState, index: number): boolean {
+  if (!isAlive(s) || index < 0 || index >= s.poops.length || bowlFull(s)) return false;
   s.poops.splice(index, 1);
-  s.coins += SCOOP_COINS;
+  s.bowl += 1;
   s.fresh = clamp(s.fresh + SCOOP_FRESH);
   s.stats.scooped += 1;
-  return SCOOP_COINS;
+  return true;
 }
 
-export function scoopAll(s: HammyState): number {
+/** As many floor poops as the toilet takes. Returns how many went in. */
+export function dumpAll(s: HammyState): number {
+  let n = 0;
+  while (s.poops.length && dumpPoop(s, 0)) n += 1;
+  return n;
+}
+
+/** You moved a poop somewhere else. Why. */
+export function movePoop(s: HammyState, index: number, x: number, up: boolean): boolean {
+  if (!isAlive(s) || index < 0 || index >= s.poops.length) return false;
+  s.poops[index] = { x: Math.min(1, Math.max(0, x)), up };
+  return true;
+}
+
+/** Somebody has to. Returns how many loads went down (the coins are FLUSH_COINS each). */
+export function flush(s: HammyState): number {
+  if (!isAlive(s)) return 0;
+  const n = s.bowl;
+  s.bowl = 0;
+  s.coins += n * FLUSH_COINS;
+  s.fresh = clamp(s.fresh + n * FLUSH_FRESH);
+  s.stats.flushed += n;
+  return n;
+}
+
+/** Throw one piece of his trash down the chute. Returns the coins (one; he drops change). */
+export function tidy(s: HammyState, index: number): number {
+  if (!isAlive(s) || index < 0 || index >= s.trash.length) return 0;
+  s.trash.splice(index, 1);
+  s.coins += TIDY_COINS;
+  s.fresh = clamp(s.fresh + TIDY_FRESH);
+  s.stats.tidied += 1;
+  return TIDY_COINS;
+}
+
+export function tidyAll(s: HammyState): number {
   let got = 0;
-  while (s.poops.length && isAlive(s)) got += scoop(s, 0);
+  while (s.trash.length && isAlive(s)) got += tidy(s, 0);
   return got;
 }
 
@@ -437,14 +534,19 @@ export function shower(s: HammyState, now: number): boolean {
   return true;
 }
 
-/** Sat on the toilet. Returns how many he got out (0 if he didn't need to go). */
-export function useToilet(s: HammyState): number {
+/**
+ * Sat on the toilet. Returns how many he got out: 0 if he didn't need to go
+ * or the bowl is full. It stays in the bowl: he doesn't flush.
+ */
+export function useToilet(s: HammyState, self = false): number {
   if (!isAlive(s) || s.urges.length === 0) return 0;
-  const n = s.urges.length;
-  s.urges = [];
-  s.coins += n * TOILET_COINS;
+  const n = Math.min(s.urges.length, BOWL_MAX - s.bowl);
+  if (n <= 0) return 0;
+  s.urges.splice(0, n);
+  s.bowl += n;
   s.fresh = clamp(s.fresh + n * TOILET_FRESH);
   s.stats.toilet += n;
+  if (self) s.stats.selfToilet += n;
   return n;
 }
 
@@ -455,7 +557,7 @@ export function useToilet(s: HammyState): number {
  */
 export function rest(s: HammyState, spot: SpotId, now: number): { mood: number; coins: number } | null {
   const r = REST[spot];
-  if (!r || !isAlive(s) || now < s.restReadyAt) return null;
+  if (!r || !isAlive(s) || !hasFurniture(s, spot) || now < s.restReadyAt) return null;
   s.restReadyAt = now + r.every * 1000;
   const mood = Math.max(0, Math.min(r.mood, r.cap - s.mood));
   s.mood = clamp(s.mood + mood);
@@ -470,7 +572,7 @@ export function rest(s: HammyState, spot: SpotId, now: number): { mood: number; 
 
 /** A raw steak out of the fridge. */
 export function buyMeat(s: HammyState): boolean {
-  if (!isAlive(s) || s.coins < MEAT_PRICE) return false;
+  if (!isAlive(s) || !hasFurniture(s, 'fridge') || s.coins < MEAT_PRICE) return false;
   s.coins -= MEAT_PRICE;
   return true;
 }
@@ -484,11 +586,19 @@ export function feed(s: HammyState, id: FoodId, now: number, roll: Roll = Math.r
   return true;
 }
 
-/** A robot vacuum got to a poop while you were watching. */
-export function vacuumPoop(s: HammyState, index: number): boolean {
-  if (!isAlive(s) || s.upgrades.vacuum === 0 || index < 0 || index >= s.poops.length) return false;
-  s.poops.splice(index, 1);
+/** A robot vacuum got to a piece of trash while you were watching. */
+export function vacuumTrash(s: HammyState, index: number): boolean {
+  if (!isAlive(s) || s.upgrades.vacuum === 0 || index < 0 || index >= s.trash.length) return false;
+  s.trash.splice(index, 1);
   s.stats.vacuumed += 1;
+  return true;
+}
+
+export function buyFurniture(s: HammyState, id: FurnitureId): boolean {
+  const f = FURNITURE_BY_ID[id];
+  if (!f || s.furniture.includes(id) || s.coins < f.price) return false;
+  s.coins -= f.price;
+  s.furniture.push(id);
   return true;
 }
 
@@ -713,8 +823,8 @@ export function formFor(s: HammyState, now: number): FormId {
 // Death
 
 /**
- * Bury him and get a new Hammy. Fits stay yours; coins start over (he spent
- * most of them anyway).
+ * Bury him and get a new Hammy. Fits, toys and furniture stay yours; coins
+ * start over (he spent most of them anyway), and the unit gets hosed out.
  */
 export function adopt(s: HammyState, now: number): boolean {
   if (s.diedAt === null) return false;

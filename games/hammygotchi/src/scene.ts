@@ -1,17 +1,23 @@
-// The containment unit, live: Hammy, his poop, his food and his stuff, on two
-// floors. Hammy has physics (badly): grab him and throw him, drop him in the
-// shower or on the toilet, put him to bed or at his PC. He's lazy, so he
-// won't go to the toilet or shower by himself, and he won't fetch food from
-// the other floor. The fridge hands out raw steak; drag it onto the oven to
-// cook it. The toy bar works here too. Every few minutes gravity stops working
-// properly. When he dies he rots right here, sprouts mushrooms, and leaves a
-// skeleton.
+// The containment unit, live: Hammy, his poop, his trash, his food and his
+// stuff, on two floors. Hammy has physics (badly): grab him and throw him,
+// drop him in the shower or on the toilet, put him to bed or at his PC. He
+// lives like a Sim: he wanders to his furniture, usually walks to the toilet
+// when he has to go (and never flushes), raids the fridge, and leaves his
+// trash wherever he finishes with it. He won't shower, and he won't fetch
+// food from the other floor. Drag his floor poop into the toilet and tap it to
+// flush; tap trash to throw it down the chute. The fridge hands out raw steak;
+// drag it onto the oven to cook it. The toy bar works here too. Every few
+// minutes gravity stops working properly. When he dies he rots right here,
+// sprouts mushrooms, and leaves a skeleton.
 import { mulberry32 } from '@shared/rng';
 import {
+  BOWL_MAX,
   BURN_SECONDS,
   COOK_SECONDS,
+  FLUSH_COINS,
   FOOD_BY_ID,
   FORM_BY_ID,
+  FURNITURE_BY_ID,
   LEAVE_BELOW,
   PINCH_BELOW,
   ROAD_TRIP,
@@ -21,16 +27,22 @@ import {
   SCIENTIST_LINES,
   SCIENTIST_NEAR,
   SCIENTIST_TAP,
+  SELF_TOILET_CHANCE,
   type FitId,
   type FoodId,
   type FormId,
+  type FurnitureId,
   type SpotId,
   type ToyId,
+  type TrashKind,
 } from './defs';
 import { EXTENTS, HEADS, drawHammy, drawSkeleton, defaultLook, type Face, type Look } from './hammy';
 import {
   DUVET,
   LOFT_SLAB,
+  chuteOf,
+  drawBowl,
+  drawChuteFlap,
   drawFridge,
   drawGlass,
   drawMonitor,
@@ -39,6 +51,7 @@ import {
   drawPlant,
   drawScientist,
   drawSteak,
+  drawTrash,
   drawVacuum,
   drawWallLife,
   layoutRoom,
@@ -50,12 +63,13 @@ import {
   type Room,
 } from './room';
 import { sfx } from './sound';
-import type { Poop } from './state';
+import type { Poop, Trash } from './state';
 import { drawToy } from './toys';
 import { speak } from './voice';
 
 export type HomeFood = 'rawsteak' | 'steak' | 'burnt';
 type RestSpot = 'bed' | 'chair' | 'pc';
+export type ToiletResult = 'went' | 'nothing' | 'full';
 
 export interface SceneView {
   now: number;
@@ -67,6 +81,12 @@ export interface SceneView {
   mood: number;
   health: number;
   poops: readonly Poop[];
+  /** What he left lying around. */
+  trash: readonly Trash[];
+  /** Loads in the toilet nobody flushed. */
+  bowl: number;
+  /** Furniture he has (the toilet and shower come with the unit). */
+  furniture: readonly FurnitureId[];
   orders: readonly { food: FoodId; arriveAt: number; self: boolean }[];
   /** He needs to go. */
   urge: boolean;
@@ -79,17 +99,31 @@ export interface SceneView {
 export interface SceneHandlers {
   pet(): void;
   fling(speed: number): void;
-  scoop(index: number): void;
+  /** A floor poop was dropped in the toilet. False if it's clogged. */
+  dump(index: number): boolean;
+  /** A floor poop was dropped somewhere else. */
+  movePoop(index: number, at: Poop): void;
+  /** A piece of trash went down the chute. Returns the coins. */
+  tidy(index: number): number;
+  /** The toilet was tapped. Returns how many loads went down. */
+  flush(): number;
+  /** He left something lying around. */
+  litter(kind: TrashKind, at: Poop): void;
   /** A toy got him. The rules decide whether it counts. */
   play(toy: ToyId): void;
-  /** He's in the shower or on the toilet. Returns whether anything came of it. */
-  spot(id: 'shower' | 'toilet'): boolean;
+  /** He's in the shower. Returns whether it did anything. */
+  shower(): boolean;
+  /** He's on the toilet; `self` if he walked there himself. */
+  toilet(self: boolean): ToiletResult;
   /** He's lying on the bed, sitting in his chair or gaming (every frame). */
   rest(id: RestSpot): void;
-  /** The fridge was tapped. Returns whether a steak came out. */
+  /** The fridge was opened. Returns whether a steak came out. */
   fridge(): boolean;
   eat(kind: HomeFood): void;
+  /** A robot vacuum got to a piece of trash. */
   vacuum(index: number): void;
+  /** An empty spot was tapped: furniture for sale. */
+  shop(id: FurnitureId): void;
 }
 
 interface Puff {
@@ -128,6 +162,8 @@ interface Thing {
 
 interface Bag extends Thing {
   food: FoodId;
+  /** He drops the wrapper where he eats it (unless the rules already put it somewhere). */
+  litter: boolean;
 }
 
 interface Food extends Thing {
@@ -161,6 +197,22 @@ interface Vacuum {
   dir: number;
   /** Backing away from him. */
   shy?: boolean;
+  /** Turned around at a poop: wanders for a bit before trying again. */
+  blockedUntil?: number;
+  beepAt?: number;
+}
+
+/** Trash on its way down the chute, or a poop on its way into the toilet. */
+interface Toss {
+  what: TrashKind | 'poop';
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  born: number;
+  ms: number;
+  /** Already counted by the rules; this is just the show. */
+  done?: () => void;
 }
 
 /** His habits: he does one every so often, wherever he is. */
@@ -223,7 +275,12 @@ export class TankScene {
   /** Where he's headed once he's up the ladder. */
   private climbTo: RestSpot | null = null;
   /** The furniture he's walking over to, if any. */
-  private walkTo: RestSpot | null = null;
+  private walkTo: SpotId | 'fridge' | null = null;
+  /** This time he'll walk to the toilet himself (most times he does). */
+  private selfGo = false;
+  /** He went, and didn't flush: he says so on the way out. */
+  private noFlush = false;
+  private nextRaidAt = 0;
   /** Furniture he's using right now. */
   private at: { id: SpotId; until: number; since: number } | null = null;
   private blinkAt = 0;
@@ -267,8 +324,13 @@ export class TankScene {
   private flash = 0;
 
   // The unit.
+  private furnished = '\u0000';
   private foods: Food[] = [];
   private heldFood: Food | null = null;
+  /** A poop in your hand, on its way to the toilet (hopefully). */
+  private heldPoop: { ref: Poop; x: number; y: number } | null = null;
+  private tosses: Toss[] = [];
+  private chuteOpenUntil = 0;
   private fridgeOpenUntil = 0;
   private nextAlarm = 0;
   private vacs: Vacuum[] = [];
@@ -306,6 +368,7 @@ export class TankScene {
     this.nextLineAt = performance.now() + 4000;
     this.nextGlitchAt = performance.now() + 90_000 + Math.random() * 90_000;
     this.nextHabitAt = performance.now() + 7000 + Math.random() * 6000;
+    this.nextRaidAt = performance.now() + 60_000;
     try {
       this.metMoss = localStorage.getItem(MET_MOSS) === '1';
     } catch {
@@ -344,7 +407,13 @@ export class TankScene {
   private paintBase(): void {
     const c = this.base.getContext('2d')!;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    paintRoom(c, this.room, this.night);
+    paintRoom(c, this.room, this.night, (id) => this.has(id));
+  }
+
+  /** Bought furniture; the toilet and shower always come with the unit. */
+  private has(id: FurnitureId | SpotId): boolean {
+    if (id === 'toilet' || id === 'shower') return true;
+    return this.view?.furniture.includes(id) ?? false;
   }
 
   get r(): number {
@@ -363,6 +432,15 @@ export class TankScene {
     }
     if (v.poops.length < this.lastPoops) this.poopBorn.clear();
     this.lastPoops = v.poops.length;
+    // New furniture: repaint the unit, and make an entrance.
+    const key = v.furniture.join();
+    if (key !== this.furnished) {
+      this.furnished = key;
+      this.paintBase();
+      if (prev) for (const id of v.furniture) if (!prev.furniture.includes(id)) this.furnish(id);
+    }
+    if (!prev && v.urge) this.selfGo = Math.random() < SELF_TOILET_CHANCE;
+    if (this.heldPoop && !v.poops.includes(this.heldPoop.ref)) this.heldPoop = null;
     // Robot vacuums: one downstairs, the second on the loft.
     while (this.vacs.length < Math.min(2, v.vacuums)) {
       const up = this.vacs.length === 1;
@@ -373,17 +451,27 @@ export class TankScene {
 
   /** Where he'd drop a poop right now: behind him, on whichever floor he's on. */
   buttPos(): Poop {
-    const m = this.room;
-    const bx = this.x - this.facing * this.size().hw * 0.7;
-    const end = this.up ? m.loftEnd : m.R;
-    return { x: Math.min(0.98, Math.max(0.02, (bx - m.L) / (end - m.L))), up: this.up };
+    return this.frac(this.x - this.facing * this.size().hw * 0.7, this.up);
   }
 
+  /** Where something on the floor is drawn: poop and trash alike. */
   private poopPos(p: Poop): { x: number; y: number } {
     const m = this.room;
     const end = p.up ? m.loftEnd : m.R;
     const pad = this.r * 0.4;
     return { x: m.L + pad + p.x * (end - m.L - pad * 2), y: p.up ? m.loft : m.ground };
+  }
+
+  /** The other way: a spot on a floor, from x on screen. */
+  private frac(x: number, up: boolean): Poop {
+    const m = this.room;
+    const end = up ? m.loftEnd : m.R;
+    const pad = this.r * 0.4;
+    return { x: Math.min(1, Math.max(0, (x - m.L - pad) / Math.max(1, end - m.L - pad * 2))), up };
+  }
+
+  private trashR(): number {
+    return Math.max(9, this.r * 0.55);
   }
 
   // -------------------------------------------------------------------------
@@ -452,7 +540,7 @@ export class TankScene {
     const up = x < m.loftEnd && y < m.loft + LOFT_SLAB;
     const top = up ? m.T : x < m.loftEnd ? m.loft + LOFT_SLAB : m.T;
     for (const id of ['shower', 'toilet', 'chair', 'bed', 'pc'] as const) {
-      if (this.spotUp(id) !== up) continue;
+      if (this.spotUp(id) !== up || !this.has(id)) continue;
       const b = this.spotBox(id);
       if (x >= b.x0 - 4 && x <= b.x1 + 4 && y >= top && y <= b.y1) return id;
     }
@@ -538,13 +626,24 @@ export class TankScene {
     this.sayKind(Math.random() < 0.6 ? 'floorPoop' : 'poop');
   }
 
-  /** He needs to go. He won't walk there himself. */
-  urge(): void {
-    this.nextUrgeLine = this.t + 9000;
-    this.sayKind('urge', 2400);
+  /**
+   * He needs to go. Most times he walks there himself; returns whether he's
+   * going to (false: he's waiting for you to carry him).
+   */
+  urge(full: boolean): boolean {
+    this.selfGo = Math.random() < SELF_TOILET_CHANCE;
+    this.urgeLine(full);
+    return this.selfGo && !full;
   }
 
-  deliver(food: FoodId): void {
+  private urgeLine(full: boolean): void {
+    this.nextUrgeLine = this.t + 9000;
+    if (full) this.sayKind('full', 2400);
+    else if (this.selfGo) this.say(pick(['Brb.', 'Toilet. Now.', 'Gotta go.', 'Nobody follow me.']), 1800);
+    else this.sayKind('urge', 2400);
+  }
+
+  deliver(food: FoodId, litter = true): void {
     const m = this.room;
     const G = this.H * 3.2;
     // Through the hatch: onto the loft if he's up there, down the stairwell if not.
@@ -553,7 +652,7 @@ export class TankScene {
       const target = Math.min(m.loftEnd - 20, Math.max(m.L + 20, this.x));
       vx = (target - m.hatchX) / Math.sqrt((2 * (m.loft - m.T)) / G);
     }
-    this.bags.push({ x: m.hatchX, y: m.T + 6, vx, vy: 0, food, landed: false });
+    this.bags.push({ x: m.hatchX, y: m.T + 6, vx, vy: 0, food, landed: false, litter });
     if (food === 'salad') this.sayKind('salad');
     else if (food === 'sushi') this.sayKind('sushi');
     else this.sayKind('food');
@@ -567,23 +666,74 @@ export class TankScene {
     this.enter(id);
   }
 
-  scoopFx(index: number): void {
+  /** The Care tab's clean-up: the poop sails into the toilet. Call before the rules remove it. */
+  dumpFx(index: number): void {
     const v = this.view;
     if (!v || index >= v.poops.length) return;
     const p = this.poopPos(v.poops[index]);
-    this.flying.push({ x: p.x, y: p.y - this.r * 0.2, vx: (Math.random() - 0.5) * 200, vy: -420, born: this.t });
+    const seat = toiletSeat(this.room.toilet);
+    this.tosses.push({ what: 'poop', x0: p.x, y0: p.y - this.r * 0.2, x1: seat.x, y1: seat.y, born: this.t + index * 120, ms: 650, done: () => this.plunked() });
+  }
+
+  /** The Care tab's tidy-up, one piece at a time. Call before the rules remove it. */
+  tidyFx(index: number): void {
+    const v = this.view;
+    if (!v || index >= v.trash.length) return;
+    this.toChute(v.trash[index].kind, this.poopPos(v.trash[index]), index * 90);
+  }
+
+  private toChute(what: TrashKind, from: { x: number; y: number }, delay = 0): void {
+    const ch = chuteOf(this.room);
+    this.tosses.push({
+      what,
+      x0: from.x,
+      y0: from.y - this.trashR() * 0.4,
+      x1: ch.x,
+      y1: ch.y,
+      born: this.t + delay,
+      ms: 700,
+      done: () => {
+        this.chuteOpenUntil = this.t + 260;
+        sfx.chute();
+      },
+    });
+  }
+
+  private plunked(): void {
+    const seat = toiletSeat(this.room.toilet);
+    sfx.plunk();
+    for (let i = 0; i < (this.calm ? 3 : 8); i++) {
+      const a = -Math.PI * (0.15 + Math.random() * 0.7);
+      this.puffs.push({ x: seat.x, y: seat.y, vx: Math.cos(a) * 70, vy: Math.sin(a) * 90, r: 1.5 + Math.random() * 1.5, born: this.t, life: 500, color: '#9fd6ff' });
+    }
+    this.popups.push({ x: seat.x, y: seat.y - this.r * 0.6, born: this.t, text: 'PLOP', color: '#ffe3b0' });
+  }
+
+  /** Furniture arrives, in a puff. */
+  private furnish(id: FurnitureId): void {
+    const b = this.room[id];
+    const cx = (b.x0 + b.x1) / 2;
+    const cy = (b.y0 + b.y1) / 2;
+    for (let i = 0; i < (this.calm ? 5 : 18); i++) {
+      const a = (i / 18) * TAU;
+      this.puffs.push({ x: cx, y: cy, vx: Math.cos(a) * 110, vy: Math.sin(a) * 70 - 20, r: this.r * 0.4, born: this.t, life: 1000, color: i % 2 ? '#e8dcff' : '#ffffff' });
+    }
+    this.popups.push({ x: cx, y: b.y0 - this.r * 0.4, born: this.t, text: FURNITURE_BY_ID[id].name.toUpperCase(), color: '#ffd34d' });
+    sfx.poof();
+    if (this.view?.deadFor === null) this.sayKind('furnish', 2200);
   }
 
   popup(text: string, color = '#ffd34d', x?: number, y?: number): void {
     this.popups.push({ x: x ?? this.x, y: y ?? this.y - this.r * 1.3, born: this.t, text, color });
   }
 
-  /** The toilet worked: swirl, flush, coins. */
-  flushed(coins: number): void {
+  /** Somebody flushed (it wasn't him): swirl, whoosh, and coins for each load. */
+  flushed(loads: number): void {
     this.flushAt = this.t;
     sfx.flush();
     const b = this.room.toilet;
-    this.popup(`+${coins}`, '#ffd34d', (b.x0 + b.x1) / 2, b.y0 - this.r * 1.6);
+    if (loads) this.popup(`+${loads * FLUSH_COINS}`, '#ffd34d', (b.x0 + b.x1) / 2, b.y0 - this.r * 1.6);
+    else this.popup('*flush*', '#9fd6ff', (b.x0 + b.x1) / 2, b.y0 - this.r * 1.6);
   }
 
   died(): void {
@@ -602,6 +752,8 @@ export class TankScene {
     this.crackers = [];
     this.foods = [];
     this.heldFood = null;
+    this.heldPoop = null;
+    this.tosses = [];
     sfx.sad();
   }
 
@@ -654,7 +806,7 @@ export class TankScene {
   // -------------------------------------------------------------------------
   // Furniture
 
-  private enter(id: SpotId): void {
+  private enter(id: SpotId, self = false): void {
     const a = this.anchor(id);
     this.x = a.x;
     this.y = a.y;
@@ -667,7 +819,7 @@ export class TankScene {
     this.climbTo = null;
     const now = this.t;
     if (id === 'shower') {
-      if (this.on.spot('shower')) {
+      if (this.on.shower()) {
         this.at = { id, since: now, until: now + 3200 };
         this.showerUntil = now + 3000;
         sfx.splash();
@@ -677,9 +829,16 @@ export class TankScene {
         this.say('Still wet. Get me out.', 1600);
       }
     } else if (id === 'toilet') {
-      const went = this.on.spot('toilet');
-      this.at = { id, since: now, until: now + (went ? 3000 : 1600) };
-      this.sayKind(went ? 'toilet' : 'noToilet', 1800);
+      const got = this.on.toilet(self);
+      this.at = { id, since: now, until: now + (got === 'went' ? 3000 : 1600) };
+      this.noFlush = got === 'went';
+      if (got === 'full') {
+        // He's not going to flush it either.
+        this.selfGo = false;
+        this.sayKind('full', 2200);
+      } else {
+        this.sayKind(got === 'went' ? 'toilet' : 'noToilet', 1800);
+      }
     } else {
       this.at = { id, since: now, until: now + 20_000 + Math.random() * 30_000 };
       this.facing = id === 'pc' ? 1 : this.facing;
@@ -687,7 +846,7 @@ export class TankScene {
     }
   }
 
-  /** Off the furniture with a little hop. */
+  /** Off the furniture with a little hop, leaving something behind. */
   private leave(): void {
     if (!this.at) return;
     const id = this.at.id;
@@ -697,6 +856,21 @@ export class TankScene {
     this.vx = (id === 'shower' || id === 'bed' ? 1 : -1) * this.H * 0.35;
     this.mode = 'idle';
     this.modeUntil = this.t + 1500;
+    if (id === 'toilet' && this.noFlush) {
+      this.noFlush = false;
+      if (Math.random() < 0.7) window.setTimeout(() => this.view?.deadFor === null && this.sayKind('noFlush', 1800), 350);
+      return;
+    }
+    // Gaming leaves cans, the chair leaves chips, the bed leaves socks and tissues.
+    const left: Partial<Record<SpotId, [TrashKind, number]>> = { pc: ['can', 0.45], chair: ['chips', 0.35], bed: [Math.random() < 0.5 ? 'sock' : 'tissue', 0.3] };
+    const drop = left[id];
+    if (drop && Math.random() < drop[1]) this.dropTrash(drop[0], this.x);
+  }
+
+  /** He's done with something: it stays where it falls. */
+  private dropTrash(kind: TrashKind, x: number): void {
+    this.on.litter(kind, this.frac(x, this.up));
+    if (!this.bubble && Math.random() < 0.3) window.setTimeout(() => this.view?.deadFor === null && !this.bubble && this.sayKind('litter', 1600), 500);
   }
 
   // -------------------------------------------------------------------------
@@ -783,14 +957,35 @@ export class TankScene {
         this.grounded = false;
         return;
       }
+      // His poop: pick it up (ew) and carry it to the toilet.
       for (let i = v.poops.length - 1; i >= 0; i--) {
         const pp = this.poopPos(v.poops[i]);
-        if (Math.hypot(p.x - pp.x, p.y - (pp.y - this.r * 0.2)) < this.r * 0.6) {
-          this.on.scoop(i);
+        if (Math.hypot(p.x - pp.x, p.y - (pp.y - this.r * 0.2)) < this.r * 0.7) {
+          this.heldPoop = { ref: v.poops[i], x: pp.x, y: pp.y - this.r * 0.2 };
+          startDrag(p, this.heldPoop.x - p.x, this.heldPoop.y - p.y);
+          capture();
+          if (!this.bubble && Math.random() < 0.3) this.sayKind('ew', 1500);
           return;
         }
       }
-      if (this.inBox(this.room.fridge, p.x, p.y, 4)) {
+      // His trash: straight down the chute.
+      for (let i = v.trash.length - 1; i >= 0; i--) {
+        const tp = this.poopPos(v.trash[i]);
+        if (Math.hypot(p.x - tp.x, p.y - (tp.y - this.trashR() * 0.4)) < Math.max(this.r * 0.6, 14)) {
+          const kind = v.trash[i].kind;
+          const coins = this.on.tidy(i);
+          if (!coins) return;
+          this.toChute(kind, tp);
+          this.popup(`+${coins}`, '#ffd34d', tp.x, tp.y - this.r * 0.8);
+          if (!this.bubble && Math.random() < 0.12) this.sayKind('tidy', 1500);
+          return;
+        }
+      }
+      if (this.onToilet(p.x, p.y)) {
+        this.flushed(this.on.flush());
+        return;
+      }
+      if (this.has('fridge') && this.inBox(this.room.fridge, p.x, p.y, 4)) {
         this.openFridge();
         return;
       }
@@ -798,6 +993,13 @@ export class TankScene {
         if (this.scientistGone) this.say(pick(['She left. Can’t imagine why.', 'Dr. Moss went home.', 'More room for me.']), 1800);
         else this.scientistBubble = { text: pick(SCIENTIST_TAP), born: this.t, ms: 2800 };
         return;
+      }
+      // An empty spot: what goes there is in the shop.
+      for (const id of ['chair', 'fridge', 'oven', 'bed', 'plant', 'pc'] as const) {
+        if (!this.has(id) && this.inBox(this.room[id], p.x, p.y, 2)) {
+          this.on.shop(id);
+          return;
+        }
       }
       // Knocking on the glass: he looks over.
       this.facing = p.x > this.x ? 1 : -1;
@@ -811,7 +1013,7 @@ export class TankScene {
         this.feather.y = p.y;
       }
       if (this.magnet) this.magnet = p;
-      if (!this.held && !this.heldBall && !this.heldFood) return;
+      if (!this.held && !this.heldBall && !this.heldFood && !this.heldPoop) return;
       this.grab.moved += Math.hypot(p.x - this.grab.px, p.y - this.grab.py);
       this.grab.px = p.x;
       this.grab.py = p.y;
@@ -838,6 +1040,10 @@ export class TankScene {
         this.heldBall = null;
         return;
       }
+      if (this.heldPoop) {
+        this.dropPoop();
+        return;
+      }
       if (this.heldFood) {
         const f = this.heldFood;
         f.held = false;
@@ -845,7 +1051,7 @@ export class TankScene {
         const o = this.room.oven;
         const pan = panSpot(o);
         // Dropped on the stove: into the pan, if it's free.
-        if (f.x >= o.x0 - 8 && f.x <= o.x1 + 8 && f.y >= o.y0 - (o.y1 - o.y0) * 1.2 && f.y <= o.y1 && !this.foods.some((x) => x !== f && x.panAt !== null)) {
+        if (this.has('oven') && f.x >= o.x0 - 8 && f.x <= o.x1 + 8 && f.y >= o.y0 - (o.y1 - o.y0) * 1.2 && f.y <= o.y1 && !this.foods.some((x) => x !== f && x.panAt !== null)) {
           f.x = pan.x;
           f.y = pan.y;
           f.vx = f.vy = 0;
@@ -889,16 +1095,53 @@ export class TankScene {
     this.canvas.addEventListener('pointercancel', release);
   }
 
-  private openFridge(): void {
+  /** Is (x, y) on the toilet, tank and all? */
+  private onToilet(x: number, y: number): boolean {
+    const b = this.room.toilet;
+    return x >= b.x0 - 4 && x <= b.x1 + 4 && y >= b.y0 - (b.y1 - b.y0) * 1.1 && y <= b.y1 + 2;
+  }
+
+  /** Let go of a poop: into the toilet, or back on a floor. */
+  private dropPoop(): void {
+    const hp = this.heldPoop!;
+    this.heldPoop = null;
+    const v = this.view;
+    const i = v ? v.poops.indexOf(hp.ref) : -1;
+    if (i < 0) return;
+    const g = this.grab;
+    if (g.moved < 10 && this.t - g.downAt < 350) {
+      this.popup('Drag it to the toilet', '#ffe3b0', hp.x, hp.y - this.r * 0.9);
+      return;
+    }
+    const m = this.room;
+    if (this.onToilet(hp.x, hp.y) || (Math.abs(hp.x - toiletSeat(m.toilet).x) < this.r && hp.y < m.toilet.y1 && hp.y > m.loft + LOFT_SLAB)) {
+      const seat = toiletSeat(m.toilet);
+      if (this.on.dump(i)) {
+        this.tosses.push({ what: 'poop', x0: hp.x, y0: hp.y, x1: seat.x, y1: seat.y, born: this.t, ms: 180, done: () => this.plunked() });
+        return;
+      }
+      this.popup('Full. Flush it first.', '#ff8a7a', seat.x, m.toilet.y0 - this.r * 1.4);
+      this.on.movePoop(i, this.frac(m.toilet.x1 + this.r * 0.5, false));
+      this.poopBorn.set(i, this.t);
+      return;
+    }
+    // Anywhere else, it drops to the floor under your finger.
+    const up = hp.x < m.loftEnd && hp.y < m.loft + LOFT_SLAB;
+    this.on.movePoop(i, this.frac(hp.x, up));
+    this.poopBorn.set(i, this.t);
+  }
+
+  private openFridge(): boolean {
     if (!this.on.fridge()) {
       this.popup('No coins', '#ff8a7a', (this.room.fridge.x0 + this.room.fridge.x1) / 2, this.room.fridge.y0 - 8);
-      return;
+      return false;
     }
     const f = this.room.fridge;
     this.fridgeOpenUntil = this.t + 700;
     this.foods.push({ kind: 'rawsteak', x: f.x0 + 6, y: f.y0 + (f.y1 - f.y0) * 0.4, vx: -this.H * (0.5 + Math.random() * 0.3), vy: -this.H * 0.6, landed: false, held: false, panAt: null });
     if (this.foods.length > 4) this.foods.shift();
     sfx.fridge();
+    return true;
   }
 
   /** Changing toys drops whatever you were holding. */
@@ -909,6 +1152,7 @@ export class TankScene {
     this.heldBall = null;
     if (this.heldFood) this.heldFood.held = false;
     this.heldFood = null;
+    this.heldPoop = null;
     this.held = false;
   }
 
@@ -1134,8 +1378,17 @@ export class TankScene {
     if (v.urge && !dead && !this.at) {
       // The pee dance.
       this.sqV += Math.sin(now * 0.03) * 0.6;
-      if (now > this.nextUrgeLine) this.urge();
+      if (now > this.nextUrgeLine) this.urgeLine(v.bowl >= BOWL_MAX);
     }
+    if (this.heldPoop) {
+      this.heldPoop.x = this.grab.px + this.grab.dx;
+      this.heldPoop.y = this.grab.py + this.grab.dy;
+    }
+    this.tosses = this.tosses.filter((tt) => {
+      if (now - tt.born < tt.ms) return true;
+      tt.done?.();
+      return false;
+    });
 
     // Deliveries fall in and wait to be eaten; steaks too, or they cook.
     const bagR = Math.max(9, r * 0.4);
@@ -1365,18 +1618,36 @@ export class TankScene {
   private updateVacuums(dt: number, v: SceneView): void {
     const m = this.room;
     const s = this.vacR();
+    const now = this.t;
     for (const vac of this.vacs) {
       const [lo, hi] = vac.up ? [m.L + s, m.loftEnd - s] : [m.L + s, m.R - s];
       let target = -1;
       let best = Infinity;
-      v.poops.forEach((p, i) => {
-        if (p.up !== vac.up) return;
-        const d = Math.abs(this.poopPos(p).x - vac.x);
-        if (d < best) {
-          best = d;
-          target = i;
-        }
+      if (now > (vac.blockedUntil ?? 0)) {
+        v.trash.forEach((p, i) => {
+          if (p.up !== vac.up) return;
+          const d = Math.abs(this.poopPos(p).x - vac.x);
+          if (d < best) {
+            best = d;
+            target = i;
+          }
+        });
+      }
+      // It won't go near his poop either: it turns around and wanders off for a bit.
+      const poop = v.poops.some((p) => {
+        if (p.up !== vac.up || p === this.heldPoop?.ref) return false;
+        const dx = this.poopPos(p).x - vac.x;
+        return Math.abs(dx) < s * 1.4 && Math.sign(dx) === vac.dir;
       });
+      if (poop) {
+        vac.dir = -vac.dir;
+        vac.blockedUntil = now + 2500;
+        if (now > (vac.beepAt ?? 0)) {
+          vac.beepAt = now + 4000;
+          sfx.beep();
+          this.popup('!', '#5ee0b0', vac.x, (vac.up ? m.loft : m.ground) - s * 1.3);
+        }
+      }
       // It wants nothing to do with him.
       const reach = this.size().hw + s * 1.5;
       if (this.up === vac.up && !this.held && Math.abs(this.x - vac.x) < reach) {
@@ -1392,11 +1663,11 @@ export class TankScene {
         continue;
       }
       vac.shy = false;
-      if (target >= 0) {
-        const px = this.poopPos(v.poops[target]).x;
+      if (target >= 0 && !poop) {
+        const px = this.poopPos(v.trash[target]).x;
         vac.dir = px > vac.x ? 1 : -1;
         if (Math.abs(px - vac.x) < s * 0.6) {
-          for (let i = 0; i < 5; i++) this.puffs.push({ x: px, y: (vac.up ? m.loft : m.ground) - 4, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30, r: 2, born: this.t, life: 400, color: '#6b4423' });
+          for (let i = 0; i < 5; i++) this.puffs.push({ x: px, y: (vac.up ? m.loft : m.ground) - 4, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30, r: 2, born: this.t, life: 400, color: '#b9b2a2' });
           sfx.slurp();
           this.on.vacuum(target);
           continue;
@@ -1603,8 +1874,22 @@ export class TankScene {
     const r = this.r;
     const [lo, hi] = this.span(this.up);
 
+    // He has to go, and this time he's walking there himself (down off the loft if he has to).
+    const toilet = v.urge && this.selfGo && v.bowl < BOWL_MAX && this.mode !== 'eat';
+    if (toilet && this.up && (this.mode !== 'walk' || this.targetX < this.room.loftEnd)) {
+      this.mode = 'walk';
+      this.walkTo = null;
+      this.targetX = this.room.loftEnd + this.size().hw + 6;
+      this.modeUntil = now + 8000;
+    } else if (toilet && !this.up && (this.mode !== 'walk' || this.walkTo !== 'toilet')) {
+      this.mode = 'walk';
+      this.walkTo = 'toilet';
+      this.targetX = this.anchor('toilet').x;
+      this.modeUntil = now + 10_000;
+    }
+
     // Food first, if it's on his floor. He won't go get it from the other one.
-    const food = this.mode === 'eat' ? this.eating : this.nearestFood();
+    const food = toilet ? null : this.mode === 'eat' ? this.eating : this.nearestFood();
     if (food && this.mode !== 'eat') {
       const d = food.x - this.x;
       if (Math.abs(d) < this.size().hw * 1.1) {
@@ -1620,7 +1905,7 @@ export class TankScene {
         this.targetX = Math.min(hi, Math.max(lo, food.x));
         this.modeUntil = now + 4000;
       }
-    } else if (!food && now > this.nextWhine && (this.bags.some((b) => b.landed) || this.foods.some((f) => f.landed && f.panAt === null))) {
+    } else if (!food && !toilet && now > this.nextWhine && (this.bags.some((b) => b.landed) || this.foods.some((f) => f.landed && f.panAt === null))) {
       this.nextWhine = now + 12_000;
       this.say(pick(['Bring it here.', 'I’m not going down there.', 'Can you bring me that?', 'Room service?']), 2000);
     }
@@ -1637,6 +1922,8 @@ export class TankScene {
             const b = this.bags[bi];
             this.bags.splice(bi, 1);
             this.crumbs(b.x, b.y, FOOD_BY_ID[b.food].color);
+            // Done with it: the wrapper stays right there.
+            if (b.litter) this.dropTrash(FOOD_BY_ID[b.food].trash, b.x);
           }
           const fi = this.foods.indexOf(th as Food);
           if (fi >= 0) {
@@ -1645,19 +1932,28 @@ export class TankScene {
             this.crumbs(f.x, f.y, FOOD_BY_ID[f.kind].color);
             this.on.eat(f.kind);
             this.sayKind(f.kind === 'rawsteak' ? 'raw' : f.kind === 'steak' ? 'cooked' : 'burnt', 2000);
+            this.on.litter('bones', this.frac(f.x, this.up));
           }
         }
       }
       return;
     }
 
-    if (now > this.modeUntil && this.mode !== 'climb') {
+    if (now > this.modeUntil && this.mode !== 'climb' && !toilet) {
       const sad = v.mood < 25 || v.health < 40;
       const roll = Math.random();
       const ball = this.balls.find((b) => !b.held && Math.abs(b.vx) < 30 && b.landed && this.thingUp(b, this.ballR()) === this.up);
-      const here = REST_SPOTS.filter((s) => this.spotUp(s) === this.up);
-      const there = REST_SPOTS.filter((s) => this.spotUp(s) !== this.up);
-      if (!sad && this.cushion && this.cushion.up === this.up && now > this.cushion.readyAt && roll < 0.3) {
+      const here = REST_SPOTS.filter((s) => this.has(s) && this.spotUp(s) === this.up);
+      const there = REST_SPOTS.filter((s) => this.has(s) && this.spotUp(s) !== this.up);
+      if (v.belly < 30 && v.health > 40 && this.has('fridge') && !this.up && now > this.nextRaidAt && !this.foods.length && roll < 0.6) {
+        // Hungry, and there's a fridge: he helps himself. Raw. (Not when raw would finish him off.)
+        const f = this.room.fridge;
+        this.nextRaidAt = now + 240_000;
+        this.mode = 'walk';
+        this.walkTo = 'fridge';
+        this.targetX = Math.min(hi, Math.max(lo, (f.x0 + f.x1) / 2));
+        this.modeUntil = now + 6000;
+      } else if (!sad && this.cushion && this.cushion.up === this.up && now > this.cushion.readyAt && roll < 0.3) {
         // He can't stay away from it.
         this.mode = 'walk';
         this.walkTo = null;
@@ -1675,7 +1971,7 @@ export class TankScene {
         this.walkTo = to;
         this.targetX = this.anchor(to).x;
         this.modeUntil = now + 6000;
-      } else if (roll < 0.7 && there.length && !v.urge) {
+      } else if (roll < 0.7 && (there.length || roll < 0.64) && !v.urge) {
         if (this.up) {
           // Down: walk off the edge of the loft.
           this.mode = 'walk';
@@ -1684,7 +1980,7 @@ export class TankScene {
           this.modeUntil = now + 5000;
         } else {
           this.mode = 'climb';
-          this.climbTo = pick(there);
+          this.climbTo = there.length ? pick(there) : null;
           this.targetX = this.ladderX();
           this.modeUntil = now + 9000;
         }
@@ -1720,13 +2016,21 @@ export class TankScene {
         this.walkTo = null;
         this.mode = 'idle';
         this.modeUntil = now + 1200 + Math.random() * 2000;
-        if (to && this.spotUp(to) === this.up) this.enter(to);
+        if (to === 'fridge') this.raid();
+        else if (to && this.has(to) && this.spotUp(to) === this.up) this.enter(to, to === 'toilet');
       } else {
         this.facing = d > 0 ? 1 : -1;
-        const speed = r * (v.belly < 20 || v.health < 40 ? 1.1 : 2.4);
+        const speed = r * (toilet ? 3 : v.belly < 20 || v.health < 40 ? 1.1 : 2.4);
         this.vx += (this.facing * speed - this.vx) * Math.min(1, dt * 8);
       }
     }
+  }
+
+  /** At the fridge, hungry: a steak out, and he'll eat it raw where it lands. */
+  private raid(): void {
+    if (!this.has('fridge') || this.up) return;
+    if (this.openFridge()) this.sayKind('raid', 1800);
+    else this.say('Empty. Like my wallet.', 1800);
   }
 
   private crumbs(x: number, y: number, color: string): void {
@@ -1738,6 +2042,7 @@ export class TankScene {
     if (v.belly < 30) moods.push('hungry');
     if (v.mood < 30) moods.push('sad');
     if (v.fresh < 35) moods.push('stinky');
+    if (v.furniture.length < 2) moods.push('bare');
     if (moods.length && Math.random() < 0.55) return this.sayKind(pick(moods));
     if (v.form !== 'cube' && Math.random() < 0.3) return this.say(pick(FORM_BY_ID[v.form].lines), 2600, 'form');
     this.say(pick(ROAD_TRIP), 2600, 'roadtrip');
@@ -2155,20 +2460,58 @@ export class TankScene {
     // The furniture that changes.
     drawWallLife(c, m, t, new Date(), this.calm);
     const sci = drawScientist(c, m.window, v.fresh < PINCH_BELOW, this.scientistGone, t, { x: this.x, near: this.sciNear });
-    // The plant leans away when he's next to it.
-    const pcx = (m.plant.x0 + m.plant.x1) / 2;
-    const pd = this.x - pcx;
-    const lean = this.up && !dead && Math.abs(pd) < r * 2.4 ? -Math.sign(pd) * (1 - Math.abs(pd) / (r * 2.4)) : 0;
-    this.plantLean += (lean - this.plantLean) * Math.min(1, dt * 3);
-    drawPlant(c, m.plant, dead ? 1 : Math.min(1, Math.max(0, (65 - v.fresh) / 55)), t, this.plantLean);
-    drawMonitor(c, m.pc, t, this.at?.id === 'pc');
-    drawFridge(c, m.fridge, t < this.fridgeOpenUntil ? 1 : 0);
-    const cooking = this.foods.some((f) => f.panAt !== null);
-    drawOven(c, m.oven, cooking ? 0.7 + Math.sin(t * 0.01) * 0.3 : 0);
-    drawPan(c, m.oven);
+    if (this.has('plant')) {
+      // The plant leans away when he's next to it.
+      const pcx = (m.plant.x0 + m.plant.x1) / 2;
+      const pd = this.x - pcx;
+      const lean = this.up && !dead && Math.abs(pd) < r * 2.4 ? -Math.sign(pd) * (1 - Math.abs(pd) / (r * 2.4)) : 0;
+      this.plantLean += (lean - this.plantLean) * Math.min(1, dt * 3);
+      drawPlant(c, m.plant, dead ? 1 : Math.min(1, Math.max(0, (65 - v.fresh) / 55)), t, this.plantLean);
+    }
+    if (this.has('pc')) drawMonitor(c, m.pc, t, this.at?.id === 'pc');
+    if (this.has('fridge')) drawFridge(c, m.fridge, t < this.fridgeOpenUntil ? 1 : 0);
+    if (this.has('oven')) {
+      const cooking = this.foods.some((f) => f.panAt !== null);
+      drawOven(c, m.oven, cooking ? 0.7 + Math.sin(t * 0.01) * 0.3 : 0);
+      drawPan(c, m.oven);
+    }
+    drawChuteFlap(c, m, Math.max(0, (this.chuteOpenUntil - t) / 260));
+
+    // What he never flushed.
+    if (v.bowl > 0) {
+      const seat = toiletSeat(m.toilet);
+      drawBowl(c, m.toilet, v.bowl, BOWL_MAX, t);
+      this.stinkLines(c, seat.x, m.toilet.y0 - r * 0.2, r * 0.9, Math.min(3, v.bowl), 0.6);
+      for (let i = 0; i < Math.min(2, v.bowl - 1); i++) this.fly(c, seat.x, m.toilet.y0 - r * 0.5, i + 5, r * 0.8);
+      if (v.bowl >= BOWL_MAX && Math.sin(t * 0.006) > -0.3) {
+        c.font = '700 10px Rubik, system-ui, sans-serif';
+        const label = 'FLUSH ME';
+        const tw = c.measureText(label).width + 10;
+        const tx = seat.x - tw / 2;
+        // Just over the tank lid.
+        const ty = m.toilet.y0 - (m.toilet.y1 - m.toilet.y0) * 0.85 - 22;
+        c.fillStyle = '#ff4d4d';
+        c.beginPath();
+        c.roundRect(tx, ty, tw, 14, 7);
+        c.fill();
+        c.fillStyle = '#fff';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(label, seat.x, ty + 7.5);
+      }
+    }
+
+    // His trash, where he left it.
+    const tr = this.trashR();
+    v.trash.forEach((p, i) => {
+      const pos = this.poopPos(p);
+      // A little scatter so a pile doesn't stack into one spot.
+      drawTrash(c, p.kind, pos.x, pos.y - 1, tr, ((i * 37) % 7) * 0.04 - 0.12);
+    });
 
     // Poop on the floors.
     v.poops.forEach((p, i) => {
+      if (p === this.heldPoop?.ref) return;
       const pos = this.poopPos(p);
       const born = this.poopBorn.get(i);
       const age = born === undefined ? 1 : Math.min(1, (t - born) / 400);
@@ -2180,6 +2523,23 @@ export class TankScene {
       c.save();
       c.globalAlpha = 1 - (t - f.born) / 900;
       this.drawPoop(c, f.x, f.y, Math.max(6, r * 0.3));
+      c.restore();
+    }
+    // On their way: trash to the chute, poop to the toilet.
+    for (const tt of this.tosses) {
+      const k = Math.min(1, Math.max(0, (t - tt.born) / tt.ms));
+      if (t < tt.born) {
+        if (tt.what === 'poop') this.drawPoop(c, tt.x0, tt.y0, Math.max(6, r * 0.3));
+        else drawTrash(c, tt.what, tt.x0, tt.y0, tr);
+        continue;
+      }
+      const arc = Math.min(this.H * 0.25, Math.abs(tt.x1 - tt.x0) * 0.5 + r);
+      const x = tt.x0 + (tt.x1 - tt.x0) * k;
+      const y = tt.y0 + (tt.y1 - tt.y0) * k - arc * 4 * k * (1 - k);
+      c.save();
+      c.globalAlpha = k > 0.85 ? (1 - k) / 0.15 : 1;
+      if (tt.what === 'poop') this.drawPoop(c, x, y, Math.max(6, r * 0.3) * (1 - k * 0.3));
+      else drawTrash(c, tt.what, x, y, tr * (1 - k * 0.35), k * 6);
       c.restore();
     }
     for (const vac of this.vacs) drawVacuum(c, vac.x, vac.up ? m.loft : m.ground, this.vacR(), t, vac.dir);
@@ -2260,7 +2620,7 @@ export class TankScene {
       // He always smells a bit, and there's always at least one fly.
       const stink = 1 - v.fresh / 100;
       this.stinkLines(c, this.x, this.y - this.size().hh * 1.1, r * 1.4, Math.max(1, Math.round(stink * 5)), Math.max(0.3, Math.min(0.85, stink)));
-      const flies = 1 + (v.fresh < 30 ? 2 : v.fresh < 50 ? 1 : 0) + (v.poops.length >= 4 ? 1 : 0);
+      const flies = 1 + (v.fresh < 30 ? 2 : v.fresh < 50 ? 1 : 0) + (v.poops.length + v.trash.length / 3 >= 4 ? 1 : 0);
       for (let i = 0; i < flies; i++) this.fly(c, this.x, this.y - r * 0.4, i, r * 1.2);
     }
 
@@ -2292,6 +2652,22 @@ export class TankScene {
     }
 
     if (!dead) this.drawToys(c, t);
+    if (this.heldPoop) {
+      const hp = this.heldPoop;
+      this.drawPoop(c, hp.x, hp.y + r * 0.2, Math.max(6, r * 0.3));
+      this.stinkLines(c, hp.x, hp.y - r * 0.3, r * 0.5, 2, 0.6);
+      // Where it'll go if you let go now.
+      if (this.onToilet(hp.x, hp.y)) {
+        const seat = toiletSeat(m.toilet);
+        c.strokeStyle = v.bowl >= BOWL_MAX ? 'rgba(255,77,77,0.9)' : 'rgba(255,255,255,0.9)';
+        c.lineWidth = 2;
+        c.setLineDash([4, 3]);
+        c.beginPath();
+        c.ellipse(seat.x, seat.y, (m.toilet.x1 - m.toilet.x0) * 0.6, (m.toilet.y1 - m.toilet.y0) * 0.3, 0, 0, TAU);
+        c.stroke();
+        c.setLineDash([]);
+      }
+    }
 
     // Fart clouds over everything in the unit.
     for (const p of this.puffs) {

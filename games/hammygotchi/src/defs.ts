@@ -58,19 +58,48 @@ export const MAX_POOPS = 8;
 /** Seconds from a meal to the poop it becomes. */
 export const DIGEST_MIN = 120;
 export const DIGEST_RANGE = 180;
-export const SCOOP_COINS = 3;
-export const SCOOP_FRESH = 4;
+/** Dragging a poop off the floor into the toilet. The coins come when you flush. */
+export const SCOOP_FRESH = 2;
 /**
  * When a meal is ready to come out he needs to go, and holds it this long.
- * Drag him onto the toilet in time, or it ends up on the floor.
+ * Most of the time he walks to the toilet himself; if he doesn't (or it's
+ * full), carry him there in time or it ends up on the floor.
  */
 export const URGE_SECONDS = 75;
-export const TOILET_COINS = 4;
-export const TOILET_FRESH = 3;
+/** How often he bothers to walk to the toilet by himself. */
+export const SELF_TOILET_CHANCE = 0.7;
+export const TOILET_FRESH = 1;
+/**
+ * He never flushes. What's in the bowl stinks until you do, and past
+ * BOWL_MAX it's clogged: nothing more goes in and he goes on the floor.
+ * Each flush pays for every load in the bowl.
+ */
+export const BOWL_MAX = 4;
+export const BOWL_STINK_PER_HOUR = 1.5;
+export const FLUSH_COINS = 3;
+export const FLUSH_FRESH = 3;
 /** The shower. He's lazy, so he won't go in by himself; soap makes it better. */
 export const SHOWER_FRESH = 40;
 export const SHOWER_MOOD = -2;
 export const SHOWER_COOLDOWN = 90;
+
+// ---------------------------------------------------------------------------
+// Trash: he leaves it wherever he finishes with it
+
+export type TrashKind = 'chips' | 'pizza' | 'foil' | 'bones' | 'can' | 'tray' | 'sock' | 'tissue';
+
+export const MAX_TRASH = 14;
+/** Every piece lying around makes the unit a little less fresh. */
+export const TRASH_STINK_PER_HOUR = 0.25;
+/** Tap a piece to throw it down the chute. */
+export const TIDY_COINS = 1;
+export const TIDY_FRESH = 1;
+/** While you’re away he leaves something lying around every 30 to 60 minutes. */
+export const LITTER_MIN = 30 * 60;
+export const LITTER_RANGE = 30 * 60;
+/** What he leaves lying around for no reason. */
+export const LITTER: readonly TrashKind[] = ['sock', 'tissue', 'chips', 'can'];
+
 /** Petting and throwing him around: a little mood, every couple of seconds. */
 export const PET_MOOD = 2;
 export const FLING_MOOD = 3;
@@ -132,22 +161,24 @@ export interface FoodDef {
   selfOrder: boolean;
   /** Bag color in the unit. */
   color: string;
+  /** What he leaves on the floor when he's done with it. */
+  trash: TrashKind;
   /** Made at home (fridge and oven), not on the DoorDosh menu. */
   home?: true;
 }
 
 export const FOODS: readonly FoodDef[] = [
-  { id: 'dorkitos', name: 'Dorkitos', blurb: 'Free. He has a whole case. The cheese dust gets everywhere.', price: 0, belly: 18, mood: 4, gas: 30, poops: 1, selfOrder: false, color: '#ff8a1f' },
-  { id: 'pizza', name: 'Large pepperoni', blurb: 'Extra greasy, the way he likes it.', price: 14, belly: 40, mood: 8, gas: 20, poops: 1, selfOrder: true, color: '#e8443a' },
-  { id: 'burrito', name: 'Burrito Grande', blurb: 'Double beans. You have been warned.', price: 20, belly: 55, mood: 6, gas: 60, poops: 2, selfOrder: true, color: '#d9b46a' },
-  { id: 'wings', name: 'Hot wings', blurb: 'He cries, he sweats, he orders more.', price: 18, belly: 30, mood: 12, gas: 35, poops: 1, selfOrder: true, color: '#c2410c' },
-  { id: 'glowjuice', name: 'Glow Juice', blurb: 'Energy drink. Three cans and he can hear colors.', price: 8, belly: 5, mood: 15, gas: 15, poops: 0, selfOrder: true, color: '#a6e22e' },
-  { id: 'sushi', name: 'Gas station sushi', blurb: 'Cheap. Fills him up. Costs him some health. Why is it warm?', price: 9, belly: 25, mood: -4, gas: 50, poops: 2, health: -15, selfOrder: false, color: '#f472b6' },
-  { id: 'salad', name: 'Side salad', blurb: 'He will eat it. He will complain the whole time. Freshens him up a little.', price: 6, belly: 15, mood: -10, gas: 0, poops: 1, fresh: 8, selfOrder: false, color: '#4ade80' },
+  { id: 'dorkitos', name: 'Dorkitos', blurb: 'Free. He has a whole case. The cheese dust gets everywhere.', price: 0, belly: 18, mood: 4, gas: 30, poops: 1, selfOrder: false, trash: 'chips', color: '#ff8a1f' },
+  { id: 'pizza', name: 'Large pepperoni', blurb: 'Extra greasy, the way he likes it.', price: 14, belly: 40, mood: 8, gas: 20, poops: 1, selfOrder: true, trash: 'pizza', color: '#e8443a' },
+  { id: 'burrito', name: 'Burrito Grande', blurb: 'Double beans. You have been warned.', price: 20, belly: 55, mood: 6, gas: 60, poops: 2, selfOrder: true, trash: 'foil', color: '#d9b46a' },
+  { id: 'wings', name: 'Hot wings', blurb: 'He cries, he sweats, he orders more.', price: 18, belly: 30, mood: 12, gas: 35, poops: 1, selfOrder: true, trash: 'bones', color: '#c2410c' },
+  { id: 'glowjuice', name: 'Glow Juice', blurb: 'Energy drink. Three cans and he can hear colors.', price: 8, belly: 5, mood: 15, gas: 15, poops: 0, selfOrder: true, trash: 'can', color: '#a6e22e' },
+  { id: 'sushi', name: 'Gas station sushi', blurb: 'Cheap. Fills him up. Costs him some health. Why is it warm?', price: 9, belly: 25, mood: -4, gas: 50, poops: 2, health: -15, selfOrder: false, trash: 'tray', color: '#f472b6' },
+  { id: 'salad', name: 'Side salad', blurb: 'He will eat it. He will complain the whole time. Freshens him up a little.', price: 6, belly: 15, mood: -10, gas: 0, poops: 1, fresh: 8, selfOrder: false, trash: 'tray', color: '#4ade80' },
   // From the fridge. He won't cook, so you have to.
-  { id: 'rawsteak', name: 'Raw steak', blurb: 'He will eat it raw if you let him.', price: 0, belly: 15, mood: -4, gas: 40, poops: 1, health: -8, selfOrder: false, color: '#e8566a', home: true },
-  { id: 'steak', name: 'Steak', blurb: 'You cooked. He ate.', price: 0, belly: 40, mood: 8, gas: 10, poops: 1, selfOrder: false, color: '#8a4a2a', home: true },
-  { id: 'burnt', name: 'Burnt steak', blurb: 'Charcoal, mostly.', price: 0, belly: 20, mood: -6, gas: 5, poops: 1, selfOrder: false, color: '#2a211c', home: true },
+  { id: 'rawsteak', name: 'Raw steak', blurb: 'He will eat it raw if you let him.', price: 0, belly: 15, mood: -4, gas: 40, poops: 1, health: -8, selfOrder: false, trash: 'bones', color: '#e8566a', home: true },
+  { id: 'steak', name: 'Steak', blurb: 'You cooked. He ate.', price: 0, belly: 40, mood: 8, gas: 10, poops: 1, selfOrder: false, trash: 'bones', color: '#8a4a2a', home: true },
+  { id: 'burnt', name: 'Burnt steak', blurb: 'Charcoal, mostly.', price: 0, belly: 20, mood: -6, gas: 5, poops: 1, selfOrder: false, trash: 'bones', color: '#2a211c', home: true },
 ];
 
 /** DoorDosh only delivers what's on the menu. */
@@ -162,6 +193,31 @@ export const BURN_SECONDS = 16;
 // The containment unit: furniture he can be dragged onto.
 
 export type SpotId = 'shower' | 'toilet' | 'chair' | 'bed' | 'pc';
+
+/**
+ * The unit comes with plumbing: a toilet and a shower. Everything else is
+ * bought, and stays when he dies.
+ */
+export type FurnitureId = 'plant' | 'chair' | 'bed' | 'fridge' | 'oven' | 'pc';
+
+export interface FurnitureDef {
+  id: FurnitureId;
+  name: string;
+  blurb: string;
+  price: number;
+  icon: string;
+}
+
+export const FURNITURE: readonly FurnitureDef[] = [
+  { id: 'plant', name: 'Plant', blurb: 'Dr. Moss’s idea. It leans away from him and wilts when he stinks.', price: 25, icon: '🪴' },
+  { id: 'chair', name: 'Armchair', blurb: 'Somewhere to sit that isn’t the floor. Never clean again. Lifts his mood.', price: 40, icon: '🛋️' },
+  { id: 'bed', name: 'Bed', blurb: 'On the loft. He naps, he drools, he cheers up.', price: 80, icon: '🛏️' },
+  { id: 'fridge', name: 'Fridge', blurb: 'Raw steak, 5 coins each. When he’s hungry he raids it himself and eats it raw.', price: 90, icon: '🧊' },
+  { id: 'oven', name: 'Oven', blurb: 'Drag a raw steak onto it and it cooks. Leave it too long and it burns.', price: 120, icon: '🍳' },
+  { id: 'pc', name: 'Gaming PC', blurb: 'He streams: a coin every 30 seconds while he plays. Leaves cans everywhere.', price: 250, icon: '🖥️' },
+];
+
+export const FURNITURE_BY_ID = Object.fromEntries(FURNITURE.map((f) => [f.id, f])) as Record<FurnitureId, FurnitureDef>;
 
 export interface RestDef {
   /** Mood every `every` seconds while he's on it, up to `cap`. */
@@ -196,7 +252,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
     id: 'vacuum',
     name: 'Robot vacuum',
     levels: [
-      { name: 'Robot vacuum', blurb: 'Drives around the ground floor eating poop. Works while you are away.', price: 150 },
+      { name: 'Robot vacuum', blurb: 'Drives around the ground floor picking up his trash, also while you are away. Won’t touch poop. Nobody would.', price: 150 },
       { name: 'Second robot vacuum', blurb: 'One for the loft too. They do not get along.', price: 400 },
     ],
   },
@@ -215,8 +271,8 @@ export const UPGRADE_BY_ID = Object.fromEntries(UPGRADES.map((u) => [u.id, u])) 
 /** Extra fresh and mood from a shower, by soap level. */
 export const SOAP_FRESH = [0, 12, 24, 40] as const;
 export const SOAP_MOOD = [0, 2, 5, 8] as const;
-/** Away, each robot vacuum eats one poop off the floor this often. */
-export const VACUUM_SECONDS = 45;
+/** Away, each robot vacuum picks up one piece of trash this often (they charge in between). */
+export const VACUUM_SECONDS = 20 * 60;
 
 export const FOOD_BY_ID = Object.fromEntries(FOODS.map((f) => [f.id, f])) as Record<FoodId, FoodDef>;
 /** At most this many orders on the way at once. */
@@ -335,7 +391,7 @@ export interface ToyDef {
 }
 
 export const TOYS: readonly ToyDef[] = [
-  { id: 'hand', name: 'Hand', how: 'Drag him to throw him. Tap him to pet him. Tap poop to scoop it.', blurb: 'Your hand. He loves being thrown.', price: 0, mood: 0, coins: 0 },
+  { id: 'hand', name: 'Hand', how: 'Drag him to throw him, tap him to pet him. Drag poop into the toilet, tap the toilet to flush, tap trash to bin it.', blurb: 'Your hand. He loves being thrown. Wash it after.', price: 0, mood: 0, coins: 0 },
   { id: 'feather', name: 'Feather', how: 'Rub it on him.', blurb: 'He is extremely ticklish.', price: 0, mood: 3, coins: 1 },
   { id: 'ball', name: 'Bouncy ball', how: 'Drag and let go to throw one. He kicks them back.', blurb: 'He loves ball. Even when it hits him.', price: 0, mood: 2, coins: 1 },
   { id: 'glove', name: 'Boxing glove', how: 'Tap him.', blurb: 'On a spring, out of the wall. He hates it. Pays well.', price: 30, mood: -5, coins: 3 },
@@ -441,6 +497,15 @@ export const SAYS = {
   sniff: ['Still good.', 'Oof. Still good.', 'Smells like a winner.', 'Two more days.'],
   scratch: ['Ahhh, that’s the spot.', 'Mind your business.', 'Itchy.'],
   avoided: ['Even the robot.', 'Rude.', 'I can see you backing away.', 'It’s called musk.'],
+  // Living like a Sim: he does things himself, badly.
+  noFlush: ['Not flushing that.', 'Flushing is your job.', 'Someone will get it.', 'I don’t do handles.', 'Leaving that for you.'],
+  full: ['It’s full. FLUSH IT.', 'The toilet’s full!', 'Can’t. It’s clogged.'],
+  ew: ['Ew, you touched it.', 'Gloves, man.', 'Hey, that’s mine.', 'Wash your hands after.'],
+  litter: ['I’ll get that later.', 'Leave it.', 'That lives there now.', 'It’s decor.'],
+  tidy: ['I was saving that.', 'Hey, I was using that.', 'Neat freak.'],
+  raid: ['Fridge raid.', 'Raw is fine.', 'Who needs an oven.', 'Snack time.'],
+  furnish: ['Ooh. Mine.', 'Finally, furniture.', 'Is this IKEA?', 'I deserve this.'],
+  bare: ['It’s just a toilet in here.', 'Can I get a chair or something?', 'I live in a box.', 'Nice place. Very… concrete.'],
 } as const;
 
 /**
@@ -467,6 +532,8 @@ export const SCIENTIST_LINES: readonly string[] = [
   'Who approved this?',
   'Do not open the hatch.',
   'I need a raise.',
+  'He didn’t flush. Again.',
+  'Noting: sock count rising.',
 ];
 
 /** The scientist puts on a gas mask below this, and evacuates below the next. */
@@ -483,6 +550,9 @@ export const HAMMY_TEXTS = {
   sad: ['nobody ever calls me', 'u forgot about me didnt u', 'im just gonna lay here', 'hello??', 'u up'],
   poopy: ["there's a situation on the floor", 'dont come in here for a bit', 'the floor is a minefield lol'],
   urge: ['i gotta go. carry me to the toilet', 'BATHROOM. NOW.', 'its coming. help'],
+  bowl: ['can u flush. i dont do that', 'the toilet is doing something weird. not my fault', 'u should flush more'],
+  messy: ['i made a little mess', 'the robot vacuum gave up', 'theres a sock in here thats not mine. its mine', 'clean ur room is what my mom says too'],
+  bare: ['can i get a chair. or a bed. or anything', 'its literally just a toilet in here', 'ur gonna buy me furniture right'],
   any: [
     'u up',
     'what r u doing',

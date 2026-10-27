@@ -1,8 +1,10 @@
 // The containment unit: a two-floor glass cell in a lab. Ground floor:
 // shower, toilet, armchair, fridge and oven, with an observation window where
 // a scientist watches. The loft: bed, a plant and a gaming PC, reached by a
-// ladder on the right. This file lays it out and draws the furniture; the
-// scene decides what happens in it.
+// ladder on the right. It comes with only the toilet and the shower; the rest
+// waits as taped-out spots until it's bought. This file lays it out and draws
+// the furniture and his trash; the scene decides what happens in it.
+import type { FurnitureId, TrashKind } from './defs';
 
 const TAU = Math.PI * 2;
 const INK = '#1f1a24';
@@ -234,7 +236,17 @@ function lampFixture(c: Ctx, l: Lamp, night: number): void {
 }
 
 /** Everything that never moves: the cell, its walls and floors, the lights and the furniture's bodies. */
-export function paintRoom(c: Ctx, m: Room, night = 0): void {
+/** Taped-out spots for furniture not bought yet. */
+const SLOTS: readonly [FurnitureId, string][] = [
+  ['chair', 'ARMCHAIR'],
+  ['fridge', 'FRIDGE'],
+  ['oven', 'OVEN'],
+  ['bed', 'BED'],
+  ['plant', 'PLANT'],
+  ['pc', 'GAMING PC'],
+];
+
+export function paintRoom(c: Ctx, m: Room, night = 0, has: (id: FurnitureId) => boolean = () => true): void {
   const { W, H, L, R, T, B, ground, loft, loftEnd } = m;
   // The lab outside, which only shows at the edges.
   c.fillStyle = '#121822';
@@ -313,6 +325,7 @@ export function paintRoom(c: Ctx, m: Room, night = 0): void {
   paintNoFart(c, fx(0.272), loft + LOFT_SLAB + low * 0.13, sign);
   paintShelf(c, m.oven.x0 + 2, m.oven.x1 - 2, m.oven.y0 - low * 0.27);
   paintCamera(c, m);
+  paintChute(c, m);
 
   // Observation window, with the lab behind it.
   paintWindow(c, m, night);
@@ -413,34 +426,353 @@ export function paintRoom(c: Ctx, m: Room, night = 0): void {
   c.fillRect(lad.x0 - 2, lad.y1 - 3, 5, 3);
   c.fillRect(lad.x1 - 3, lad.y1 - 3, 5, 3);
 
-  // The furniture, each with its shadow on the floor.
-  for (const b of [m.shower, m.toilet, m.chair, m.fridge, m.oven]) footShadow(c, b.x0, b.x1, ground);
-  for (const b of [m.bed, m.plant]) footShadow(c, b.x0, b.x1, loft);
-  footShadow(c, m.pc.x0, m.pc.x1, loft, 0.22);
+  // The furniture he has, each with its shadow on the floor, and tape where the rest would go.
+  const ground3: FurnitureId[] = ['chair', 'fridge', 'oven'];
+  for (const b of [m.shower, m.toilet, ...ground3.filter(has).map((id) => m[id])]) footShadow(c, b.x0, b.x1, ground);
+  for (const id of ['bed', 'plant'] as const) if (has(id)) footShadow(c, m[id].x0, m[id].x1, loft);
+  if (has('pc')) footShadow(c, m.pc.x0, m.pc.x1, loft, 0.22);
+  for (const [id, label] of SLOTS) if (!has(id)) paintSlot(c, m[id], label);
   paintShower(c, m.shower);
   paintToilet(c, m.toilet);
-  paintChair(c, m.chair);
-  paintBed(c, m.bed);
-  paintDesk(c, m.pc);
-  paintPizzaBoxes(c, m.fridge);
-  // A sock. Nobody knows whose. (His.)
-  const sk = (m.chair.x1 + m.fridge.x0) / 2;
-  const ss = Math.max(4, m.r * 0.2);
-  c.fillStyle = '#f2efe6';
-  c.strokeStyle = 'rgba(31,26,36,0.6)';
-  c.lineWidth = 1;
-  c.beginPath();
-  c.moveTo(sk - ss * 0.4, ground - ss * 1.4);
-  c.lineTo(sk + ss * 0.1, ground - ss * 1.4);
-  c.lineTo(sk + ss * 0.15, ground - ss * 0.5);
-  c.quadraticCurveTo(sk + ss * 0.9, ground - ss * 0.55, sk + ss * 0.9, ground);
-  c.lineTo(sk - ss * 0.4, ground);
-  c.closePath();
+  if (has('chair')) paintChair(c, m.chair);
+  if (has('bed')) paintBed(c, m.bed);
+  if (has('pc')) paintDesk(c, m.pc);
+  if (has('fridge')) paintPizzaBoxes(c, m.fridge);
+  for (const l of lamps) lampFixture(c, l, night);
+}
+
+/** Floor tape and a stencil where furniture will go once it's bought. */
+function paintSlot(c: Ctx, b: Box, label: string): void {
+  const w = b.x1 - b.x0;
+  const h = b.y1 - b.y0;
+  c.save();
+  c.fillStyle = 'rgba(255,255,255,0.1)';
+  rect(c, b.x0 + 1, b.y0, w - 2, h, 5);
+  c.fill();
+  c.strokeStyle = 'rgba(52,70,92,0.32)';
+  c.lineWidth = 1.5;
+  c.setLineDash([5, 4]);
+  c.stroke();
+  c.setLineDash([]);
+  // Yellow tape corners on the floor.
+  c.fillStyle = 'rgba(240,196,60,0.8)';
+  const t = Math.max(6, Math.min(12, w * 0.14));
+  c.fillRect(b.x0 + 1, b.y1 - 3, t, 3);
+  c.fillRect(b.x1 - 1 - t, b.y1 - 3, t, 3);
+  const size = Math.max(8, Math.min(11, w * 0.11, h * 0.2));
+  c.font = `700 ${size}px Rubik, system-ui, sans-serif`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillStyle = 'rgba(52,70,92,0.5)';
+  const cx = (b.x0 + b.x1) / 2;
+  const cy = b.y0 + h * 0.5;
+  c.fillText('+', cx, cy - size * 0.75);
+  c.fillText(label, cx, cy + size * 0.45, w - 6);
+  c.restore();
+}
+
+/** The trash chute on the stairwell wall: where everything he drops ends up, eventually. */
+export function chuteOf(m: Room): { x: number; y: number; w: number; h: number } {
+  const fx = (f: number) => m.L + (m.R - m.L) * f;
+  const w = Math.min(fx(0.875) - fx(0.795), m.r * 1.8);
+  const h = Math.min((m.loft - m.T) * 0.34, w * 1.25);
+  return { x: (fx(0.795) + fx(0.875)) / 2, y: m.T + (m.loft - m.T) * 0.42, w, h };
+}
+
+function paintChute(c: Ctx, m: Room): void {
+  const { x, y, w, h } = chuteOf(m);
+  const top = y - h / 2;
+  c.strokeStyle = INK;
+  c.lineWidth = 1.5;
+  // A steel plate with a hazard stripe, the flap, and its label.
+  c.fillStyle = chrome(c, top, top + h);
+  rect(c, x - w / 2, top, w, h, 3);
   c.fill();
   c.stroke();
-  c.fillStyle = '#b9b2a2';
-  c.fillRect(sk - ss * 0.4, ground - ss * 1.4, ss * 0.5, ss * 0.3);
-  for (const l of lamps) lampFixture(c, l, night);
+  c.save();
+  rect(c, x - w / 2 + 2, top + 2, w - 4, h * 0.16, 1.5);
+  c.clip();
+  for (let i = -2; i < 14; i++) {
+    c.fillStyle = i % 2 ? '#1f1a24' : '#f0c43c';
+    c.beginPath();
+    const sx = x - w / 2 + i * 5;
+    c.moveTo(sx, top + h * 0.2);
+    c.lineTo(sx + 5, top + h * 0.2);
+    c.lineTo(sx + 5 + h * 0.2, top);
+    c.lineTo(sx + h * 0.2, top);
+    c.closePath();
+    c.fill();
+  }
+  c.restore();
+  const flap = flapOf(x, y, w, h);
+  c.fillStyle = '#3a414a';
+  rect(c, flap.x, flap.y, flap.w, flap.h, 2);
+  c.fill();
+  c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.18)';
+  c.fillRect(flap.x + 2, flap.y + 2, flap.w - 4, 1.5);
+  c.fillStyle = '#c8d0d8';
+  c.fillRect(x - w * 0.12, flap.y + flap.h - 4, w * 0.24, 2);
+  const size = Math.max(7, Math.min(10, w * 0.2, h * 0.15));
+  c.font = `700 ${size}px Rubik, system-ui, sans-serif`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillStyle = '#1f1a24';
+  c.fillText('TRASH', x, top + h * 0.85, w - 4);
+}
+
+function flapOf(x: number, y: number, w: number, h: number): { x: number; y: number; w: number; h: number } {
+  const top = y - h / 2;
+  return { x: x - w * 0.36, y: top + h * 0.26, w: w * 0.72, h: h * 0.44 };
+}
+
+/** The flap swinging open as something goes down. */
+export function drawChuteFlap(c: Ctx, m: Room, open: number): void {
+  if (open <= 0) return;
+  const { x, y, w, h } = chuteOf(m);
+  const f = flapOf(x, y, w, h);
+  c.fillStyle = `rgba(8,10,14,${0.9 * open})`;
+  rect(c, f.x, f.y, f.w, f.h * open, 2);
+  c.fill();
+}
+
+/** What's in the bowl he never flushes: 0 is clean water, `max` is clogged. */
+export function drawBowl(c: Ctx, b: Box, loads: number, max: number, t: number): void {
+  if (loads <= 0) return;
+  const w = b.x1 - b.x0;
+  const h = b.y1 - b.y0;
+  const { x: cx, y: sy } = toiletSeat(b);
+  const k = Math.min(1, loads / max);
+  c.save();
+  c.beginPath();
+  c.ellipse(cx, sy + h * 0.005, w * 0.33, h * 0.065, 0, 0, TAU);
+  c.clip();
+  c.fillStyle = `rgba(120,86,30,${0.35 + k * 0.45})`;
+  c.fillRect(cx - w * 0.4, sy - h * 0.1, w * 0.8, h * 0.2);
+  c.restore();
+  c.strokeStyle = INK;
+  c.lineWidth = 1;
+  for (let i = 0; i < Math.min(loads, max); i++) {
+    const bx = cx + (i - (Math.min(loads, max) - 1) / 2) * w * 0.15;
+    const by = sy - h * 0.01 - (k >= 1 ? h * 0.05 : 0) + Math.sin(t * 0.003 + i) * 0.6;
+    c.fillStyle = i % 2 ? '#6b4423' : '#7a4f28';
+    c.beginPath();
+    c.ellipse(bx, by, w * 0.09, h * 0.05, 0, Math.PI, TAU);
+    c.fill();
+    c.stroke();
+  }
+  if (k >= 1) {
+    // Up to the rim, and over it.
+    c.fillStyle = '#6b4423';
+    c.beginPath();
+    c.ellipse(cx + w * 0.38, sy + h * 0.12, w * 0.06, h * 0.12, 0.2, 0, TAU);
+    c.fill();
+  }
+}
+
+/** One piece of his trash, lying on the floor at y. `s` is about a third of his size. */
+export function drawTrash(c: Ctx, kind: TrashKind, x: number, y: number, s: number, spin = 0): void {
+  c.save();
+  c.translate(x, y);
+  if (spin) c.rotate(spin);
+  c.strokeStyle = 'rgba(31,26,36,0.75)';
+  c.lineWidth = 1;
+  switch (kind) {
+    case 'chips': {
+      // A Dorkitos bag, crumpled flat, crimped at both ends.
+      c.fillStyle = '#ff8a1f';
+      c.beginPath();
+      c.moveTo(-s * 0.75, -s * 0.05);
+      c.lineTo(-s * 0.6, -s * 0.55);
+      c.lineTo(s * 0.55, -s * 0.6);
+      c.lineTo(s * 0.8, -s * 0.1);
+      c.lineTo(s * 0.7, 0);
+      c.lineTo(-s * 0.7, 0);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = '#ffd34d';
+      c.beginPath();
+      c.moveTo(-s * 0.15, -s * 0.12);
+      c.lineTo(s * 0.2, -s * 0.12);
+      c.lineTo(s * 0.02, -s * 0.45);
+      c.closePath();
+      c.fill();
+      c.fillStyle = '#d6332b';
+      c.fillRect(-s * 0.6, -s * 0.36, s * 1.15, s * 0.07);
+      break;
+    }
+    case 'pizza': {
+      // The box, open, a crust and a grease stain.
+      c.fillStyle = '#d9b98a';
+      c.beginPath();
+      c.moveTo(-s * 1.05, 0);
+      c.lineTo(-s * 0.85, -s * 0.28);
+      c.lineTo(s * 0.85, -s * 0.28);
+      c.lineTo(s * 1.05, 0);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = 'rgba(150,100,40,0.45)';
+      c.beginPath();
+      c.ellipse(s * 0.2, -s * 0.15, s * 0.3, s * 0.08, 0, 0, TAU);
+      c.fill();
+      c.strokeStyle = '#c98a3a';
+      c.lineWidth = Math.max(1.5, s * 0.12);
+      c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(-s * 0.55, -s * 0.12);
+      c.quadraticCurveTo(-s * 0.3, -s * 0.3, -s * 0.05, -s * 0.14);
+      c.stroke();
+      c.lineCap = 'butt';
+      break;
+    }
+    case 'foil': {
+      const g = c.createRadialGradient(-s * 0.15, -s * 0.5, s * 0.05, 0, -s * 0.4, s * 0.5);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(1, '#9aa3ad');
+      c.fillStyle = g;
+      c.beginPath();
+      for (let i = 0; i < 9; i++) {
+        const a = (i / 9) * TAU;
+        const rr = s * (0.36 + ((i * 7) % 3) * 0.05);
+        const px = Math.cos(a) * rr;
+        const py = -s * 0.38 + Math.sin(a) * rr;
+        if (i === 0) c.moveTo(px, py);
+        else c.lineTo(px, py);
+      }
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.strokeStyle = 'rgba(80,90,100,0.6)';
+      c.beginPath();
+      c.moveTo(-s * 0.2, -s * 0.5);
+      c.lineTo(s * 0.05, -s * 0.3);
+      c.lineTo(s * 0.2, -s * 0.55);
+      c.stroke();
+      break;
+    }
+    case 'bones': {
+      // Picked clean. Mostly.
+      for (const [a, dx] of [
+        [0.3, -0.15],
+        [-0.4, 0.2],
+      ] as const) {
+        c.save();
+        c.translate(dx * s, -s * 0.16);
+        c.rotate(a);
+        c.fillStyle = '#f4ecd8';
+        c.fillRect(-s * 0.45, -s * 0.07, s * 0.9, s * 0.14);
+        c.strokeRect(-s * 0.45, -s * 0.07, s * 0.9, s * 0.14);
+        for (const ex of [-0.48, 0.48]) {
+          for (const ey of [-0.08, 0.08]) {
+            c.beginPath();
+            c.arc(ex * s, ey * s, s * 0.1, 0, TAU);
+            c.fill();
+            c.stroke();
+          }
+        }
+        c.restore();
+      }
+      c.fillStyle = 'rgba(194,65,12,0.55)';
+      c.beginPath();
+      c.ellipse(0, -s * 0.05, s * 0.18, s * 0.05, 0, 0, TAU);
+      c.fill();
+      break;
+    }
+    case 'can': {
+      // An empty can of the green stuff, on its side and a bit crushed.
+      const w = s * 1.1;
+      const h = s * 0.5;
+      c.fillStyle = '#4fc65e';
+      c.beginPath();
+      c.moveTo(-w / 2, -h);
+      c.lineTo(-w * 0.05, -h);
+      c.lineTo(w * 0.05, -h * 0.82);
+      c.lineTo(w / 2, -h);
+      c.lineTo(w / 2, 0);
+      c.lineTo(w * 0.05, -h * 0.12);
+      c.lineTo(-w * 0.05, 0);
+      c.lineTo(-w / 2, 0);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = '#1b1b22';
+      c.fillRect(-w * 0.32, -h * 0.66, w * 0.22, h * 0.36);
+      c.fillStyle = '#c8d0d8';
+      c.fillRect(w / 2 - 2, -h, 2, h);
+      c.fillStyle = 'rgba(255,255,255,0.45)';
+      c.fillRect(-w * 0.45, -h * 0.85, w * 0.35, 1);
+      break;
+    }
+    case 'tray': {
+      // A foam clamshell, lid open, something pink left in it.
+      c.fillStyle = '#f7f7f2';
+      c.beginPath();
+      c.moveTo(-s * 0.8, 0);
+      c.lineTo(-s * 0.7, -s * 0.24);
+      c.lineTo(s * 0.7, -s * 0.24);
+      c.lineTo(s * 0.8, 0);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.beginPath();
+      c.moveTo(s * 0.7, -s * 0.24);
+      c.lineTo(s * 0.95, -s * 0.7);
+      c.lineTo(-s * 0.35, -s * 0.72);
+      c.lineTo(-s * 0.7, -s * 0.24);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = '#f472b6';
+      c.beginPath();
+      c.ellipse(-s * 0.15, -s * 0.24, s * 0.2, s * 0.08, 0, Math.PI, TAU);
+      c.fill();
+      break;
+    }
+    case 'sock': {
+      c.fillStyle = '#f2efe6';
+      c.beginPath();
+      c.moveTo(-s * 0.55, -s * 1.05);
+      c.lineTo(-s * 0.05, -s * 1.05);
+      c.lineTo(0, -s * 0.38);
+      c.quadraticCurveTo(s * 0.75, -s * 0.42, s * 0.75, 0);
+      c.lineTo(-s * 0.55, 0);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = '#b9b2a2';
+      c.fillRect(-s * 0.55, -s * 1.05, s * 0.5, s * 0.22);
+      c.fillStyle = 'rgba(120,100,60,0.35)';
+      c.beginPath();
+      c.ellipse(s * 0.4, -s * 0.12, s * 0.2, s * 0.08, 0, 0, TAU);
+      c.fill();
+      break;
+    }
+    case 'tissue': {
+      // Used. Don't ask what for.
+      c.fillStyle = '#fbfbf7';
+      c.beginPath();
+      c.moveTo(-s * 0.5, 0);
+      c.quadraticCurveTo(-s * 0.65, -s * 0.45, -s * 0.2, -s * 0.55);
+      c.quadraticCurveTo(0, -s * 0.8, s * 0.25, -s * 0.55);
+      c.quadraticCurveTo(s * 0.65, -s * 0.45, s * 0.5, 0);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.fillStyle = 'rgba(155,194,58,0.55)';
+      c.beginPath();
+      c.ellipse(s * 0.05, -s * 0.3, s * 0.16, s * 0.1, 0.4, 0, TAU);
+      c.fill();
+      c.strokeStyle = 'rgba(31,26,36,0.3)';
+      c.beginPath();
+      c.moveTo(-s * 0.25, -s * 0.1);
+      c.lineTo(-s * 0.05, -s * 0.4);
+      c.stroke();
+      break;
+    }
+  }
+  c.restore();
 }
 
 function paintWindow(c: Ctx, m: Room, night: number): void {
@@ -1256,49 +1588,6 @@ function paintDesk(c: Ctx, b: Box): void {
   c.fillRect(can.x, deskY - can.h - 1, can.w, 1.5);
   c.fillStyle = 'rgba(255,255,255,0.5)';
   c.fillRect(can.x + 1, deskY - can.h + 1, 1, can.h - 2);
-  // A pizza box and crushed cans under the desk. He eats where he games.
-  const px0 = dx0 + w * 0.08;
-  const pw = Math.min(w * 0.2, tx - px0 - 6);
-  if (pw > 10) {
-    c.fillStyle = '#c99d63';
-    c.strokeStyle = 'rgba(80,50,20,0.8)';
-    c.lineWidth = 1;
-    c.beginPath();
-    c.moveTo(px0, b.y1 - 4);
-    c.lineTo(px0 + pw * 0.15, b.y1 - 4 - pw * 0.45);
-    c.lineTo(px0 + pw * 1.15, b.y1 - 4 - pw * 0.45);
-    c.lineTo(px0 + pw, b.y1 - 4);
-    c.closePath();
-    c.fill();
-    c.stroke();
-    c.fillStyle = '#e2bf87';
-    c.fillRect(px0, b.y1 - 4, pw, 4);
-    c.strokeRect(px0 + 0.5, b.y1 - 3.5, pw - 1, 3.5);
-    c.fillStyle = '#f2c14e';
-    c.beginPath();
-    c.moveTo(px0 + pw * 0.3, b.y1 - 5);
-    c.lineTo(px0 + pw * 0.62, b.y1 - 5);
-    c.lineTo(px0 + pw * 0.5, b.y1 - 5 - pw * 0.3);
-    c.closePath();
-    c.fill();
-    c.fillStyle = '#d6332b';
-    c.beginPath();
-    c.arc(px0 + pw * 0.48, b.y1 - 5 - pw * 0.1, Math.max(1, pw * 0.05), 0, TAU);
-    c.fill();
-    for (const [u, col, rot] of [
-      [1.25, '#4fc65e', 1.2],
-      [1.45, '#d6332b', -0.3],
-    ] as const) {
-      c.save();
-      c.translate(px0 + pw * u, b.y1 - 2.5);
-      c.rotate(rot);
-      c.fillStyle = col;
-      c.fillRect(-3.5, -2, 7, 4);
-      c.fillStyle = '#c8d0d8';
-      c.fillRect(2.5, -2, 1.5, 4);
-      c.restore();
-    }
-  }
   // The gaming chair, facing you: winged red back, headrest, seat, arms and wheels.
   const ccx = b.x0 + w * 0.15;
   const bw = Math.max(18, w * 0.26);
