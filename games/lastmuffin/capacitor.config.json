@@ -1,0 +1,29 @@
+{
+  "appId": "com.muffindevelopment.lastmuffin",
+  "appName": "Last Muffin Standing",
+  "webDir": "../../dist/lastmuffin",
+  "backgroundColor": "#1c120e",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#1c120e"
+  },
+  "android": {
+    "backgroundColor": "#1c120e"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "launchAutoHide": true,
+      "backgroundColor": "#1c120e",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

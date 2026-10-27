@@ -1,0 +1,22 @@
+{
+  "name": "lastmuffin",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Last Muffin Standing app shell (Capacitor). Code lives in src/.",
+  "scripts": {
+    "sync": "npm run build:web && cap sync",
+    "build:web": "cd ../.. && GAME=lastmuffin vite build",
+    "open:ios": "cap open ios",
+    "open:android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.5.3",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4"
+  }
+}

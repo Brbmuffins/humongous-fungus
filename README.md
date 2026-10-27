@@ -1,12 +1,13 @@
 # Fungus games
 
-Three mobile games that share one codebase.
+Four mobile games that share one codebase.
 
 | Game | What it is | Folder |
 |---|---|---|
 | **Humongous Fungus** | Idle game: you are a mycelium network growing a terrarium in real time, even while the game is closed | `games/fungus` |
 | **Sporemonger** | Trading game: buy and sell goods on a live market in a mushroom town, before they rot | `games/sporemonger` |
 | **Hammygotchi** | Virtual pet: keep Cube Hammy fed, showered, on the toilet and called in his containment unit, or he rots into mushrooms. Comes with a toy box and a kitchen; some days he's a meatball sub | `games/hammygotchi` |
+| **Last Muffin Standing** | Survivors-style action: a muffin auto-fights swarms of bakery pests from midnight to sunrise, picking weapon upgrades as it levels up, with bosses, evolutions and upgrades between runs | `games/lastmuffin` |
 
 ## Run it
 
@@ -15,6 +16,7 @@ npm install
 npm run dev              # Humongous Fungus on a local server; open the URL on your phone (same Wi-Fi)
 npm run dev:sporemonger  # Sporemonger
 npm run dev:hammygotchi  # Hammygotchi
+npm run dev:lastmuffin   # Last Muffin Standing
 npm test                 # unit tests for every game and the shared code
 npm run build            # type-check, then build each game into one self-contained dist/<game>/index.html
 npm run build:artifact   # also writes dist/<game>/artifact.html for sharing as claude.ai pages
@@ -23,7 +25,7 @@ npm run sim              # Humongous Fungus pacing simulator: npm run sim -- [ta
 
 ## Phone apps
 
-All three games are packaged for iOS and Android with [Capacitor](https://capacitorjs.com):
+The first three games are packaged for iOS and Android with [Capacitor](https://capacitorjs.com):
 each game folder has its native projects in `ios/` and `android/`, and its
 `src/native.ts` adds the phone-only features (durable saves, reminder
 notifications, haptics). Builds run on GitHub Actions: iPhone builds upload to
@@ -35,6 +37,10 @@ Play (`android-humongous-fungus.yml`, `android-sporemonger.yml`,
 - **Getting them on the App Store and Google Play:** [docs/app-store-checklist.md](docs/app-store-checklist.md)
 - **Store text and screenshots:** `games/<game>/store/` (Apple) and `games/<game>/store/play/` (Google)
 - **Privacy policy and support pages:** `site/humongous-fungus/`, `site/sporemonger/` and `site/hammygotchi/`
+
+Last Muffin Standing has its Capacitor config and `src/native.ts` (durable
+saves, haptics, pausing in the background) but no native projects or store
+setup yet.
 
 After changing a game, copy it into its native projects with
 `cd games/fungus && npm run sync` (or `games/sporemonger`, `games/hammygotchi`).
@@ -54,6 +60,7 @@ After changing a game, copy it into its native projects with
 | `games/hammygotchi/src/` | Hammygotchi rules (`game.ts`), content and every line he says (`defs.ts`), the containment unit, its physics and the toys in it (`scene.ts`), its furniture (`room.ts`), Hammy in his four forms and his fits (`hammy.ts`), his recorded voice lines (`voice.ts`), the toys' drawings (`toys.ts`), synthesized sounds (`sound.ts`), screens (`ui.ts`) and phone features (`native.ts`) |
 | `games/hammygotchi/assets/face`, `assets/voice` | Drop-in photos of the real Hammy's eyes and mouth, and his recorded voice lines (see the README in each) |
 | `games/hammygotchi/ios`, `android` | Native app projects (Capacitor) |
+| `games/lastmuffin/src/` | Last Muffin Standing content: weapons, passives, pests, waves, muffins and the Pantry (`defs.ts`); one run, as a pure simulation (`run.ts`); what carries over between runs (`meta.ts`); every drawing (`draw.ts`); the camera, floor and effects (`view.ts`); joystick and keys (`input.ts`); sounds (`sound.ts`); screens and HUD (`ui.ts`); phone features (`native.ts`) |
 | `shared/market.ts` | Live market engine: seeded price walk, moods, trades, rot |
 | `shared/chart.ts` | Live price chart with crosshair readout |
 | `shared/storage.ts` | Local save, plus an optional per-player cloud copy when hosted as an artifact |
