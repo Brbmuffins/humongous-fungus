@@ -17,11 +17,11 @@ Copy these into App Store Connect. Character limits are Apple's; every field her
 | Privacy policy URL | where you host `site/hammygotchi/privacy.html` |
 | Support URL | where you host `site/hammygotchi/support.html` |
 
-Fart Rocket, the betting game on Hammy's phone, is left out of the app
-builds (`ROCKET_IN_APPS` in `games/hammygotchi/src/rocket.ts` is false), so
-the answers above stay right. If you switch it on, answer "Frequent/Intense"
-for Simulated Gambling (bets of in-game coins, no real money) and expect a
-teen or older rating.
+Hammy's Arcade, the betting games on Hammy's phone (Fart Rocket, Mines,
+Crossing and Plinko), is left out of the app builds (`ARCADE_IN_APPS` in
+`games/hammygotchi/src/arcade.ts` is false), so the answers above stay
+right. If you switch it on, answer "Frequent/Intense" for Simulated Gambling
+(bets of in-game coins, no real money) and expect a teen or older rating.
 
 The optional "talk to him" feature (Life tab) sends what the player types
 or says to Anthropic and ElevenLabs, but only with the player's own API keys

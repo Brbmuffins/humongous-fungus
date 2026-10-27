@@ -1,21 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  CRASHES,
-  ROCKET_CROWD,
-  ROCKET_IN_APPS,
-  cashCrowd,
-  crashCause,
-  crashPoint,
-  crowd,
-  multiplierAt,
-  rocketBet,
-  rocketCashOut,
-  rocketRefund,
-  secondsTo,
-} from '../../games/hammygotchi/src/rocket';
-import { deserialize, newGame, serialize } from '../../games/hammygotchi/src/state';
-
-const T0 = Date.UTC(2026, 9, 1, 12);
+import { CRASHES, ROCKET_CROWD, cashCrowd, crashCause, crashPoint, crowd, multiplierAt, secondsTo } from '../../games/hammygotchi/src/rocket';
 
 /** A repeatable stand-in for Math.random. */
 function seeded(seed: number): () => number {
@@ -99,62 +83,5 @@ describe('Fart Rocket: everyone else', () => {
     const late = cashCrowd(ps, 100, 4);
     for (const p of late) expect(p.target!).toBeLessThan(4);
     for (const p of ps) if (p.target === null || p.target >= 4) expect(p.out).toBeNull();
-  });
-});
-
-describe('Fart Rocket: your coins', () => {
-  it('takes the bet up front and pays it back times the multiplier', () => {
-    const s = newGame(T0);
-    s.coins = 100;
-    expect(rocketBet(s, 30.7)).toBe(true);
-    expect(s.coins).toBe(70);
-    expect(rocketCashOut(s, 30, 2.37)).toBe(71);
-    expect(s.coins).toBe(141);
-    expect(s.stats.rocketRounds).toBe(1);
-    expect(s.stats.rocketNet).toBe(41);
-    expect(s.stats.rocketBest).toBe(2.37);
-  });
-
-  it('won’t bet what you don’t have, nothing, or on a dead Hammy', () => {
-    const s = newGame(T0);
-    s.coins = 20;
-    expect(rocketBet(s, 21)).toBe(false);
-    expect(rocketBet(s, 0)).toBe(false);
-    expect(rocketBet(s, Number.NaN)).toBe(false);
-    expect(s.coins).toBe(20);
-    s.diedAt = T0;
-    expect(rocketBet(s, 5)).toBe(false);
-    expect(s.stats.rocketRounds).toBe(0);
-  });
-
-  it('gives a bet back if it never launched, as if it never happened', () => {
-    const s = newGame(T0);
-    s.coins = 50;
-    rocketBet(s, 25);
-    rocketRefund(s, 25);
-    expect(s.coins).toBe(50);
-    expect(s.stats.rocketRounds).toBe(0);
-    expect(s.stats.rocketNet).toBe(0);
-  });
-
-  it('keeps a losing record through a save, and old saves start at zero', () => {
-    const s = newGame(T0);
-    s.coins = 40;
-    rocketBet(s, 40);
-    const back = deserialize(serialize(s))!;
-    expect(back.stats.rocketNet).toBe(-40);
-    expect(back.stats.rocketRounds).toBe(1);
-    const old = JSON.parse(serialize(s));
-    delete old.stats.rocketRounds;
-    delete old.stats.rocketNet;
-    delete old.stats.rocketBest;
-    const fresh = deserialize(JSON.stringify(old))!;
-    expect(fresh.stats.rocketRounds).toBe(0);
-    expect(fresh.stats.rocketNet).toBe(0);
-    expect(fresh.stats.rocketBest).toBe(0);
-  });
-
-  it('stays out of the store apps unless switched on (it would change their age rating)', () => {
-    expect(ROCKET_IN_APPS).toBe(false);
   });
 });

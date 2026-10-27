@@ -18,11 +18,12 @@ Copy these into Play Console. Every field fits Google's limits.
 | Privacy policy URL | where you host `site/hammygotchi/privacy.html` |
 | Contact email | northfieldhemp@gmail.com |
 
-Fart Rocket, the betting game on Hammy's phone, is left out of the app
-builds (`ROCKET_IN_APPS` in `games/hammygotchi/src/rocket.ts` is false), so
-the answers above stay right. If you switch it on, answer yes to simulated
-gambling in the content rating questionnaire (bets of in-game coins, nothing
-to buy or win) and expect a teen or older rating.
+Hammy's Arcade, the betting games on Hammy's phone (Fart Rocket, Mines,
+Crossing and Plinko), is left out of the app builds (`ARCADE_IN_APPS` in
+`games/hammygotchi/src/arcade.ts` is false), so the answers above stay
+right. If you switch it on, answer yes to simulated gambling in the content
+rating questionnaire (bets of in-game coins, nothing to buy or win) and
+expect a teen or older rating.
 
 ## Short description (80)
 

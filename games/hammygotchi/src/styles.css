@@ -1308,64 +1308,65 @@ button {
   background: #ff3b30;
 }
 
-/* Fart Rocket: an app on his phone, full screen over the unit. */
-.app-tile {
+/* Hammy's Arcade: the betting games on his phone, full screen over the unit. */
+.apps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 8px 6px 6px;
+  border-bottom: 1px solid #2a2238;
+}
+.app {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  margin: 8px 10px 0;
-  padding: 8px 12px;
-  border: 1px solid #3a2f12;
-  border-radius: 14px;
-  background: linear-gradient(90deg, #3a2a0c, #1f1830);
+  gap: 4px;
+  padding: 2px;
+  border: 0;
+  background: none;
   color: var(--text);
-  text-align: left;
   cursor: pointer;
 }
 .app-icon {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  flex: none;
-  border-radius: 10px;
-  background: var(--stink);
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   font-size: 22px;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.2);
 }
-.app-text {
-  display: flex;
-  flex-direction: column;
-  font-size: 12px;
+.app-name {
+  font-size: 11px;
+  line-height: 1.15;
+  text-align: center;
   color: var(--muted);
 }
-.app-text strong {
-  font-size: 14px;
-  color: var(--text);
-}
-.rocket-card {
+.arcade-card {
   width: min(560px, 100%);
   gap: 8px;
   padding: 14px;
   background: linear-gradient(180deg, #2a1d40, #140c20);
 }
-.rocket-top {
+.arcade-top {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.rocket-top h2 {
+.arcade-top h2 {
   flex: 1;
   font-size: 22px;
 }
-.rocket-coins {
+.arcade-coins {
   padding: 4px 10px;
   border-radius: 999px;
   background: #3a2a0c;
   color: #ffd34d;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.rocket-close {
+.arcade-close {
   width: 36px;
   height: 36px;
   flex: none;
@@ -1376,7 +1377,8 @@ button {
   font-size: 16px;
   cursor: pointer;
 }
-.rocket-history {
+.rocket-history,
+.arcade-history {
   display: flex;
   gap: 5px;
   overflow: hidden;
@@ -1385,42 +1387,62 @@ button {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.rocket-history li {
+.rocket-history li,
+.arcade-history li {
   padding: 2px 8px;
   border-radius: 999px;
   background: #3b2d55;
 }
-.rocket-history .lo {
+.rocket-history .lo,
+.arcade-history .lo {
   color: #ff8a7a;
 }
-.rocket-history .mid {
+.rocket-history .mid,
+.arcade-history .mid {
   color: var(--mint);
 }
-.rocket-history .hi {
+.rocket-history .hi,
+.arcade-history .hi {
   color: #1d1400;
   background: #ffd34d;
 }
-.rocket-history .none {
+.rocket-history .none,
+.arcade-history .none {
   color: var(--muted);
   font-weight: 500;
 }
-.rocket-sky {
+.rocket-sky,
+.crossing-road,
+.plinko-board {
   width: 100%;
+  border-radius: 14px;
+}
+.rocket-sky {
   aspect-ratio: 5 / 4;
   max-height: 46vh;
-  border-radius: 14px;
   background: #69b7ff;
 }
-.modal-card .rocket-status {
+.crossing-road {
+  aspect-ratio: 4 / 3;
+  max-height: 46vh;
+  background: #34323d;
+}
+.plinko-board {
+  aspect-ratio: 1;
+  max-height: 50vh;
+  background: #140c20;
+}
+.modal-card .rocket-status,
+.modal-card .arcade-status {
   min-height: 2.6em;
   color: var(--text);
   text-align: center;
 }
-.rocket-row {
+.arcade-row {
   display: flex;
   gap: 6px;
 }
-.rocket-amount,
+.arcade-amount,
 .rocket-auto-at {
   min-width: 0;
   border: 1px solid var(--line);
@@ -1431,11 +1453,15 @@ button {
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
-.rocket-amount {
+.arcade-amount {
   flex: 1;
   padding: 8px;
 }
-.rocket-chip {
+.arcade-amount:disabled {
+  opacity: 0.6;
+}
+.arcade-chip,
+.arcade-opt {
   flex: none;
   min-width: 44px;
   padding: 8px 10px;
@@ -1445,6 +1471,32 @@ button {
   color: var(--text);
   font-weight: 700;
   cursor: pointer;
+}
+.arcade-chip:disabled,
+.arcade-opt:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.arcade-choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.arcade-choice-label {
+  min-width: 48px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.arcade-opt {
+  flex: 1;
+  padding-inline: 6px;
+  font-size: 13px;
+}
+.arcade-opt[aria-pressed='true'] {
+  border-color: var(--cheese);
+  background: #3a2a0c;
+  color: #ffd34d;
 }
 .rocket-auto {
   display: flex;
@@ -1462,13 +1514,26 @@ button {
   width: 84px;
   padding: 5px;
 }
-.modal-card .rocket-go {
+.modal-card .rocket-go,
+.modal-card .arcade-go,
+.modal-card .arcade-go2 {
   margin-top: 2px;
   font-size: 17px;
 }
-.rocket-go.bail {
+.arcade-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.arcade-buttons .btn {
+  flex: 1 1 160px;
+}
+.rocket-go.bail,
+.arcade-go.bail,
+.arcade-go2.bail {
   background: var(--stink);
   color: var(--stink-ink);
+  border-color: transparent;
   animation: bail 0.5s ease-in-out infinite alternate;
 }
 @keyframes bail {
@@ -1476,7 +1541,7 @@ button {
     transform: scale(1.03);
   }
 }
-.rocket-sub {
+.arcade-sub {
   margin-top: 4px;
   font-size: 13px;
   color: var(--muted);
@@ -1512,6 +1577,158 @@ button {
 }
 .rocket-crowd .you {
   font-weight: 700;
+}
+
+/* Hammy Mines: a floor of pizza boxes. */
+.mines-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mines-face {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 50%;
+  background: #3b2d55;
+}
+.mines-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.modal-card .mines-says {
+  color: var(--text);
+  font-weight: 600;
+}
+.modal-card .mines-head-text .arcade-status {
+  min-height: 0;
+  text-align: left;
+  color: var(--muted);
+  font-size: 13px;
+}
+.mines-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--n, 8), 1fr);
+  gap: 4px;
+  padding: 8px;
+  border-radius: 14px;
+  background: #5a4630;
+  box-shadow: inset 0 0 0 2px #3d2f20;
+}
+.mines-grid.g16 {
+  gap: 2px;
+  padding: 5px;
+}
+.mines-tile {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: linear-gradient(160deg, #e6c48f, #c99a5b);
+  box-shadow:
+    inset 0 0 0 2px rgba(120, 72, 24, 0.45),
+    0 2px 0 #7a5530;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+/* The DoorDosh sticker on every box. */
+.mines-tile:not(.dorkito):not(.poop)::after {
+  content: '';
+  width: 26%;
+  height: 26%;
+  border-radius: 50%;
+  background: #ff3d2e;
+  opacity: 0.85;
+}
+.g8 .mines-tile {
+  border-radius: 4px;
+  font-size: 15px;
+}
+.g16 .mines-tile {
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(120, 72, 24, 0.45);
+  font-size: 9px;
+}
+.mines-grid:not(.live) .mines-tile:not(.dorkito):not(.poop) {
+  cursor: default;
+}
+.mines-tile.dorkito,
+.mines-tile.poop {
+  background: #2b2038;
+  box-shadow: inset 0 0 0 2px #3f2f5a;
+  cursor: default;
+}
+.mines-tile.poop {
+  background: #4a2c14;
+}
+.mines-tile.shown {
+  opacity: 0.45;
+}
+.mines-tile.boom {
+  background: #ff5c5c;
+  animation: boom 0.4s ease-out;
+}
+@keyframes boom {
+  from {
+    transform: scale(1.4);
+  }
+}
+.chip-dorkito {
+  width: 62%;
+  height: 62%;
+  background: radial-gradient(circle at 35% 55%, #d4481a 0 7%, transparent 8%), radial-gradient(circle at 62% 70%, #d4481a 0 7%, transparent 8%), #ff9a2e;
+  clip-path: polygon(50% 4%, 96% 92%, 4% 92%);
+  animation: pop 0.25s ease-out;
+}
+@keyframes pop {
+  from {
+    transform: scale(0.3) rotate(-30deg);
+  }
+}
+.modal-card .mines-pays {
+  color: #ffd34d;
+  font-weight: 700;
+  text-align: center;
+}
+.mines-poops {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.mines-count {
+  flex: 1;
+  accent-color: var(--cheese);
+}
+.mines-count-label {
+  min-width: 72px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* Stepping in it. */
+.arcade-card.splat {
+  position: relative;
+}
+.arcade-card.splat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 50% 45%, rgba(122, 74, 30, 0.75), rgba(122, 74, 30, 0) 65%);
+  pointer-events: none;
+  animation: splat 0.8s ease-out forwards;
+}
+@keyframes splat {
+  to {
+    opacity: 0;
+  }
 }
 
 /* Short phones (iPhone SE, small Androids): tighter everything, and the

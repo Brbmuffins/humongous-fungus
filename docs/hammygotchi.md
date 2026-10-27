@@ -234,42 +234,64 @@ thread or call. `src/talk.ts` does the asking and the speaking:
   the save, which syncs to the cloud. The privacy page says what's sent where
   when they're added.
 
-### Fart Rocket
+### Hammy's Arcade
 
-An app on his phone (the tile at the top of the Phone tab): a crash game.
-You bet Hammy coins, he blasts off the roof of the containment building on
-his own fart, and the multiplier climbs until something ridiculous ends the
-flight. Bail out before it does and you get your bet times the multiplier.
-Rules and content are in `src/rocket.ts`, the screen in `src/rocketview.ts`.
+A row of apps on his phone (top of the Phone tab): four betting games on his
+coins, modelled on the casino originals. They share their coins, stats and
+switches through `src/arcade.ts` and the bet picker, option buttons and card
+in `src/arcadeview.ts`; each game's rules are in its own file, its screen in
+the matching `…view.ts`. Every game pays back about 99 of every 100 coins bet
+over many rounds (`RTP`), and every round's luck comes from the browser's
+crypto random numbers.
 
-- **The climb.** It's `e^(0.075·t)`: 2× after about 9 seconds, 10× after
-  about 31. On the way up he passes seagulls, a plane towing an ARE WE THERE
-  YET? banner, the clouds, a satellite, the moon (which wakes up), a UFO, a
-  whole fleet of them holding a HI HAMMY sign, floating Dorkitos, and a
-  series of road signs saying it's still Ohio. Past 50× the sky and his
-  exhaust go rainbow.
-- **The crash.** Each round's crash point is `floor(99 / (1 − u)) / 100` for
-  a uniform `u`: the chance he gets past x is 0.99 / x, so whatever you aim
-  for pays back 99% over many rounds, and about 2 rounds in 100 end before he
-  leaves the roof. How it ends depends on how high he got: running out of
-  gas, sneezing, spotting a Dorkito, sharting, checking his phone, a seagull,
-  Dr. Moss pulling the plug, a plane, burrito cramps, bonking the moon, alien
-  abduction, landing in Ohio.
-- **Everyone else.** Four to seven others bet each round (Dr. Moss, the robot
-  vacuum, the DoorDosh driver, Grandma, a seagull, the toilet, War…), each
-  with their own nerve, and parachute off him when they bail. The plant never
-  bails. It's a plant.
-- **Your coins.** Bets come out of his coins up front; bail-outs pay
-  `floor(bet × multiplier)`. There's an auto bail-out. Closing the app or
-  leaving the page mid-flight bails you out at the current multiplier, and a
-  bet on a round that hasn't launched comes back. When you close it he says
-  something about how it went, back in the unit. The Life tab keeps rounds,
-  best bail-out and coins up or down.
+- **Fart Rocket** (`rocket.ts`): a crash game. You bet, he blasts off the
+  roof of the containment building on his own fart, and the multiplier
+  climbs (`e^(0.075·t)`: 2× after about 9 seconds, 10× after about 31) until
+  something ridiculous ends the flight; bail out before it does. On the way
+  up: seagulls, a plane towing an ARE WE THERE YET? banner, clouds, a
+  satellite, the moon (which wakes up), a UFO, a fleet of them with a HI
+  HAMMY sign, floating Dorkitos and road signs saying it's still Ohio; past
+  50× it all goes rainbow. The crash point is `floor(99 / (1 − u)) / 100`, so
+  the chance of getting past x is 0.99 / x and about 2 rounds in 100 end on
+  the roof. How it ends depends on how high he got: out of gas, a sneeze, a
+  Dorkito, a shart, his phone, a seagull, Dr. Moss pulling the plug, a plane,
+  burrito cramps, the moon, aliens, Ohio. Four to seven others bet each round
+  (Dr. Moss, the robot vacuum, Grandma, the toilet, War…) and parachute off
+  him when they bail; the plant never bails. There's an auto bail-out.
+- **Hammy Mines** (`mines.ts`): a floor of pizza boxes, 4×4, 8×8 or 16×16,
+  with as much poop under them as you choose (from 1 to all but one box).
+  Every Dorkito you find multiplies what you'd get back by the odds of that
+  box being safe, `(boxes left) / (safe boxes left)`, times 0.99 once; the
+  first poop loses the bet. Cash out after any box, or open a random one.
+  Runs are capped at 1,000,000×.
+- **Hammy Crossing** (`crossing.ts`): walk him across the road a lane at a
+  time. Each lane has a set chance of flattening him (Easy 4%, Medium 12%,
+  Hard 20%, Daredevil 40%) and the multiplier is `0.99 / (1 − risk)^lanes`,
+  shown on each lane's manhole. A lane he makes it across gets a barrier,
+  with whatever was coming screeching to a stop behind it. The traffic is
+  drawn from straight above in `src/cars.ts`: a cop car with a flashing light
+  bar, an ambulance, the Dorkitos truck, a garbage truck, the school bus, a
+  pickup with a couch in the back, a tractor, a race car, a DoorDosh
+  scooter, a runaway shopping cart, Grandma on her mobility scooter, and
+  Train Hammy, smoking. Cash out on any lane, or reach the other side (24,
+  22, 20 or 15 lanes).
+- **Poop Plinko** (`plinko.ts`): he squats over a board of pegs (8, 12 or 16
+  rows) and drops one. It bounces left or right off every row and lands in a
+  toilet; low, medium or high risk sets how much the edges pay (up to 1000×
+  on 16 rows, high) and how little the clogged middle does. The tables are
+  in `plinko.ts`, each paying back just under 99% on a fair bounce. Drop as
+  many as you like at once.
+- **Your coins.** Bets come out up front; wins pay `floor(bet × multiplier)`.
+  A bet on a round that hasn't started comes back, and closing a game or
+  leaving the page squares you up the way the round was going: bailed out
+  at the current multiplier, or paid where the poop was going to land. Back
+  in the unit he says something about how it went. The Life tab keeps each
+  game's rounds, coins up or down and best multiplier.
 - **Not in the store apps.** Simulated gambling raises an app's age rating,
-  so `ROCKET_IN_APPS` in `src/rocket.ts` is false and the iOS and Android
-  builds leave it out; the browser version has it. Switch it on and the
-  age-rating answers in `store/listing.md` and `store/play/listing.md` need
-  to change (both say so).
+  so `ARCADE_IN_APPS` in `src/arcade.ts` is false and the iOS and Android
+  builds leave the whole arcade out; the browser version has it. Switch it
+  on and the age-rating answers in `store/listing.md` and
+  `store/play/listing.md` need to change (both say so).
 
 ## Cube Hammy, and some days a meatball sub
 

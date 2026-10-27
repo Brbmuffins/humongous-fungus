@@ -67,14 +67,14 @@ import {
   type AwayReport,
   type HammyEvent,
 } from './game';
-import { ROCKET_HOME, rocketBet, rocketCashOut, rocketRefund } from './rocket';
-import type { RocketSession } from './rocketview';
+import { HOME_LINES, payOut, placeBet, refundBet, type ArcadeGame } from './arcade';
+import type { ArcadeSession } from './arcadeview';
 import { TankScene, type ToiletResult } from './scene';
 import { ask, loadTalk, setTalkSound, speakLine, type Turn } from './talk';
 import { setSound, sfx, unlock } from './sound';
 import { setVoice } from './voice';
 import { deserialize, newGame, serialize, type HammyState, type Poop } from './state';
-import { GameUI, ROCKET_ON, type Controller } from './ui';
+import { ARCADE_ON, GameUI, type Controller } from './ui';
 import { askForReminders, buzz, clearReminders, isNative, nativeSave, onAppState, scheduleReminders } from './native';
 
 const localSave = makeLocalSave('hammygotchi.save.v1');
@@ -579,38 +579,39 @@ class Game implements Controller {
     this.talk(false);
   }
 
-  // Fart Rocket ---------------------------------------------------------------
+  // Hammy's Arcade -----------------------------------------------------------
 
-  rocket(): void {
-    if (!ROCKET_ON || this.ui.modalOpen) return;
+  arcade(game: ArcadeGame): void {
+    if (!ARCADE_ON || this.ui.modalOpen) return;
     if (!isAlive(this.state)) {
-      this.ui.toast('No pilot. Hammy is dead.');
+      this.ui.toast('Hammy is dead. The arcade is closed.');
       return;
     }
-    this.ui.showRocket((r) => this.rocketDone(r));
+    this.ui.showArcade(game, (r) => this.arcadeDone(game, r));
   }
 
-  rocketBet(amount: number): boolean {
-    if (!rocketBet(this.state, amount)) return false;
+  bet(game: ArcadeGame, amount: number): boolean {
+    if (!placeBet(this.state, game, amount)) return false;
     this.changed();
     return true;
   }
 
-  rocketCashOut(bet: number, mult: number): number {
-    const won = rocketCashOut(this.state, bet, mult);
+  payOut(game: ArcadeGame, bet: number, mult: number): number {
+    const won = payOut(this.state, game, bet, mult);
     this.changed();
     return won;
   }
 
-  rocketRefund(bet: number): void {
-    rocketRefund(this.state, bet);
+  refund(game: ArcadeGame, bet: number): void {
+    refundBet(this.state, game, bet);
     this.changed();
   }
 
   /** Back in the unit after you've been betting on him: he has thoughts. */
-  private rocketDone(r: RocketSession): void {
+  private arcadeDone(game: ArcadeGame, r: ArcadeSession): void {
     if (!r.rounds || !isAlive(this.state)) return;
-    const lines = r.net > 0 ? ROCKET_HOME.won : r.net < 0 ? ROCKET_HOME.lost : ROCKET_HOME.even;
+    const home = HOME_LINES[game];
+    const lines = r.net > 0 ? home.won : r.net < 0 ? home.lost : home.even;
     // Back to the unit (on phones the Phone sheet would hide him).
     this.ui.closeSheet();
     this.scene.fart(1.1);

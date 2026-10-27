@@ -30,9 +30,12 @@ never flushes and leaves his trash everywhere.
   character with Claude (on your claude.ai account in the browser version, or
   your own Anthropic key in the app), out loud with ElevenLabs or the
   device's voice.
-- Fart Rocket, a crash game on his phone (browser version only): bet coins,
-  he rides his own fart past the plane, the moon and the aliens, and you
-  bail out before he sneezes, hits a seagull or lands in Ohio.
+- Hammy's Arcade on his phone (browser version only), betting his coins:
+  Fart Rocket (he rides his own fart past the plane, the moon and the
+  aliens; bail out before he sneezes, hits a seagull or lands in Ohio),
+  Hammy Mines (Dorkitos under his pizza boxes, and poop, on a 4×4, 8×8 or
+  16×16 floor), Hammy Crossing (walk him across the road lane by lane) and
+  Poop Plinko (he drops one; it bounces into a toilet).
 - Coins from his stream (it keeps paying while you're away), furniture for
   the unit, fits to dress him in,
   robot vacuums (they pick up his trash, never his poop) and soap.

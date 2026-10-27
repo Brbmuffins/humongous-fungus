@@ -1,10 +1,9 @@
-// Fart Rocket: Hammy's crash game, an app on his phone (and on his PC).
-// Bet Hammy coins, he rides his own fart up out of the unit, past the
-// seagulls, a plane, the moon and some aliens, and the multiplier climbs
-// until something ridiculous ends it. Cash out before it does. Plain rules
-// and content here; the screen is in rocketview.ts.
-import { isAlive } from './game';
-import type { HammyState } from './state';
+// Fart Rocket: Hammy's crash game, in Hammy's Arcade on his phone. Bet
+// Hammy coins, he rides his own fart up out of the unit, past the seagulls,
+// a plane, the moon and some aliens, and the multiplier climbs until
+// something ridiculous ends it. Cash out before it does. Plain rules and
+// content here; the screen is in rocketview.ts, the coins in arcade.ts.
+import { RTP } from './arcade';
 
 type Roll = () => number;
 
@@ -13,14 +12,6 @@ export const ROCKET_GROWTH = 0.075;
 /** Seconds to bet before each launch, and to look at the wreckage after. */
 export const ROCKET_BET_SECONDS = 5;
 export const ROCKET_PAUSE_SECONDS = 3.5;
-export const ROCKET_MIN_BET = 1;
-/**
- * Fart Rocket is simulated gambling, which raises an app's store age rating,
- * so it's left out of the iOS and Android builds and only the browser version
- * has it. Turning this on means new age-rating answers in both stores (see
- * docs/hammygotchi.md).
- */
-export const ROCKET_IN_APPS = false;
 
 export const multiplierAt = (seconds: number): number => Math.exp(ROCKET_GROWTH * Math.max(0, seconds));
 export const secondsTo = (mult: number): number => Math.log(Math.max(1, mult)) / ROCKET_GROWTH;
@@ -31,7 +22,7 @@ export const secondsTo = (mult: number): number => Math.log(Math.max(1, mult)) /
  * 99% on average, and about 2 rounds in 100 end before he's off the roof.
  */
 export function crashPoint(u: number): number {
-  const x = Math.floor(99 / (1 - Math.min(0.999999, Math.max(0, u)))) / 100;
+  const x = Math.floor((RTP * 100) / (1 - Math.min(0.999999, Math.max(0, u)))) / 100;
   return Math.max(1, Math.min(10_000, x));
 }
 
@@ -146,40 +137,4 @@ export function cashCrowd(punters: Punter[], mult: number, crash: number): Punte
     now.push(p);
   }
   return now;
-}
-
-// ---------------------------------------------------------------------------
-// Your coins
-
-/** Put coins on him. False if you don't have them (or he's dead). */
-export function rocketBet(s: HammyState, amount: number): boolean {
-  const bet = Math.floor(amount);
-  if (!isAlive(s) || !Number.isFinite(bet) || bet < ROCKET_MIN_BET || bet > s.coins) return false;
-  s.coins -= bet;
-  s.stats.rocketRounds += 1;
-  s.stats.rocketNet -= bet;
-  return true;
-}
-
-/** Out in time: the bet times the multiplier, rounded down. Returns what came back. */
-export function rocketCashOut(s: HammyState, bet: number, mult: number): number {
-  const won = Math.floor(bet * Math.max(1, mult));
-  s.coins += won;
-  s.stats.rocketNet += won;
-  s.stats.rocketBest = Math.max(s.stats.rocketBest, Math.floor(mult * 100) / 100);
-  return won;
-}
-
-/** What he says back in the unit after you've been betting on him. */
-export const ROCKET_HOME = {
-  won: ['Told you I could fly.', 'Pilot Hammy, reporting for duty.', 'Spend it on me. Furniture. For me.', 'I’m basically an astronaut now.'],
-  lost: ['My bad on the coins.', 'The beans betrayed us.', 'Run it back?', 'That seagull owes you money.'],
-  even: ['I’m never eating beans again.', 'My butt is tired.', 'Same time tomorrow?'],
-} as const;
-
-/** A bet that never launched comes back. */
-export function rocketRefund(s: HammyState, bet: number): void {
-  s.coins += bet;
-  s.stats.rocketRounds = Math.max(0, s.stats.rocketRounds - 1);
-  s.stats.rocketNet += bet;
 }

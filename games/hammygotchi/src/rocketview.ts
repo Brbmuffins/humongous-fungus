@@ -1,9 +1,23 @@
 // The Fart Rocket screen: the sky, Hammy riding his own fart up through it,
 // everyone else's bets, and the button. Rounds run back to back while it's
-// open. The rules are in rocket.ts; your coins move through the controller.
+// open. The rules are in rocket.ts; your coins go through arcadeview.ts.
 import { h, setDisabled, setText } from '@shared/dom';
 import { fmt } from '@shared/format';
-import type { FormId } from './defs';
+import {
+  BetPicker,
+  EMOJI_FONT as EMOJI,
+  Ledger,
+  UI_FONT as UI,
+  arcadeCard,
+  emoji,
+  fairRoll,
+  loud,
+  pick,
+  x2,
+  type ArcadeHost,
+  type ArcadeScreen,
+  type ArcadeSession,
+} from './arcadeview';
 import { isAlive } from './game';
 import { EXTENTS, defaultLook, drawHammy, type Face } from './hammy';
 import { buzz } from './native';
@@ -11,7 +25,6 @@ import {
   FLIGHT_LINES,
   MILESTONES,
   ROCKET_BET_SECONDS,
-  ROCKET_MIN_BET,
   ROCKET_PAUSE_SECONDS,
   cashCrowd,
   crashCause,
@@ -22,28 +35,11 @@ import {
   type Punter,
 } from './rocket';
 import { engine, sfx, type Engine } from './sound';
-import type { HammyState } from './state';
-
-export interface RocketHost {
-  readonly state: HammyState;
-  readonly form: FormId;
-  /** Put coins on him: false if you can't. */
-  rocketBet(amount: number): boolean;
-  /** Bailed out at `mult`: returns what came back. */
-  rocketCashOut(bet: number, mult: number): number;
-  rocketRefund(bet: number): void;
-}
-
-/** How a sitting went, for Hammy to react to back in the unit. */
-export interface RocketSession {
-  rounds: number;
-  net: number;
-}
 
 type Phase = 'bet' | 'fly' | 'crash';
 
 /** Kept between sittings while the page is open (not saved). */
-const prefs = { amount: 10, auto: false, autoAt: 2 };
+const prefs = { auto: false, autoAt: 2 };
 const history: number[] = [];
 
 /** Positions: x as a fraction of the width, l as altitude (log10 of the multiplier). */
@@ -70,9 +66,6 @@ interface Cloud {
 }
 
 const INK = '#2b1400';
-const EMOJI = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
-const DISPLAY = '"Bagel Fat One", "Cooper Black", system-ui, sans-serif';
-const UI = 'Rubik, system-ui, sans-serif';
 
 /** Sky colours (top, bottom) by altitude: day, high, dusk, space. */
 const SKY: readonly (readonly [number, string, string])[] = [
@@ -83,10 +76,7 @@ const SKY: readonly (readonly [number, string, string])[] = [
   [9, '#06051a', '#120d33'],
 ];
 
-const rand = (): number => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
-const pick = <T>(xs: readonly T[]): T => xs[Math.floor(Math.random() * xs.length)];
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
-const x2 = (m: number): string => `${(Math.floor(m * 100) / 100).toFixed(2)}×`;
 const wrap = (v: number, n: number): number => ((v % n) + n) % n;
 
 function hex(c: string): [number, number, number] {
@@ -113,27 +103,7 @@ function skyAt(l: number): [string, string] {
   return [SKY[SKY.length - 1][1], SKY[SKY.length - 1][2]];
 }
 
-/** Text with a dark outline, so it reads on any sky. */
-function loud(c: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, fill: string, font = DISPLAY): void {
-  c.font = font === DISPLAY ? `${size}px ${DISPLAY}` : `800 ${size}px ${font}`;
-  c.textAlign = 'center';
-  c.textBaseline = 'middle';
-  c.lineJoin = 'round';
-  c.lineWidth = Math.max(3, size * 0.14);
-  c.strokeStyle = 'rgba(20, 8, 30, 0.85)';
-  c.strokeText(text, x, y);
-  c.fillStyle = fill;
-  c.fillText(text, x, y);
-}
-
-function emoji(c: CanvasRenderingContext2D, e: string, x: number, y: number, size: number): void {
-  c.font = `${size}px ${EMOJI}`;
-  c.textAlign = 'center';
-  c.textBaseline = 'middle';
-  c.fillText(e, x, y);
-}
-
-export class RocketApp {
+export class RocketApp implements ArcadeScreen {
   readonly card: HTMLElement;
   private phase: Phase = 'bet';
   private phaseAt = 0;
@@ -148,7 +118,9 @@ export class RocketApp {
   private won = 0;
   /** Bet as soon as the next round opens. */
   private queued = false;
-  private session: RocketSession = { rounds: 0, net: 0 };
+  private ledger: Ledger;
+  private picker: BetPicker;
+  private syncCoins: (coins: number) => void;
   private milestone = 0;
   private nextLine = 0;
   private bubble: { text: string; until: number } | null = null;
@@ -165,27 +137,19 @@ export class RocketApp {
   private dpr = 1;
 
   private canvas = h('canvas', { class: 'rocket-sky', role: 'img', 'aria-label': 'Hammy riding his own fart into the sky' });
-  private coinsEl = h('span', { class: 'rocket-coins' });
   private historyEl = h('ol', { class: 'rocket-history', 'aria-label': 'Where the last rounds ended' });
   private status = h('p', { class: 'rocket-status', 'aria-live': 'polite' });
-  private amount = h('input', { class: 'rocket-amount', type: 'number', min: ROCKET_MIN_BET, step: 1, inputmode: 'numeric', 'aria-label': 'Bet, in coins' });
   private autoBox = h('input', { type: 'checkbox', 'aria-label': 'Bail out automatically' });
   private autoAt = h('input', { class: 'rocket-auto-at', type: 'number', min: 1.01, step: 0.1, inputmode: 'decimal', 'aria-label': 'Bail out at this multiplier' });
   private go = h('button', { class: 'btn btn-cheese rocket-go', type: 'button' });
   private crowdEl = h('ul', { class: 'rocket-crowd', 'aria-label': 'Who else is betting on him' });
 
   constructor(
-    private host: RocketHost,
+    private host: ArcadeHost,
     close: () => void,
   ) {
-    const closeBtn = h('button', { class: 'rocket-close', type: 'button', 'aria-label': 'Close Fart Rocket', onclick: close }, '✕');
-    const chip = (label: string, title: string, f: () => void) => h('button', { class: 'rocket-chip', type: 'button', 'aria-label': title, onclick: f }, label);
-    this.amount.value = String(prefs.amount);
-    this.amount.addEventListener('input', () => {
-      const v = Math.floor(Number(this.amount.value));
-      if (Number.isFinite(v) && v >= ROCKET_MIN_BET) prefs.amount = v;
-    });
-    this.amount.addEventListener('change', () => this.setAmount(Number(this.amount.value)));
+    this.ledger = new Ledger(host, 'rocket');
+    this.picker = new BetPicker(() => host.state.coins);
     this.autoBox.checked = prefs.auto;
     this.autoBox.addEventListener('change', () => (prefs.auto = this.autoBox.checked));
     this.autoAt.value = prefs.autoAt.toFixed(2);
@@ -196,29 +160,21 @@ export class RocketApp {
     });
     this.go.addEventListener('click', () => this.action());
 
-    this.card = h(
-      'div',
-      { class: 'modal-card rocket-card', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'modal-title' },
-      h('div', { class: 'rocket-top' }, h('h2', { id: 'modal-title' }, '💨 Fart Rocket'), this.coinsEl, closeBtn),
+    const { card, syncCoins } = arcadeCard(
+      'rocket',
+      close,
       this.historyEl,
       this.canvas,
       this.status,
-      h(
-        'div',
-        { class: 'rocket-row' },
-        chip('½', 'Half the bet', () => this.setAmount(prefs.amount / 2)),
-        this.amount,
-        chip('2×', 'Double the bet', () => this.setAmount(prefs.amount * 2)),
-        chip('Max', 'Bet everything', () => this.setAmount(this.host.state.coins)),
-      ),
+      this.picker.el,
       h('label', { class: 'rocket-auto' }, this.autoBox, h('span', null, 'Bail out at'), this.autoAt),
       this.go,
-      h('h3', { class: 'rocket-sub' }, 'Also riding'),
+      h('h3', { class: 'arcade-sub' }, 'Also riding'),
       this.crowdEl,
-      h('p', { class: 'note' }, 'Bets are Hammy coins, never real money. The higher he gets, the more it pays, until something ends it. Over many rounds you get back about 99 of every 100 coins you bet.'),
     );
+    this.card = card;
+    this.syncCoins = syncCoins;
     this.card.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') close();
       if (e.key === ' ' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLButtonElement)) {
         e.preventDefault();
         this.action();
@@ -244,8 +200,8 @@ export class RocketApp {
   };
 
   /** Stop, square up any bet still out, and say how it went. */
-  close(): RocketSession {
-    if (this.closed) return this.session;
+  close(): ArcadeSession {
+    if (this.closed) return this.ledger.session;
     this.closed = true;
     cancelAnimationFrame(this.raf);
     document.removeEventListener('visibilitychange', this.onHidden);
@@ -253,12 +209,7 @@ export class RocketApp {
     else if (this.phase === 'fly' && this.bet && this.cashedAt === null) this.cashOut(this.mult);
     this.engine?.stop();
     this.engine = null;
-    return this.session;
-  }
-
-  private setAmount(v: number): void {
-    prefs.amount = Math.max(ROCKET_MIN_BET, Math.floor(Number.isFinite(v) ? v : ROCKET_MIN_BET));
-    this.amount.value = String(prefs.amount);
+    return this.ledger.session;
   }
 
   // Rounds -------------------------------------------------------------------
@@ -270,7 +221,7 @@ export class RocketApp {
     this.bet = 0;
     this.cashedAt = null;
     this.won = 0;
-    this.crash = crashPoint(rand());
+    this.crash = crashPoint(fairRoll());
     this.cause = crashCause(this.crash);
     this.punters = crowd();
     this.milestone = 0;
@@ -327,31 +278,25 @@ export class RocketApp {
   }
 
   private placeBet(): void {
-    const s = this.host.state;
-    const amount = Math.min(prefs.amount, Math.floor(s.coins));
-    if (amount < ROCKET_MIN_BET || !this.host.rocketBet(amount)) {
-      setText(this.status, isAlive(s) ? 'Not enough coins for that bet.' : 'No pilot. Hammy is dead.');
+    const amount = this.ledger.bet(this.picker.amount);
+    if (!amount) {
+      setText(this.status, isAlive(this.host.state) ? 'Not enough coins for that bet.' : 'No pilot. Hammy is dead.');
       return;
     }
     this.bet = amount;
-    this.session.rounds += 1;
-    this.session.net -= amount;
     sfx.coin();
     setText(this.status, `You’re in for ${fmt(amount)}. Bail out before it ends.`);
   }
 
   private refund(): void {
-    this.host.rocketRefund(this.bet);
-    this.session.rounds -= 1;
-    this.session.net += this.bet;
+    this.ledger.refund(this.bet);
     this.bet = 0;
   }
 
   private cashOut(mult: number): void {
     const at = Math.floor(mult * 100) / 100;
-    this.won = this.host.rocketCashOut(this.bet, at);
+    this.won = this.ledger.pay(this.bet, at);
     this.cashedAt = at;
-    this.session.net += this.won;
     sfx.kaching();
     buzz.success();
     this.jump('🙋', 'You');
@@ -445,20 +390,20 @@ export class RocketApp {
   private sync(): void {
     const s = this.host.state;
     const alive = isAlive(s);
-    setText(this.coinsEl, `🪙 ${fmt(s.coins)}`);
+    this.syncCoins(s.coins);
     const riding = this.phase === 'fly' && this.bet > 0 && this.cashedAt === null;
     const label = riding
       ? `BAIL OUT · +${fmt(Math.floor(this.bet * this.mult))}`
       : this.phase === 'bet'
         ? this.bet
           ? `Take back ${fmt(this.bet)}`
-          : `Bet ${fmt(prefs.amount)} on Hammy`
+          : `Bet ${fmt(this.picker.amount)} on Hammy`
         : this.queued
           ? 'Betting on the next one… (cancel)'
-          : `Bet ${fmt(prefs.amount)} on the next one`;
+          : `Bet ${fmt(this.picker.amount)} on the next one`;
     setText(this.go, label);
     this.go.classList.toggle('bail', riding);
-    setDisabled(this.go, !alive || (!riding && !this.bet && !this.queued && (prefs.amount > s.coins || prefs.amount < ROCKET_MIN_BET)));
+    setDisabled(this.go, !alive || (!riding && !this.bet && !this.queued && !this.picker.affordable));
     this.renderCrowd();
   }
 

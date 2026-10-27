@@ -23,6 +23,7 @@ import {
   type TrashKind,
   type UpgradeId,
 } from './defs';
+import { ARCADE, noBets, type ArcadeGame, type BetStats } from './arcade';
 
 export interface Message {
   at: number;
@@ -87,10 +88,8 @@ export interface LifeStats {
   cooked: number;
   /** Trash the robot vacuums picked up. */
   vacuumed: number;
-  /** Fart Rocket: rounds you bet on, coins up or down, highest cash-out. */
-  rocketRounds: number;
-  rocketNet: number;
-  rocketBest: number;
+  /** Hammy's Arcade, game by game: bets, coins up or down, best multiplier. */
+  arcade: Record<ArcadeGame, BetStats>;
 }
 
 export interface HammyState {
@@ -174,9 +173,7 @@ export const noStats = (): LifeStats => ({
   toys: 0,
   cooked: 0,
   vacuumed: 0,
-  rocketRounds: 0,
-  rocketNet: 0,
-  rocketBest: 0,
+  arcade: noBets(),
 });
 
 const noUpgrades = (): Record<UpgradeId, number> => Object.fromEntries(UPGRADES.map((u) => [u.id, 0])) as Record<UpgradeId, number>;
@@ -342,6 +339,14 @@ export function deserialize(raw: string): HammyState | null {
 
   const st = obj(d.stats);
   const stat = (k: string) => pos(st[k], 0);
+  const bets = obj(st.arcade);
+  const arcade = noBets();
+  for (const g of ARCADE) {
+    const b = obj(bets[g.id]);
+    arcade[g.id] = { rounds: Math.floor(pos(b.rounds, 0)), net: Math.floor(num(b.net, 0)), best: pos(b.best, 0) };
+  }
+  // Fart Rocket came first, with its own three stats.
+  if (!bets.rocket && st.rocketRounds !== undefined) arcade.rocket = { rounds: Math.floor(stat('rocketRounds')), net: Math.floor(num(st.rocketNet, 0)), best: stat('rocketBest') };
   const diedAt = typeof d.diedAt === 'number' && Number.isFinite(d.diedAt) ? d.diedAt : null;
 
   return {
@@ -404,9 +409,7 @@ export function deserialize(raw: string): HammyState | null {
       toys: Math.floor(stat('toys')),
       cooked: Math.floor(stat('cooked')),
       vacuumed: Math.floor(stat('vacuumed')),
-      rocketRounds: Math.floor(stat('rocketRounds')),
-      rocketNet: Math.floor(num(st.rocketNet, 0)),
-      rocketBest: stat('rocketBest'),
+      arcade,
     },
   };
 }
