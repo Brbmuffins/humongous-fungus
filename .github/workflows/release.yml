@@ -1,20 +1,31 @@
-# Release: push a tag named <game branch>-v<version>, for example
-# ticker-rush-v1.0.0 or hammygotchi-v1.0.0. This checks the version matches
-# the game's package.json, runs the tests, builds that game into one
-# self-contained HTML file, and opens a draft GitHub release with the notes
-# from docs/releases/<tag>.md and the game attached. Look the draft over on
-# GitHub and press Publish when it's ready.
+# Release: a draft GitHub release for one game, with its notes and the game
+# as a single self-contained HTML file attached.
 #
-# Phone builds aren't made here: run the game's android-* and ios-*
-# workflows by hand (they sign and upload to Google Play and TestFlight).
+# Two ways to start one:
+# - Push release notes on the game's branch: docs/releases/<branch>-v<version>.md,
+#   where the version is the one in games/<game>/package.json. This opens
+#   the draft, or updates it if it's still a draft. Publishing the draft on
+#   GitHub creates the tag <branch>-v<version> on that commit.
+# - Or push the tag yourself (for example ticker-rush-v1.0.0).
+#
+# Either way it checks the version, runs the tests and builds the game first.
+# Phone builds aren't made here: run the game's android-* and ios-* workflows
+# by hand (they sign and upload to Google Play and TestFlight).
 name: Release
 
 on:
   push:
     tags: ['*-v*']
+    branches: [humongous-fungus, sporemonger, hammygotchi, last-muffin-standing, ticker-rush]
+    paths:
+      - docs/releases/**
+      - .github/workflows/release.yml
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
 
 jobs:
   release:
@@ -25,23 +36,34 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Work out the game and version from the tag
+      - name: Work out the game and version
         id: game
         run: |
-          tag="$GITHUB_REF_NAME"
-          name="${tag%-v*}"
-          version="${tag##*-v}"
+          ref="$GITHUB_REF_NAME"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            name="${ref%-v*}"
+            version="${ref##*-v}"
+          else
+            name="$ref"
+            version=""
+          fi
           case "$name" in
             humongous-fungus) game=fungus; title="Humongous Fungus" ;;
             sporemonger) game=sporemonger; title="Sporemonger" ;;
             hammygotchi) game=hammygotchi; title="Hammygotchi" ;;
             last-muffin-standing) game=lastmuffin; title="Last Muffin Standing" ;;
             ticker-rush) game=tickerrush; title="Ticker Rush" ;;
-            *) echo "::error::$tag doesn't name a game. Use <game branch>-v<version>, like ticker-rush-v1.0.0."; exit 1 ;;
+            *) echo "::error::$ref doesn't name a game. Tags look like <game branch>-v<version>, like ticker-rush-v1.0.0."; exit 1 ;;
           esac
-          if [ ! -f "games/$game/package.json" ]; then echo "::error::games/$game isn't in the tagged commit. Tag a commit on the $name branch."; exit 1; fi
+          if [ ! -f "games/$game/package.json" ]; then echo "::error::games/$game isn't in this commit. Release it from the $name branch."; exit 1; fi
           have=$(node -p "require('./games/$game/package.json').version")
-          if [ "$have" != "$version" ]; then echo "::error::games/$game/package.json is at $have but the tag says $version."; exit 1; fi
+          if [ -z "$version" ]; then
+            version="$have"
+          elif [ "$have" != "$version" ]; then
+            echo "::error::games/$game/package.json is at $have but the tag says $version."
+            exit 1
+          fi
+          tag="$name-v$version"
           notes="docs/releases/$tag.md"
           if [ ! -f "$notes" ]; then echo "::error::Write the release notes in $notes first."; exit 1; fi
           {
@@ -49,6 +71,7 @@ jobs:
             echo "game=$game"
             echo "title=$title"
             echo "version=$version"
+            echo "tag=$tag"
             echo "notes=$notes"
           } >> "$GITHUB_OUTPUT"
       - run: npm ci
@@ -61,13 +84,25 @@ jobs:
           npx vite build
           node scripts/make-artifact.mjs "$GAME"
           cp "dist/$GAME/index.html" "$RUNNER_TEMP/${{ steps.game.outputs.name }}-${{ steps.game.outputs.version }}.html"
-      - name: Open a draft release
+      - name: Open or update the draft release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.game.outputs.tag }}
+          TITLE: ${{ steps.game.outputs.title }} ${{ steps.game.outputs.version }}
+          NOTES: ${{ steps.game.outputs.notes }}
+          FILE: ${{ runner.temp }}/${{ steps.game.outputs.name }}-${{ steps.game.outputs.version }}.html
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            "$RUNNER_TEMP/${{ steps.game.outputs.name }}-${{ steps.game.outputs.version }}.html" \
-            --draft --verify-tag \
-            --title "${{ steps.game.outputs.title }} ${{ steps.game.outputs.version }}" \
-            --notes-file "${{ steps.game.outputs.notes }}"
-          echo "Draft release ready: ${{ steps.game.outputs.title }} ${{ steps.game.outputs.version }}. Publish it from the repo's Releases page." >> "$GITHUB_STEP_SUMMARY"
+          # Drafts don't show up by tag, so look through the list.
+          state=$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq ".[] | select(.tag_name == \"$TAG\") | if .draft then \"draft\" else \"published\" end" | head -n 1)
+          if [ "$state" = published ]; then
+            echo "::error::$TAG is already published. Bump the game's version and write new notes to release again."
+            exit 1
+          elif [ "$state" = draft ]; then
+            gh release edit "$TAG" --title "$TITLE" --notes-file "$NOTES" --target "$GITHUB_SHA"
+            gh release upload "$TAG" "$FILE" --clobber
+            echo "Updated the draft release $TITLE. Publish it from the repo's Releases page." >> "$GITHUB_STEP_SUMMARY"
+          else
+            if [ "$GITHUB_REF_TYPE" = tag ]; then where=(--verify-tag); else where=(--target "$GITHUB_SHA"); fi
+            gh release create "$TAG" "$FILE" --draft "${where[@]}" --title "$TITLE" --notes-file "$NOTES"
+            echo "Draft release ready: $TITLE. Publish it from the repo's Releases page; that creates the tag $TAG." >> "$GITHUB_STEP_SUMMARY"
+          fi

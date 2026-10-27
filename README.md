@@ -59,18 +59,19 @@ build is a single HTML file with fonts inlined, so it runs fully offline.
 
 ## Releases
 
-Each game is released from its own branch. Bump the version in
-`games/<game>/package.json` (and, for games with phone apps, `versionName` in
-`android/app/build.gradle` and `MARKETING_VERSION` in the iOS project), write
-the notes in `docs/releases/<branch>-v<version>.md`, then push a tag:
+Each game is released from its own branch, as a draft GitHub release with the
+game's single-file HTML attached:
 
-```sh
-git tag -a ticker-rush-v1.0.0 -m "Ticker Rush 1.0.0"
-git push origin ticker-rush-v1.0.0
-```
+1. Bump the version in `games/<game>/package.json` (and, for games with phone
+   apps, `versionName` in `android/app/build.gradle` and `MARKETING_VERSION`
+   in the iOS project).
+2. Write the notes in `docs/releases/<branch>-v<version>.md` and push them on
+   the game's branch, for example `docs/releases/ticker-rush-v1.0.0.md` on
+   `ticker-rush`.
+3. The Release workflow (`.github/workflows/release.yml`) tests and builds the
+   game and opens the draft (pushing changed notes updates it).
+4. Publish the draft from the repo's Releases page. That creates the tag,
+   like `ticker-rush-v1.0.0`.
 
-The Release workflow (`.github/workflows/release.yml`) tests and builds that
-game and opens a draft release on GitHub with the notes and the game's
-single-file HTML attached. Publish the draft from the Releases page when it's
-ready. Phone builds still go through the game's `android-*` and `ios-*`
-workflows.
+Pushing a tag yourself works too. Phone builds still go through the game's
+`android-*` and `ios-*` workflows.
