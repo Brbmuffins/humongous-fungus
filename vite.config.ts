@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 
-// Two games share this repo. GAME picks which one to serve or build:
+// Several games share this repo. GAME picks which one to serve or build:
 //   GAME=fungus vite      GAME=sporemonger vite build
 // Each build is one self-contained HTML file (fonts, styles and code
 // inlined), so it runs offline in a phone WebView and shares as one page.

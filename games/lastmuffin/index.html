@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#1c120e" />
+    <title>Last Muffin Standing</title>
+  </head>
+  <body>
+    <div id="app">
+      <div class="stage" id="stage">
+        <canvas id="game" aria-label="The bakery floor at night. Drag anywhere, or use WASD or the arrow keys, to move your muffin. Your weapons fire by themselves. Hop with the button, Space or Shift."></canvas>
+        <div class="night" aria-hidden="true"></div>
+        <div class="ouch" id="ouch" aria-hidden="true"></div>
+      </div>
+      <div class="hud" id="hud" hidden>
+        <div class="xp" role="progressbar" aria-label="Sprinkles to the next level"><span class="xp-fill" id="xp-fill"></span><span class="xp-level" id="level">Lv 1</span></div>
+        <div class="hud-top">
+          <div class="loadout" id="loadout"></div>
+          <div class="clock"><span id="clock">12:00 AM</span><span class="timer" id="timer">0:00</span></div>
+          <div class="hud-right">
+            <span class="hud-stat" title="Pests squashed"><span aria-hidden="true">💀</span><span id="kills">0</span></span>
+            <span class="hud-stat" title="Crumbs"><span class="crumb-dot" aria-hidden="true"></span><span id="crumbs">0</span></span>
+            <button class="pause-btn" id="pause" type="button" aria-label="Pause">❚❚</button>
+          </div>
+        </div>
+        <div class="bossbar" id="boss" hidden><span class="boss-name" id="boss-name"></span><span class="bar"><span class="bar-fill" id="boss-fill"></span></span></div>
+        <p class="warning" id="warning" role="status" hidden></p>
+        <button class="hop" id="hop" type="button" aria-label="Hop">HOP<small class="key" aria-hidden="true">Space</small></button>
+      </div>
+      <div class="screen" id="screen" hidden></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
