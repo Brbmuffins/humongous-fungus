@@ -9,6 +9,7 @@ import {
   BOWL_MAX,
   BOWL_STINK_PER_HOUR,
   CALL_COINS,
+  CAUGHT,
   CALL_COOLDOWN,
   CALL_GAP_MIN,
   CALL_GAP_RANGE,
@@ -99,6 +100,7 @@ import {
   URGE_SECONDS,
   VACUUM_SECONDS,
   WELCOME_SECONDS,
+  type CaughtId,
   type Cause,
   type FitId,
   type FoodId,
@@ -744,6 +746,21 @@ export function cannedReply(s: HammyState, said: string, roll: Roll = Math.rando
   const hit = CANNED.find(([re]) => re.test(said));
   return hit ? replyTo(hit[1], s, roll) : pick(SHRUG_REPLIES, roll);
 }
+
+/**
+ * What you walk in on after being away. Whatever the unit has going for it
+ * is likelier: a pile of trash to dig through, an unflushed toilet to stare
+ * into, a fridge to put his face in.
+ */
+export function pickCaught(s: HammyState, roll: Roll = Math.random): CaughtId {
+  const options: CaughtId[] = ['sock', 'nap', 'lick'];
+  if (s.trash.length >= 2) options.push('dig', 'dig', 'dig');
+  if (s.bowl > 0) options.push('toilet', 'toilet');
+  if (hasFurniture(s, 'fridge')) options.push('fridge', 'fridge');
+  return pick(options, roll);
+}
+
+export const caughtLine = (id: CaughtId, roll: Roll = Math.random): string => pick(CAUGHT[id].says, roll);
 
 /** What's going on in the unit, in a few lines, for him to talk about. */
 export function situation(s: HammyState, now: number, form: FormId): string {

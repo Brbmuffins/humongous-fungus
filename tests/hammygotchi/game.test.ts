@@ -47,6 +47,7 @@ import {
   isAlive,
   needWord,
   order,
+  pickCaught,
   pickToy,
   play,
   rest,
@@ -307,6 +308,21 @@ describe('the phone', () => {
     expect(live.events.some((e) => e.type === 'ring')).toBe(true);
     const away = step(s, T0 + hours(6), half);
     expect(away.away!.missedCalls).toBeGreaterThan(0);
+  });
+});
+
+describe('coming back', () => {
+  it('you walk in on him doing something, likelier what the unit has going for it', () => {
+    const bare = newGame(T0);
+    const seen = new Set(Array.from({ length: 50 }, (_, i) => pickCaught(bare, () => i / 50)));
+    expect([...seen].sort()).toEqual(['lick', 'nap', 'sock']);
+    const messy = newGame(T0);
+    for (const x of [0.2, 0.5]) addTrash(messy, 'chips', x, false);
+    messy.bowl = 2;
+    messy.furniture = ['fridge'];
+    const picks = Array.from({ length: 100 }, (_, i) => pickCaught(messy, () => i / 100));
+    expect(new Set(picks)).toEqual(new Set(['sock', 'nap', 'lick', 'dig', 'toilet', 'fridge']));
+    expect(picks.filter((p) => p === 'dig').length).toBeGreaterThan(picks.filter((p) => p === 'sock').length);
   });
 });
 

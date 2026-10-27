@@ -1016,7 +1016,8 @@ export class GameUI {
     requestAnimationFrame(() => paintPortrait(pic, this.c.state.fit, 'joy', 0, this.c.form));
   }
 
-  showWelcome(r: AwayReport): void {
+  /** The welcome-back screen. `caught` is what you walked in on; `onClose` shows it in the unit. */
+  showWelcome(r: AwayReport, caught: string | null = null, onClose?: () => void): void {
     const lines: string[] = [];
     if (r.farts) lines.push(`farted ${fmt(r.farts)} ${r.farts === 1 ? 'time' : 'times'}`);
     if (r.selfToilet) lines.push(`used the toilet ${r.selfToilet === 1 ? 'once' : `${r.selfToilet} times`} and didn’t flush${r.selfToilet === 1 ? '' : ' once'}`);
@@ -1035,11 +1036,12 @@ export class GameUI {
       r.selfOrders
         ? h('p', { class: 'stink' }, `He ordered DoorDosh ${r.selfOrders === 1 ? 'once' : `${r.selfOrders} times`} on your coins, tip included: ${fmt(r.selfSpent)} coins.`)
         : null,
+      caught ? h('p', { class: 'stink' }, `And right now you walked in on him ${caught}.`) : null,
       r.died
         ? h('p', null, causeText(this.c.state.causes))
         : h('ul', { class: 'changes' }, change('belly', 'Belly'), change('fresh', 'Fresh'), change('mood', 'Mood')),
     ];
-    this.showModal(children, r.died ? 'Go look' : 'Back to the unit');
+    this.showModal(children, r.died ? 'Go look' : caught ? 'Uh, hi Hammy' : 'Back to the unit', onClose);
   }
 
   /** He's calling. Answer, decline, or let it ring out. */

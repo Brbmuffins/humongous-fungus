@@ -13,6 +13,7 @@ import { mulberry32 } from '@shared/rng';
 import {
   BOWL_MAX,
   BURN_SECONDS,
+  CAUGHT,
   COOK_SECONDS,
   FLUSH_COINS,
   FOOD_BY_ID,
@@ -30,6 +31,7 @@ import {
   SCIENTIST_NEAR,
   SCIENTIST_TAP,
   SELF_TOILET_CHANCE,
+  type CaughtId,
   type FitId,
   type FoodId,
   type FormId,
@@ -282,6 +284,12 @@ export class TankScene {
   private selfGo = false;
   /** He went, and didn't flush: he says so on the way out. */
   private noFlush = false;
+  /** What you walked in on, coming back: he's in the middle of it for a few seconds. */
+  private caught: { kind: CaughtId; start: number; until: number; nextFx: number } | null = null;
+  /** Trash he's flinging out of the pile, his face print on the glass. */
+  private bits: { kind: TrashKind; x: number; y: number; vx: number; vy: number; born: number; spin: number }[] = [];
+  private smear: { x: number; y: number; born: number } | null = null;
+  private caughtEndedAt: number | null = null;
   private nextRaidAt = 0;
   /** Furniture he's using right now. */
   private at: { id: SpotId; until: number; since: number } | null = null;
@@ -758,6 +766,9 @@ export class TankScene {
     this.heldFood = null;
     this.heldPoop = null;
     this.tosses = [];
+    this.caught = null;
+    this.bits = [];
+    this.smear = null;
     sfx.sad();
   }
 
@@ -777,6 +788,114 @@ export class TankScene {
     this.youLose = false;
     this.scientistGone = false;
     this.say('Hi. I live here now.', 2600, 'hello');
+  }
+
+  /** You're back, and you walked in on him doing this. */
+  caughtDoing(kind: CaughtId): void {
+    const v = this.view;
+    if (!v || v.deadFor !== null) return;
+    const m = this.room;
+    const { hw, hh } = this.size();
+    this.leave();
+    this.at = null;
+    this.held = false;
+    this.habit = null;
+    this.glitch = null;
+    this.vx = this.vy = this.spin = this.spinV = 0;
+    this.mode = 'idle';
+    const ground = (x: number) => {
+      this.x = this.clampX(x, hw);
+      this.up = false;
+      this.y = m.ground - hh;
+    };
+    if (kind === 'dig') {
+      // At the biggest pile, on whichever floor it's on.
+      const t = v.trash.find((p) => !p.up) ?? v.trash[0];
+      if (t) {
+        const pos = this.poopPos(t);
+        this.facing = pos.x > (m.L + m.R) / 2 ? 1 : -1;
+        this.up = t.up;
+        this.x = this.clampX(pos.x - this.facing * hw * 0.7, hw);
+        this.y = (t.up ? m.loft : m.ground) - hh;
+      }
+    } else if (kind === 'toilet') {
+      this.facing = -1;
+      ground(m.toilet.x1 + hw * 0.75);
+    } else if (kind === 'fridge' && this.has('fridge')) {
+      this.facing = 1;
+      ground((m.fridge.x0 + m.fridge.x1) / 2 - hw * 0.3);
+    } else if (kind === 'nap') {
+      ground((m.shower.x0 + m.shower.x1) / 2);
+    } else if (kind === 'lick') {
+      ground(Math.min(m.R - hw * 2, Math.max(m.L + hw * 2, this.x)));
+      this.smear = { x: this.x, y: this.y, born: this.t };
+    }
+    this.grounded = true;
+    this.caught = { kind, start: this.t, until: this.t + 6500, nextFx: this.t };
+    window.setTimeout(() => this.caught?.kind === kind && this.say(pick(CAUGHT[kind].says), 2600), 700);
+    if (Math.random() < 0.5) window.setTimeout(() => this.caught && !this.scientistBubble && !this.scientistGone && (this.scientistBubble = { text: pick(['He’s been at that for an hour.', 'Noting this. Unfortunately.', 'Don’t ask me.']), born: this.t, ms: 2600 }), 2400);
+  }
+
+  /** You interrupted. */
+  private interrupt(): void {
+    if (!this.caught) return;
+    this.endCaught();
+    this.say(pick(['Hey! I was busy.', 'Knock first!', 'I can explain.']), 1800);
+  }
+
+  private endCaught(): void {
+    if (this.caught?.kind === 'lick' && this.smear) {
+      const f = this.facePos();
+      this.smear = { x: f.x, y: f.y, born: this.smear.born };
+    }
+    this.caught = null;
+    this.caughtEndedAt = this.t;
+  }
+
+  private updateCaught(now: number): void {
+    const c = this.caught;
+    if (!c) return;
+    if (this.held || !this.grounded || now > c.until) {
+      if (now > c.until && !this.bubble) this.say(pick(['Anyway.', 'You saw nothing.', 'As I was saying.']), 1600);
+      this.endCaught();
+      return;
+    }
+    this.vx = 0;
+    this.mode = 'idle';
+    this.modeUntil = now + 500;
+    if (now < c.nextFx) return;
+    const { hw, hh } = this.size();
+    const r = this.r;
+    switch (c.kind) {
+      case 'dig': {
+        c.nextFx = now + 260 + Math.random() * 160;
+        const kinds: TrashKind[] = ['chips', 'foil', 'can', 'tissue', 'sock', 'bones', 'tray', 'pizza'];
+        this.bits.push({ kind: pick(kinds), x: this.x + this.facing * hw * 0.8, y: this.y + hh * 0.6, vx: -this.facing * (60 + Math.random() * 120) + (Math.random() - 0.5) * 60, vy: -(240 + Math.random() * 200), born: now, spin: (Math.random() - 0.5) * 10 });
+        if (Math.random() < 0.25) this.popups.push({ x: this.x + this.facing * hw, y: this.y - hh * 0.6, born: now, text: '*rustle*', color: '#ffe3b0' });
+        break;
+      }
+      case 'toilet': {
+        c.nextFx = now + 420;
+        const seat = toiletSeat(this.room.toilet);
+        this.puffs.push({ x: seat.x + (Math.random() - 0.5) * r * 0.6, y: seat.y, vx: (Math.random() - 0.5) * 8, vy: -18 - Math.random() * 14, r: 2 + Math.random() * 2, born: now, life: 900, color: '#bfe6ff' });
+        break;
+      }
+      case 'fridge': {
+        c.nextFx = now + 500;
+        this.fridgeOpenUntil = now + 900;
+        this.crumbs(this.x + this.facing * hw * 0.7, this.y, '#e8566a');
+        break;
+      }
+      case 'nap': {
+        c.nextFx = now + 1100;
+        this.popups.push({ x: this.x + r * 0.5, y: this.y - hh, born: now, text: 'z', color: '#cfe4ff' });
+        break;
+      }
+      case 'sock':
+      case 'lick':
+        c.nextFx = now + 600;
+        break;
+    }
   }
 
   /** Space bar on the unit: a pat on the head. */
@@ -953,6 +1072,7 @@ export class TankScene {
         return;
       }
       if (this.onHim(p.x, p.y)) {
+        this.interrupt();
         this.leave();
         this.held = true;
         this.climbTo = null;
@@ -1246,7 +1366,7 @@ export class TankScene {
       } else {
         bounce = 1.02;
       }
-    } else if (!dead && !this.held && !this.at && now > this.nextGlitchAt) {
+    } else if (!dead && !this.held && !this.at && !this.caught && now > this.nextGlitchAt) {
       this.startGlitch();
     }
 
@@ -1446,6 +1566,13 @@ export class TankScene {
     }
     this.updateHabit(now, dead);
     this.updateMoss(now, dt, dead);
+    if (!dead) this.updateCaught(now);
+    this.bits = this.bits.filter((b) => {
+      b.vy += G * dt;
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      return now - b.born < 900;
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -1463,7 +1590,7 @@ export class TankScene {
         sfx.squelch();
       }
     }
-    if (this.habit || dead || this.held || !this.grounded || now < this.nextHabitAt) return;
+    if (this.habit || this.caught || dead || this.held || !this.grounded || now < this.nextHabitAt) return;
     if (this.mode === 'eat' || this.mode === 'climb' || (this.at && this.at.id !== 'chair' && this.at.id !== 'pc')) return;
     this.nextHabitAt = now + 9000 + Math.random() * 12_000;
     const kind = pick(HABITS);
@@ -1873,6 +2000,7 @@ export class TankScene {
   private think(dt: number, v: SceneView): void {
     const now = this.t;
     if (!this.grounded) return;
+    if (this.caught && !v.urge) return;
     if (now < this.tickleUntil) {
       this.vx *= 0.8;
       return;
@@ -2405,6 +2533,10 @@ export class TankScene {
       const k = (now - hb.start) / (hb.until - hb.start);
       face = hb.kind === 'burp' ? 'smug' : hb.kind === 'pick' ? 'meh' : hb.kind === 'sniff' ? (k < 0.35 ? 'happy' : 'sick') : 'joy';
     }
+    const cg = this.caught;
+    if (cg) {
+      face = { dig: Math.sin(now * 0.012) > 0 ? 'eat' : 'smug', toilet: 'joy', fridge: 'eat', sock: Math.sin(now * 0.003) > 0 ? 'happy' : 'sick', nap: 'sleep', lick: 'eat' }[cg.kind] as Face;
+    }
     look.face = face;
     look.green = Math.max(0, Math.min(1, Math.max(((50 - v.fresh) / 50) * 0.45, ((60 - v.health) / 60) * 0.85)));
     look.fog = Math.max(0, 1 - v.fresh / 70);
@@ -2431,6 +2563,20 @@ export class TankScene {
     look.lean = this.spin + (this.grounded ? walk * 2 : Math.max(-0.3, Math.min(0.3, this.vx * 0.0008)));
     if (this.mode === 'climb' && this.climbing()) look.lean = Math.sin(now * 0.02) * 0.1;
     if (hb?.kind === 'sniff') look.lean += this.facing * 0.18;
+    if (cg) {
+      if (cg.kind === 'dig') look.lean = this.facing * (0.5 + Math.sin(now * 0.02) * 0.08);
+      else if (cg.kind === 'toilet') look.lean = this.facing * 0.55;
+      else if (cg.kind === 'fridge') look.lean = this.facing * 0.25;
+      else if (cg.kind === 'nap') look.lean = Math.sin(now * 0.0015) * 0.12;
+      else if (cg.kind === 'sock') look.armsUp = true;
+      else if (cg.kind === 'lick') {
+        // Face squashed flat on the glass.
+        look.sx = 1.22 + Math.sin(now * 0.008) * 0.03;
+        look.sy = 0.88;
+        look.flip = false;
+      }
+      if (cg.kind === 'dig' || cg.kind === 'fridge' || cg.kind === 'lick') look.mouth = (Math.sin(now * 0.03) + 1) / 2;
+    }
     return look;
   }
 
@@ -2531,6 +2677,13 @@ export class TankScene {
       this.drawPoop(c, f.x, f.y, Math.max(6, r * 0.3));
       c.restore();
     }
+    // What he's flinging out of the pile.
+    for (const b of this.bits) {
+      c.save();
+      c.globalAlpha = Math.min(1, 1.6 - (t - b.born) / 600);
+      drawTrash(c, b.kind, b.x, b.y, this.trashR() * 0.8, ((t - b.born) / 1000) * b.spin);
+      c.restore();
+    }
     // On their way: trash to the chute, poop to the toilet.
     for (const tt of this.tosses) {
       const k = Math.min(1, Math.max(0, (t - tt.born) / tt.ms));
@@ -2607,6 +2760,13 @@ export class TankScene {
       }
       drawHammy(c, this.x, this.y, r, look, t);
       this.drawHabit(c, t);
+      if (this.caught?.kind === 'sock') {
+        // Held right up to his nose.
+        const f = this.facePos();
+        const sx = f.x + this.facing * f.s * 0.35;
+        drawTrash(c, 'sock', sx, f.y + f.s * 0.55, this.trashR() * 0.95, -this.facing * 0.5);
+        this.stinkLines(c, sx, f.y - f.s * 0.2, r * 0.6, 3, 0.8);
+      }
       this.drawAfterEffects(c, t);
       if (this.at?.id === 'bed') {
         // Tucked in.
@@ -2705,6 +2865,46 @@ export class TankScene {
 
     // The glass and frame, then the hatch and what's coming through it.
     drawGlass(c, m);
+    // His face print on the front glass (he's licking it), fading once he stops.
+    const sm = this.smear;
+    if (sm) {
+      const licking = this.caught?.kind === 'lick';
+      const fade = licking ? 1 : 1 - (t - (this.caughtEndedAt ?? t)) / 4000;
+      if (fade <= 0) this.smear = null;
+      else {
+        const f = this.facePos();
+        const fx = licking ? f.x : sm.x;
+        const fy = licking ? f.y : sm.y;
+        c.save();
+        c.globalAlpha = Math.max(0, fade);
+        const g = c.createRadialGradient(fx, fy, 0, fx, fy, r * 1.3);
+        g.addColorStop(0, 'rgba(225,245,200,0.38)');
+        g.addColorStop(1, 'rgba(225,245,200,0)');
+        c.fillStyle = g;
+        c.beginPath();
+        c.ellipse(fx, fy, r * 1.3, r, 0, 0, TAU);
+        c.fill();
+        c.strokeStyle = 'rgba(255,255,255,0.45)';
+        c.lineWidth = 2;
+        for (let i = 0; i < 4; i++) {
+          c.beginPath();
+          c.moveTo(fx - r * 0.5 + i * r * 0.3, fy + r * 0.2);
+          c.quadraticCurveTo(fx - r * 0.4 + i * r * 0.3, fy + r * 0.6, fx - r * 0.45 + i * r * 0.3, fy + r * (0.8 + (i % 2) * 0.3));
+          c.stroke();
+        }
+        if (licking && Math.sin(t * 0.012) > -0.2) {
+          // The tongue, flat on the glass.
+          c.fillStyle = '#ff7fa8';
+          c.strokeStyle = '#1f1a24';
+          c.lineWidth = 1.2;
+          c.beginPath();
+          c.ellipse(fx, fy + f.s * 0.42, f.s * 0.18, f.s * 0.24, 0, 0, TAU);
+          c.fill();
+          c.stroke();
+        }
+        c.restore();
+      }
+    }
     // The hatch: a slot in the ceiling with a red flap.
     c.fillStyle = '#15191f';
     c.beginPath();

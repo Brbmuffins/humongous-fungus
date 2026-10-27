@@ -9,6 +9,7 @@ import { fmt } from '@shared/format';
 import { CloudSave, localSave as makeLocalSave } from '@shared/storage';
 import {
   BOWL_MAX,
+  CAUGHT,
   FIT_BY_ID,
   FOOD_BY_ID,
   FORM_BY_ID,
@@ -47,6 +48,7 @@ import {
   movePoop,
   order,
   pet,
+  pickCaught,
   pickToy,
   play,
   rest,
@@ -271,9 +273,13 @@ class Game implements Controller {
     this.changed();
   }
 
+  /** Back after a while: what happened, and what you just walked in on. */
   private welcome(r: AwayReport): void {
     if (this.ui.modalOpen) return;
-    this.ui.showWelcome(r);
+    const kind = isAlive(this.state) ? pickCaught(this.state) : null;
+    this.ui.showWelcome(r, kind ? CAUGHT[kind].doing : null, () => {
+      if (kind) this.scene.caughtDoing(kind);
+    });
   }
 
   private bind(): void {

@@ -606,6 +606,20 @@ export const TEXT_OPTIONS: readonly TextOption[] = [
 
 export const CHILL_REPLIES = ['bro chill 💀', 'ur blowing up my phone', 'ok ok i get it', 'one text at a time pls'];
 
+/**
+ * What you walk in on when you come back after a while: he's in the middle
+ * of something. `doing` finishes "You walked in on him …".
+ */
+export type CaughtId = 'dig' | 'toilet' | 'fridge' | 'sock' | 'nap' | 'lick';
+export const CAUGHT: Record<CaughtId, { doing: string; says: readonly string[] }> = {
+  dig: { doing: 'digging through his own trash', says: ['This isn’t what it looks like.', 'I dropped a Dorkito in here.', 'Finders keepers.', 'Still good. Mostly.'] },
+  toilet: { doing: 'staring into the toilet', says: ['Just checking on it.', 'It’s like a little pond.', 'Don’t flush. We’re bonding.', 'I named it.'] },
+  fridge: { doing: 'eating out of the fridge with his face', says: ['Mmmph. Hi.', 'I was cleaning it.', 'Midnight snack.', 'You saw nothing.'] },
+  sock: { doing: 'sniffing his own sock', says: ['Still good.', 'Vintage.', 'Smells like Tuesday.', 'Want a sniff?'] },
+  nap: { doing: 'asleep standing up in the shower', says: ['Huh? I’m up. I’m up.', 'I wasn’t sleeping.', 'Is it Thursday?', 'Five more minutes.'] },
+  lick: { doing: 'licking the glass', says: ['Tastes like freedom.', 'Salty.', 'I’m cleaning it. With my face.', 'Mmm, fingerprints.'] },
+};
+
 /** When he can't think of anything (no brain to ask, or the signal dropped). */
 export const SHRUG_REPLIES = ['lol', 'ya', 'wait what', 'k', 'bro', 'thats crazy', 'idk man', 'hold on im eating'];
 

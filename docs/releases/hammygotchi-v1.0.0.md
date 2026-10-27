@@ -16,7 +16,8 @@ never flushes and leaves his trash everywhere.
   (wrappers, pizza boxes, cans, socks, tissues) wherever he's done with it,
   also overnight. Drag his floor poop into the toilet and flush it before it
   clogs, tap the trash to throw it down the chute, and see what he got up
-  to while you were gone.
+  to while you were gone. Come back and you walk in on him mid-act: digging
+  through his trash, staring into the toilet, licking the glass.
 - Four needs: belly, freshness, mood and health. Order food on DoorDosh, cook
   steaks on the oven (or burn them), carry him to the shower, and clean up
   after him.

@@ -110,6 +110,17 @@ carry him to the toilet or the shower, flush, put the floor poop in the
 toilet, tidy up. Its badge counts the mess, and the first time each chore
 comes up a hint over the unit says what to do.
 
+**Walking in on him.** Come back after a while and the welcome-back screen
+ends with what you just walked in on, and when you close it there he is,
+in the middle of it, for a few seconds: digging through his own trash
+(flinging it out of the pile), staring into the toilet (more likely when
+it's unflushed), eating out of the fridge with his face (if there's a
+fridge), sniffing his own sock, asleep standing up in the shower, or face
+squashed on the glass, licking it (it leaves a smear). He has a line for
+each, Dr. Moss sometimes has one too, and grabbing him interrupts him
+("Knock first!"). `pickCaught` in `src/game.ts` chooses; the scene does
+the rest.
+
 What he won't do by himself:
 
 - **The shower.** Drop him in it (or tap Shower): +40 fresh, a little mood
