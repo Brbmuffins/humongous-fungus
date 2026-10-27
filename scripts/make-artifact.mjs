@@ -10,10 +10,12 @@ const html = readFileSync(`${dir}/index.html`, 'utf8');
 const grab = (re) => [...html.matchAll(re)].map((m) => m[0]);
 
 const title = grab(/<title>[\s\S]*?<\/title>/g)[0];
+// Page hints for the claude.ai viewer, like claude:viewport-fit-sides.
+const hints = grab(/<meta name="claude:[^>]*>/g);
 const styles = grab(/<style[^>]*>[\s\S]*?<\/style>/g);
 const scripts = grab(/<script[^>]*>[\s\S]*?<\/script>/g);
 const body = (html.match(/<body[^>]*>([\s\S]*)<\/body>/) ?? [, ''])[1].replace(/<script[^>]*>[\s\S]*?<\/script>/g, '').trim();
 
 if (!title || !styles.length || !scripts.length || !body) throw new Error(`${dir}/index.html is missing styles, scripts or body`);
-writeFileSync(`${dir}/artifact.html`, [title, ...styles, body, ...scripts].join('\n'));
+writeFileSync(`${dir}/artifact.html`, [title, ...hints, ...styles, body, ...scripts].join('\n'));
 console.log(`${dir}/artifact.html: ${(readFileSync(`${dir}/artifact.html`).length / 1024).toFixed(0)} KB`);

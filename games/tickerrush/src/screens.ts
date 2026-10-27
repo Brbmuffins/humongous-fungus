@@ -251,10 +251,26 @@ function settings(g: Controller): HTMLElement {
     seg('Stop loss', STOP_CHOICES, s.stop, (v) => `${v * 100}%`, (v) => g.set('stop', v), brackets ? 'How far it can go against you before the desk sells.' : 'Needs Bracket orders (Tools).'),
     seg('Take profit', TARGET_CHOICES, s.target, (v) => `${v * 100}%`, (v) => g.set('target', v), brackets ? 'How far it can run your way before the desk sells.' : undefined),
     btn('Back', () => g.back()),
-    btn('Reset career', () => {
-      if (confirm('Start over with $10,000? Tools and records go too.')) g.resetCareer();
-    }, 'btn danger subtle'),
+    resetButton(g),
   );
+}
+
+/** Reset asks for a second tap instead of a dialog. */
+function resetButton(g: Controller): HTMLButtonElement {
+  let armed = 0;
+  const b = btn('Reset career', () => {
+    if (armed) {
+      clearTimeout(armed);
+      g.resetCareer();
+      return;
+    }
+    b.textContent = 'Tap again to start over with $10,000 (tools and records go too)';
+    armed = window.setTimeout(() => {
+      armed = 0;
+      b.textContent = 'Reset career';
+    }, 4000);
+  }, 'btn danger subtle');
+  return b;
 }
 
 function help(g: Controller): HTMLElement {
