@@ -1,0 +1,29 @@
+{
+  "appId": "com.muffindevelopment.tickerrush",
+  "appName": "Ticker Rush",
+  "webDir": "../../dist/tickerrush",
+  "backgroundColor": "#070b14",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#070b14"
+  },
+  "android": {
+    "backgroundColor": "#070b14"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "launchAutoHide": true,
+      "backgroundColor": "#070b14",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

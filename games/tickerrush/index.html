@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#070b14" />
+    <title>Ticker Rush</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="top">
+        <div class="acct">
+          <span class="pnl" id="pnl" aria-live="off">$0.00</span>
+          <span class="acct-sub"><span id="equity">$10,000</span> · <span id="bp">BP $20,000</span></span>
+          <span class="meter" id="meter" aria-hidden="true"><span class="meter-fill" id="meter-fill"></span><span class="meter-goal" id="meter-goal"></span></span>
+        </div>
+        <div class="clock-box" aria-label="Market clock">
+          <span class="clock" id="clock">9:30</span>
+          <span class="session" aria-hidden="true"><span class="session-fill" id="session"></span></span>
+        </div>
+        <button class="icon-btn" id="pause" type="button" aria-label="Pause">❚❚</button>
+      </header>
+      <nav class="watch" id="watch" aria-label="Watchlist"></nav>
+      <section class="chart-box" id="chart-box">
+        <div class="chart-head">
+          <span class="sym" id="sym">—</span>
+          <span class="co" id="co"></span>
+          <span class="last" id="last"></span>
+          <span class="chg" id="chg"></span>
+        </div>
+        <canvas id="chart" role="img" aria-label="Price chart"></canvas>
+        <div class="halt" id="halt" hidden><b>HALTED</b><small id="halt-sub">Volatility pause</small></div>
+        <button class="breaking" id="breaking" type="button" hidden></button>
+        <div class="floats" id="floats" aria-hidden="true"></div>
+        <div class="banner" id="banner" hidden></div>
+        <div class="toast" id="toast" role="status" hidden></div>
+      </section>
+      <section class="wire">
+        <ol class="news" id="news" aria-label="News"></ol>
+        <div class="tape-box" id="tape-box"><ol class="tape" id="tape" aria-label="Time and sales"></ol></div>
+      </section>
+      <section class="ticket" aria-label="Order ticket">
+        <div class="pos" id="pos"></div>
+        <div class="sizes" id="sizes" role="radiogroup" aria-label="Order size"></div>
+        <div class="actions">
+          <button class="buy" id="buy" type="button"><span class="act" id="buy-act">BUY</span><small id="buy-sub"></small></button>
+          <button class="sell" id="sell" type="button"><span class="act" id="sell-act">SHORT</span><small id="sell-sub"></small></button>
+        </div>
+        <button class="flat-all" id="flat-all" type="button">Flatten all</button>
+      </section>
+      <div class="screen" id="screen" hidden></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

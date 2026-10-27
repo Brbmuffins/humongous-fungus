@@ -2,16 +2,18 @@
   "name": "fungus-games",
   "private": true,
   "version": "0.1.0",
-  "description": "Two mobile games: Humongous Fungus (idle terrarium) and Sporemonger (mushroom market trading).",
+  "description": "Three mobile games: Humongous Fungus (idle terrarium), Sporemonger (mushroom market trading) and Ticker Rush (real-time day trading in a make-believe market).",
   "type": "module",
   "scripts": {
     "dev": "GAME=fungus vite --host",
     "dev:sporemonger": "GAME=sporemonger vite --host",
-    "build": "tsc --noEmit && GAME=fungus vite build && GAME=sporemonger vite build",
-    "build:artifact": "npm run build && node scripts/make-artifact.mjs fungus && node scripts/make-artifact.mjs sporemonger",
+    "dev:tickerrush": "GAME=tickerrush vite --host",
+    "build": "tsc --noEmit && GAME=fungus vite build && GAME=sporemonger vite build && GAME=tickerrush vite build",
+    "build:artifact": "npm run build && node scripts/make-artifact.mjs fungus && node scripts/make-artifact.mjs sporemonger && node scripts/make-artifact.mjs tickerrush",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "sim": "tsx scripts/simulate.ts"
+    "sim": "tsx scripts/simulate.ts",
+    "sim:tickerrush": "tsx scripts/tickerrush-sim.ts"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
@@ -30,6 +32,7 @@
   },
   "workspaces": [
     "games/fungus",
-    "games/sporemonger"
+    "games/sporemonger",
+    "games/tickerrush"
   ]
 }
