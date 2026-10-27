@@ -13,12 +13,12 @@ headless bot can play whole runs. Every number is in `src/defs.ts`.
 
 ## A night
 
-- **12 minutes**, shown as a clock on the wall from 12:00 AM to 6:00 AM.
+- **8 minutes**, shown as a clock on the wall from 12:00 AM to 6:00 AM.
   Survive until sunrise and you win (+100 crumbs). Then you can head home or
   keep going in overtime, where the pests keep coming and get tougher fast.
 - **Moving:** put your thumb anywhere and drag (the stick appears where you
   touched), or WASD and the arrow keys. **Hop** (the button, Space or Shift)
-  is a quick dash you can't be hurt during, every 2.5 seconds.
+  is a quick dash you can't be hurt during, every 1.6 seconds.
 - **Health:** 100, plus upgrades. Every pest touching you hurts (at most once
   every 0.6 seconds each); armor takes some off every hit, but never below 1.
   Milk heals 30.
@@ -73,21 +73,45 @@ knockback, a big yellow BONK! over the pest and the best sound in the game.
 
 Ants and fruit flies first, then mice, cockroaches, mold (which splits into
 three little molds), raccoons and seagulls. Each minute of the night has its
-own mix, spawn rate and cap (`WAVES`), and pests get 18% more health every
-minute. Pests spawn just off screen, mostly ahead of you when you run, and
+own mix, spawn rate and cap (`WAVES`): 9 pests a second at midnight, 24 by
+the last minute, up to 380 at once. Pests get 32% more health every minute. Pests spawn just off screen, mostly ahead of you when you run, and
 ones left far behind come back around ahead of you, so you can't just outrun
 the night.
 
-At set times: a ring of pests closes in around you (ants at 0:50, cockroaches,
-mold, raccoons later), flocks of pigeons and seagulls fly straight across, and
-three bosses arrive:
+Something happens every 20 to 30 seconds (`EVENTS`): a ring of pests closes in
+around you (ants at 0:18, then mice, cockroaches, mold and raccoons), flocks
+of pigeons and seagulls fly straight across, an ant stampede, a fruit fly
+swarm and a mouse stampede tear through, and three bosses arrive:
 
-- **3:00 The Queen Ant** keeps laying ants.
-- **6:00 The Rat King** charges at you every few seconds.
-- **9:00 The Toaster** fires toast.
+- **2:00 The Queen Ant** keeps laying ants.
+- **4:00 The Rat King** charges at you every few seconds.
+- **6:00 The Toaster** fires toast.
 
 Red arrows at the edge of the screen point at bosses you can't see, yellow
-ones at pie tins.
+ones at pie tins and golden pests, pink ones at Cherry Bombs and Sugar Cubes.
+
+## The fast stuff
+
+- **SUGAR RUSH.** Every pest you squash fills the meter under the sprinkle
+  bar. When it's full you go into a frenzy for 7 seconds: weapons fire twice
+  as often, you move 30% faster and hit 35% harder, sprinkles come from three
+  times as far and count half again. The screen's edges go rainbow and you
+  leave a rainbow trail. Each rush needs 110 more kills than the last (220 for
+  the first), so it comes roughly every 35 to 60 seconds.
+- **Combo.** Kills in a row, each within 1.6 seconds of the last, count up on
+  the left of the screen; every 100, 250, 500, 1,000… gets called out. Getting
+  touched breaks it, so a big combo means good dodging.
+- **Golden pests.** At 0:30 and every 32 seconds after, one of tonight's pests
+  turns up glowing gold: 14 times the health, bigger and a bit faster. It
+  drops a big pile of sprinkles, 8 crumbs and, turn about, a Sugar Cube
+  (instant SUGAR RUSH, or 3.5 more seconds of one) or a Cherry Bomb. It also
+  fills a third of the rush meter.
+- **Cherry Bombs** also drop now and then from anything. Pick one up and every
+  pest on screen is squashed at once (bosses lose 8% of their health), with a
+  white flash and the biggest bang in the game.
+- **No pause when there's nothing to pick.** Once every weapon and passive is
+  maxed, level-ups just give you the snack (or milk, if you're low) without
+  stopping the night.
 
 ## Muffins
 
@@ -137,14 +161,17 @@ mostly steering:
 
 **Game speed** (Pause or Records): Normal, Fast or Turbo plays everything (you,
 the pests, the weapons and the clock) 1, 1.25 or 1.5 times as fast. Fast is
-the default, so a night takes about 9.5 minutes of real time.
+the default, so a night takes about 6.5 minutes of real time.
 
-The night starts busy: ten pests are already on their way at midnight, and
+The night starts busy: 24 pests are already on their way at midnight, and
 they appear just past the edge of the screen (not on a circle around it, which
 on a tall phone put the ones from the sides far away). The first is on screen
-within a second and level 2 comes in a few seconds. The muffin moves at 140,
-faster than everything but seagulls and pigeons; the spawner puts most pests
-ahead of you when you run, so running alone doesn't win.
+within a second and level 2 comes in a few seconds. Every weapon fires 28%
+more often than its listed cooldown (`WEAPON_TEMPO`), and the Blueberry
+Blaster starts with two blueberries that go through two pests each, so the
+swarm is something to mow through rather than run from. The muffin moves at
+168, faster than everything but seagulls and pigeons; the spawner puts most
+pests ahead of you when you run, so running alone doesn't win.
 
 The game keeps real time on slow devices: a frame that took too long is played
 as several short steps instead of slowing the night down, and if frames stay
@@ -157,22 +184,22 @@ pixel for pixel; damage numbers are cached the same way.
 
 `scripts/lastmuffin-sim.ts` has a bot that kites the swarm, grabs sprinkles
 and picks the way the Recipe Book does play whole nights
-(`npx tsx scripts/lastmuffin-sim.ts blueberry 20 2`; add `auto` for the
-Fridge Magnet and Auto-Hop, or `pulse` or `hop` for one of them). Over 20
-nights each, roughly:
+(`npx tsx scripts/lastmuffin-sim.ts blueberry 16 2`; add `auto` for the
+Fridge Magnet and Auto-Hop, or `pulse` or `hop` for one of them). It prints
+each night's kills, level, rushes and best combo. Over 16 nights each,
+roughly:
 
-| Setup | Reach sunrise | Average night |
+| Setup | Reach sunrise | Kills a night |
 |---|---|---|
-| Blueberry, no Pantry | 1 in 5 | 9 minutes |
-| Every Pantry upgrade at level 2 | 5 in 8 | 11 minutes |
-| No Pantry, plus Fridge Magnet | 9 in 20 | 11 minutes |
-| No Pantry, plus Auto-Hop | 6 in 20 | 8.5 minutes |
-| No Pantry, plus both | 12 in 20 | 11 minutes |
+| Blueberry, no Pantry | 6 in 16 | 7,000 to 12,000 |
+| Every Pantry upgrade at level 2 | 13 in 16 | 8,000 to 12,500 |
 
-The bot is a poor player with melee weapons: it runs away from everything,
-so the Whisk and Hot Coffee look worse than they are. A night brings home
-anywhere from a few dozen to about 1,500 crumbs, so the first few Pantry
-levels and muffins come within a handful of nights.
+Nights that are lost are mostly lost in the last two minutes, when the
+seagulls, raccoons and mold all come at once. The bot is a poor player with
+melee weapons: it runs away from everything, so the Whisk and Hot Coffee look
+worse than they are. A night brings home anywhere from a hundred to about
+2,500 crumbs, so the first few Pantry levels and muffins come within a handful
+of nights.
 
 ## Saving
 

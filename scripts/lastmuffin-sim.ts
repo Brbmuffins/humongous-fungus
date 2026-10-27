@@ -75,6 +75,6 @@ for (let seed = 1; seed <= seeds; seed++) {
     }
   }
   const w = r.weapons.map((w) => `${w.id}${w.evolved ? '*' : w.level}:${Math.round(w.damage / 1000)}k`).join(' ');
-  results.push(`seed ${seed}: ${r.state} at ${Math.round(r.t)}s L${r.level} kills ${r.kills} crumbs ${Math.floor(r.crumbs)} bosses ${r.bosses} max ${maxEnemies}\n   ${w}\n   ${r.passives.map((p) => p.id + p.level).join(' ')}\n   ${log.join(' | ')}`);
+  results.push(`seed ${seed}: ${r.state} at ${Math.round(r.t)}s L${r.level} kills ${r.kills} crumbs ${Math.floor(r.crumbs)} bosses ${r.bosses} max ${maxEnemies} rushes ${r.rushes} combo ${r.bestCombo}\n   ${w}\n   ${r.passives.map((p) => p.id + p.level).join(' ')}\n   ${log.join(' | ')}`);
 }
 console.log(results.join('\n'));

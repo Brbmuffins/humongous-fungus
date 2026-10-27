@@ -5,10 +5,12 @@
 // ---------------------------------------------------------------------------
 // A run
 
-/** A run lasts from midnight until the bakery opens at 6 AM: 12 minutes. */
-export const RUN_SECONDS = 720;
+/** A run lasts from midnight until the bakery opens at 6 AM: 8 minutes. */
+export const RUN_SECONDS = 480;
 /** Seconds of run time per hour on the clock. */
 export const SECONDS_PER_HOUR = RUN_SECONDS / 6;
+/** Every weapon fires this much more often than its listed cooldown: the night is fast. */
+export const WEAPON_TEMPO = 0.72;
 /** Most weapons and passives you can carry at once. */
 export const SLOTS = 5;
 export const MAX_LEVEL = 5;
@@ -16,7 +18,7 @@ export const MAX_LEVEL = 5;
 export const PLAYER = {
   hp: 100,
   /** World units a second. The screen shows about 420 across its short side. */
-  speed: 150,
+  speed: 168,
   radius: 13,
   /** Sprinkles closer than this fly to you. */
   magnet: 62,
@@ -24,7 +26,7 @@ export const PLAYER = {
   bonk: 0.03,
   bonkDamage: 3,
   /** An enemy can only hurt you this often. */
-  contactCooldown: 0.6,
+  contactCooldown: 0.55,
 };
 
 /** Game speed settings: everything (you, pests, weapons, the clock) runs this much faster. */
@@ -36,7 +38,34 @@ export const GAME_SPEEDS: Record<GameSpeed, { name: string; scale: number }> = {
 };
 
 /** The hop: a quick dash you can't be hurt during. */
-export const HOP = { cooldown: 2.5, distance: 100, seconds: 0.18, safe: 0.32 };
+export const HOP = { cooldown: 1.6, distance: 115, seconds: 0.16, safe: 0.32 };
+
+/**
+ * SUGAR RUSH: every pest you squash fills the meter; when it's full you go
+ * into a frenzy for a few seconds. Each rush needs a bit more than the last.
+ */
+export const RUSH = {
+  need: 220,
+  needMore: 110,
+  seconds: 7,
+  /** While it lasts: cooldowns times this, and the rest as multipliers. */
+  cooldown: 0.5,
+  speed: 1.3,
+  might: 1.35,
+  magnet: 3,
+  growth: 1.5,
+};
+/** Kills closer together than this keep a combo going. */
+export const COMBO_SECONDS = 1.6;
+
+/**
+ * Golden pests: every so often one of tonight's pests turns up glowing gold,
+ * much tougher, and carrying a Cherry Bomb or a Sugar Cube.
+ */
+export const ELITE = { first: 30, every: 32, hp: 14, size: 1.45, speed: 1.1, xp: 20, crumbs: 8 };
+/** A Cherry Bomb squashes every pest on screen (bosses just take a chunk). */
+export const BOMB_CHANCE = 0.0012;
+export const BOMB_BOSS_DAMAGE = 0.08;
 
 // ---------------------------------------------------------------------------
 // Weapons
@@ -113,7 +142,7 @@ export const WEAPONS: readonly WeaponDef[] = [
     unit: ['blueberry', 'blueberries'],
     color: '#4f6bd8',
     levels: levels(
-      { damage: 10, cooldown: 0.75, count: 1, area: 1, speed: 430, pierce: 1, duration: 1.2, knockback: 40 },
+      { damage: 11, cooldown: 0.55, count: 2, area: 1, speed: 480, pierce: 2, duration: 1.1, knockback: 40 },
       { count: 1 },
       { damage: 5 },
       { count: 1, cooldown: -0.1 },
@@ -347,6 +376,8 @@ export type EnemyId = 'ant' | 'fly' | 'mouse' | 'roach' | 'pigeon' | 'mold' | 'm
 export interface EnemyDef {
   id: EnemyId;
   name: string;
+  /** For "Mice! All around you!" */
+  plural: string;
   hp: number;
   speed: number;
   damage: number;
@@ -365,24 +396,24 @@ export interface EnemyDef {
 }
 
 export const ENEMIES: readonly EnemyDef[] = [
-  { id: 'ant', name: 'Ant', hp: 5, speed: 66, damage: 5, radius: 7, xp: 1, heft: 0, crumbs: 0.02 },
-  { id: 'fly', name: 'Fruit fly', hp: 3, speed: 92, damage: 3, radius: 6, xp: 1, heft: 0, crumbs: 0.02, wobble: true },
-  { id: 'mouse', name: 'Mouse', hp: 16, speed: 82, damage: 8, radius: 11, xp: 2, heft: 0.1, crumbs: 0.04 },
-  { id: 'roach', name: 'Cockroach', hp: 30, speed: 96, damage: 10, radius: 11, xp: 3, heft: 0.2, crumbs: 0.05 },
-  { id: 'pigeon', name: 'Pigeon', hp: 22, speed: 150, damage: 9, radius: 12, xp: 2, heft: 0.2, crumbs: 0.04 },
-  { id: 'mold', name: 'Mold', hp: 60, speed: 38, damage: 12, radius: 16, xp: 5, heft: 0.4, crumbs: 0.08, splits: { into: 'moldling', n: 3 } },
-  { id: 'moldling', name: 'Little mold', hp: 10, speed: 62, damage: 6, radius: 8, xp: 1, heft: 0.1, crumbs: 0.01 },
-  { id: 'raccoon', name: 'Raccoon', hp: 220, speed: 56, damage: 18, radius: 20, xp: 12, heft: 0.7, crumbs: 0.25 },
-  { id: 'seagull', name: 'Seagull', hp: 90, speed: 118, damage: 16, radius: 15, xp: 8, heft: 0.4, crumbs: 0.12 },
-  { id: 'queen', name: 'The Queen Ant', hp: 1800, speed: 46, damage: 20, radius: 34, xp: 100, heft: 0.95, crumbs: 1, boss: true },
-  { id: 'ratking', name: 'The Rat King', hp: 4800, speed: 52, damage: 26, radius: 38, xp: 200, heft: 0.95, crumbs: 1, boss: true },
-  { id: 'toaster', name: 'The Toaster', hp: 9500, speed: 40, damage: 30, radius: 40, xp: 300, heft: 1, crumbs: 1, boss: true },
+  { id: 'ant', name: 'Ant', plural: 'Ants', hp: 5, speed: 73, damage: 5, radius: 7, xp: 1, heft: 0, crumbs: 0.02 },
+  { id: 'fly', name: 'Fruit fly', plural: 'Fruit flies', hp: 3, speed: 101, damage: 3, radius: 6, xp: 1, heft: 0, crumbs: 0.02, wobble: true },
+  { id: 'mouse', name: 'Mouse', plural: 'Mice', hp: 16, speed: 90, damage: 8, radius: 11, xp: 2, heft: 0.1, crumbs: 0.04 },
+  { id: 'roach', name: 'Cockroach', plural: 'Cockroaches', hp: 30, speed: 105, damage: 10, radius: 11, xp: 3, heft: 0.2, crumbs: 0.05 },
+  { id: 'pigeon', name: 'Pigeon', plural: 'Pigeons', hp: 22, speed: 160, damage: 9, radius: 12, xp: 2, heft: 0.2, crumbs: 0.04 },
+  { id: 'mold', name: 'Mold', plural: 'Molds', hp: 60, speed: 42, damage: 12, radius: 16, xp: 5, heft: 0.4, crumbs: 0.08, splits: { into: 'moldling', n: 3 } },
+  { id: 'moldling', name: 'Little mold', plural: 'Little molds', hp: 10, speed: 68, damage: 6, radius: 8, xp: 1, heft: 0.1, crumbs: 0.01 },
+  { id: 'raccoon', name: 'Raccoon', plural: 'Raccoons', hp: 220, speed: 62, damage: 18, radius: 20, xp: 12, heft: 0.7, crumbs: 0.25 },
+  { id: 'seagull', name: 'Seagull', plural: 'Seagulls', hp: 90, speed: 128, damage: 16, radius: 15, xp: 8, heft: 0.4, crumbs: 0.12 },
+  { id: 'queen', name: 'The Queen Ant', plural: 'Queen Ants', hp: 1800, speed: 50, damage: 20, radius: 34, xp: 100, heft: 0.95, crumbs: 1, boss: true },
+  { id: 'ratking', name: 'The Rat King', plural: 'Rat Kings', hp: 4800, speed: 56, damage: 26, radius: 38, xp: 200, heft: 0.95, crumbs: 1, boss: true },
+  { id: 'toaster', name: 'The Toaster', plural: 'Toasters', hp: 9500, speed: 43, damage: 30, radius: 40, xp: 300, heft: 1, crumbs: 1, boss: true },
 ];
 
 export const ENEMY_BY_ID = Object.fromEntries(ENEMIES.map((e) => [e.id, e])) as Record<EnemyId, EnemyDef>;
 
 /** Pests get tougher as the night goes on: this much more health a minute. */
-export const HP_PER_MINUTE = 0.18;
+export const HP_PER_MINUTE = 0.32;
 /** After sunrise (overtime) they get tougher much faster. */
 export const OVERTIME_HP_PER_MINUTE = 0.35;
 
@@ -395,44 +426,46 @@ export interface Wave {
 }
 
 export const WAVES: readonly Wave[] = [
-  { mix: { ant: 3, fly: 2 }, rate: 2.6, max: 70 },
-  { mix: { ant: 3, fly: 1, mouse: 2 }, rate: 3.4, max: 90 },
-  { mix: { ant: 2, mouse: 3, roach: 1 }, rate: 4, max: 110 },
-  { mix: { mouse: 2, roach: 3, ant: 2 }, rate: 4.6, max: 130 },
-  { mix: { roach: 3, mold: 2, mouse: 2 }, rate: 5, max: 150 },
-  { mix: { mold: 3, roach: 3, fly: 2 }, rate: 5.4, max: 170 },
-  { mix: { raccoon: 1, mouse: 3, roach: 3 }, rate: 6, max: 190 },
-  { mix: { raccoon: 2, mold: 3, roach: 3 }, rate: 6.4, max: 210 },
-  { mix: { seagull: 1, raccoon: 2, roach: 4 }, rate: 7, max: 230 },
-  { mix: { seagull: 2, raccoon: 2, mold: 3 }, rate: 7.6, max: 250 },
-  { mix: { seagull: 3, raccoon: 3, roach: 3, mold: 2 }, rate: 8.4, max: 280 },
-  { mix: { seagull: 4, raccoon: 4, mold: 3, mouse: 2 }, rate: 9.4, max: 320 },
-];
+  { mix: { ant: 3, fly: 2 }, rate: 9, max: 130 },
+  { mix: { ant: 3, fly: 1, mouse: 2 }, rate: 11, max: 170 },
+  { mix: { ant: 2, mouse: 3, roach: 1, fly: 1 }, rate: 13, max: 210 },
+  { mix: { mouse: 2, roach: 3, ant: 2, mold: 1 }, rate: 15, max: 250 },
+  { mix: { roach: 3, mold: 2, mouse: 2, raccoon: 1 }, rate: 17, max: 290 },
+  { mix: { mold: 3, roach: 3, raccoon: 1, seagull: 1 }, rate: 19, max: 320 },
+  { mix: { raccoon: 2, seagull: 2, roach: 3, mold: 2 }, rate: 21, max: 350 },
+  { mix: { seagull: 3, raccoon: 3, mold: 3, roach: 3 }, rate: 24, max: 380 },
+]
 
 /** Things that happen at a set time of night. */
 export type NightEvent =
   | { at: number; type: 'boss'; enemy: EnemyId }
   /** A ring of pests closes in around you. */
   | { at: number; type: 'ring'; enemy: EnemyId; n: number }
-  /** A flock flies across the screen. */
-  | { at: number; type: 'flock'; enemy: EnemyId; n: number };
+  /** A flock (or a stampede) comes straight across the screen. */
+  | { at: number; type: 'flock'; enemy: EnemyId; n: number; text?: string };
 
 export const EVENTS: readonly NightEvent[] = [
-  { at: 50, type: 'ring', enemy: 'ant', n: 40 },
-  { at: 115, type: 'flock', enemy: 'pigeon', n: 16 },
-  { at: 180, type: 'boss', enemy: 'queen' },
-  { at: 270, type: 'flock', enemy: 'pigeon', n: 22 },
-  { at: 330, type: 'ring', enemy: 'roach', n: 40 },
-  { at: 360, type: 'boss', enemy: 'ratking' },
-  { at: 450, type: 'ring', enemy: 'mold', n: 28 },
-  { at: 500, type: 'flock', enemy: 'seagull', n: 16 },
-  { at: 540, type: 'boss', enemy: 'toaster' },
-  { at: 620, type: 'ring', enemy: 'raccoon', n: 30 },
-  { at: 680, type: 'flock', enemy: 'seagull', n: 28 },
-];
+  { at: 18, type: 'ring', enemy: 'ant', n: 36 },
+  { at: 42, type: 'flock', enemy: 'pigeon', n: 18 },
+  { at: 66, type: 'flock', enemy: 'ant', n: 60, text: 'ANT STAMPEDE!' },
+  { at: 92, type: 'ring', enemy: 'mouse', n: 30 },
+  { at: 120, type: 'boss', enemy: 'queen' },
+  { at: 148, type: 'flock', enemy: 'pigeon', n: 26 },
+  { at: 174, type: 'ring', enemy: 'roach', n: 36 },
+  { at: 204, type: 'flock', enemy: 'fly', n: 70, text: 'A swarm of fruit flies!' },
+  { at: 240, type: 'boss', enemy: 'ratking' },
+  { at: 268, type: 'ring', enemy: 'mold', n: 26 },
+  { at: 296, type: 'flock', enemy: 'seagull', n: 16 },
+  { at: 326, type: 'ring', enemy: 'roach', n: 44 },
+  { at: 360, type: 'boss', enemy: 'toaster' },
+  { at: 388, type: 'flock', enemy: 'mouse', n: 60, text: 'MOUSE STAMPEDE!' },
+  { at: 412, type: 'ring', enemy: 'raccoon', n: 22 },
+  { at: 436, type: 'flock', enemy: 'seagull', n: 26 },
+  { at: 458, type: 'ring', enemy: 'mold', n: 34 },
+]
 
 /** Things lying on the floor. */
-export type PickupKind = 'xp' | 'crumb' | 'milk' | 'magnet' | 'chest';
+export type PickupKind = 'xp' | 'crumb' | 'milk' | 'magnet' | 'chest' | 'bomb' | 'sugar';
 
 /** Milk heals this much. */
 export const MILK_HEAL = 30;
@@ -446,9 +479,9 @@ export const WIN_CRUMBS = 100;
 
 /** Sprinkles to get from level `level` to the next. */
 export function xpToNext(level: number): number {
-  if (level < 20) return 5 + (level - 1) * 7;
-  if (level < 40) return 139 + (level - 20) * 10;
-  return 339 + (level - 40) * 13;
+  if (level < 20) return 5 + (level - 1) * 10;
+  if (level < 40) return 195 + (level - 20) * 16;
+  return 515 + (level - 40) * 24;
 }
 
 // ---------------------------------------------------------------------------

@@ -13,6 +13,7 @@ import {
   PANTRY,
   PASSIVE_BY_ID,
   RUN_SECONDS,
+  RUSH,
   WEAPON_BY_ID,
   WEAPONS,
   WIN_CRUMBS,
@@ -103,6 +104,12 @@ export class UI {
   private screenEl = document.getElementById('screen')!;
   private hud = document.getElementById('hud')!;
   private xpFill = document.getElementById('xp-fill')!;
+  private rushEl = document.getElementById('rush')!;
+  private rushFill = document.getElementById('rush-fill')!;
+  private rushLabel = document.getElementById('rush-label')!;
+  private comboEl = document.getElementById('combo')!;
+  private comboN = document.getElementById('combo-n')!;
+  private comboShown = 0;
   private levelEl = document.getElementById('level')!;
   private clockEl = document.getElementById('clock')!;
   private timerEl = document.getElementById('timer')!;
@@ -143,6 +150,23 @@ export class UI {
     const fill = `scaleX(${Math.min(1, run.xp / need).toFixed(3)})`;
     if (this.xpFill.style.transform !== fill) this.xpFill.style.transform = fill;
     setText(this.levelEl, `Lv ${run.level}`);
+    // SUGAR RUSH: filling up, or draining while it lasts.
+    const rushing = run.rushing;
+    const rush = rushing ? (run.rushUntil - run.t) / RUSH.seconds : run.rush / run.rushNeed;
+    const rf = `scaleX(${Math.min(1, Math.max(0, rush)).toFixed(3)})`;
+    if (this.rushFill.style.transform !== rf) this.rushFill.style.transform = rf;
+    this.rushEl.classList.toggle('on', rushing);
+    this.rushEl.classList.toggle('near', !rushing && rush > 0.85);
+    setText(this.rushLabel, rushing ? 'SUGAR RUSH!' : 'Sugar rush');
+    // The combo, once it's worth showing.
+    const combo = run.combo;
+    this.comboEl.hidden = combo < 15;
+    if (combo >= 15 && combo !== this.comboShown) {
+      setText(this.comboN, `×${fmt(combo)}`);
+      this.comboEl.classList.toggle('hot', combo >= 150);
+      this.comboEl.classList.toggle('blazing', combo >= 500);
+    }
+    this.comboShown = combo;
     setText(this.clockEl, run.overtime ? `Overtime ${time(run.t - RUN_SECONDS)}` : clockText(run.t));
     setText(this.timerEl, time(run.t));
     setText(this.killsEl, fmt(run.kills));
@@ -165,16 +189,25 @@ export class UI {
   }
 
   /** A boss's name across the screen. */
-  banner(sub: string, name: string): void {
+  banner(sub: string, name: string, style: 'boss' | 'rush' = 'boss'): void {
     setText(document.getElementById('banner-sub')!, sub);
     setText(document.getElementById('banner-name')!, name);
     const el = this.bannerEl;
+    el.classList.toggle('banner-rush', style === 'rush');
     el.hidden = false;
     el.style.animation = 'none';
     void el.offsetWidth;
     el.style.animation = '';
     clearTimeout(this.bannerTimer);
     this.bannerTimer = window.setTimeout(() => (el.hidden = true), 2700);
+  }
+
+  /** A big pop on the combo counter, for milestones. */
+  comboPop(): void {
+    const el = this.comboEl;
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
   }
 
   warn(text: string, ms = 2200): void {

@@ -1,8 +1,8 @@
 // Draws a run: the bakery floor scrolling under you, every pest, pickup and
 // weapon, and the bits that are only for show (crumbs flying, damage numbers,
 // BONK!). Sprites are drawn once per size into little canvases and reused.
-import { ENEMY_BY_ID, MUFFIN_BY_ID, PLAYER, WEAPON_BY_ID, type EnemyId, type MuffinId } from './defs';
-import { INK, drawBerry, drawChef, drawChest, drawCrumb, drawEnemy, drawKnife, drawMagnet, drawMilk, drawMuffin, drawPin, drawSprinkle, drawToast, type MuffinFace } from './draw';
+import { ELITE, ENEMY_BY_ID, HOP, MUFFIN_BY_ID, PLAYER, WEAPON_BY_ID, type EnemyId, type MuffinId } from './defs';
+import { INK, drawBerry, drawCherryBomb, drawChef, drawChest, drawCrumb, drawEnemy, drawKnife, drawMagnet, drawMilk, drawMuffin, drawPin, drawSprinkle, drawSugarCube, drawToast, type MuffinFace } from './draw';
 import { CHUNK, drawProp, propsIn } from './deco';
 import type { Controls } from './input';
 import type { Run, RunEvent } from './run';
@@ -103,6 +103,10 @@ export class View {
   private hurtAt = -1e9;
   private shake = 0;
   private levelAt = -1e9;
+  /** When a Cherry Bomb went off, and a SUGAR RUSH started. */
+  private bombAt = -1e9;
+  private rushAt = -1e9;
+  private trailAt = 0;
   /** Sparks on screen (they're capped). */
   private sparks = 0;
   /** When the muffin last kicked up dust. */
@@ -439,6 +443,27 @@ export class View {
         case 'boss':
           this.shake = 6;
           break;
+        case 'bomb': {
+          this.bombAt = t;
+          this.shake = 16;
+          this.flashes.push({ kind: 'ring', x: e.x, y: e.y, r: 700, angle: 0, w: 0, h: 0, born: t, evolved: false });
+          for (let i = 0; i < (this.calm ? 12 : 48); i++) {
+            const a = Math.random() * TAU;
+            const sp = 200 + Math.random() * 420;
+            this.bits.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, born: t, life: 0.8, color: ['#ff5c3a', '#ffd34d', '#ff9a2e', '#d81e2c'][i % 4], r: 3 + Math.random() * 3 });
+          }
+          break;
+        }
+        case 'rush':
+          this.rushAt = t;
+          this.shake = Math.max(this.shake, 7);
+          this.flashes.push({ kind: 'ring', x: run.x, y: run.y, r: 360, angle: 0, w: 0, h: 0, born: t, evolved: true });
+          for (let i = 0; i < (this.calm ? 10 : 40); i++) {
+            const a = Math.random() * TAU;
+            const sp = 160 + Math.random() * 260;
+            this.bits.push({ x: run.x, y: run.y - 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120, born: t, life: 1, color: CONFETTI[i % CONFETTI.length], r: 2.6 });
+          }
+          break;
         default:
           break;
       }
@@ -508,6 +533,13 @@ export class View {
         this.blit(this.sprite('milk', 7, 10, drawMilk), p.x, p.y);
       } else if (p.kind === 'magnet') {
         this.blit(this.sprite('magnet', 8, 11, drawMagnet), p.x, p.y);
+      } else if (p.kind === 'bomb' || p.kind === 'sugar') {
+        this.world();
+        c.save();
+        c.translate(p.x, p.y + Math.sin(t * 0.006 + p.x) * 2);
+        if (p.kind === 'bomb') drawCherryBomb(c, 9, t);
+        else drawSugarCube(c, 8.5, t);
+        c.restore();
       } else {
         this.world();
         c.save();
@@ -524,6 +556,20 @@ export class View {
       const left = e.flock ? e.flock.vx < 0 : e.x > run.x;
       // A little bob as they scurry.
       const bob = e.def.boss ? 0 : Math.abs(Math.sin(t * 0.014 + e.uid)) * -1.6;
+      if (e.elite) {
+        // Golden: a glow on the floor, and bigger.
+        this.world();
+        const g = c.createRadialGradient(e.x, e.y, e.r * 0.3, e.x, e.y, e.r * 2.2);
+        g.addColorStop(0, `rgba(255,211,77,${0.55 + Math.sin(t * 0.01) * 0.2})`);
+        g.addColorStop(1, 'rgba(255,211,77,0)');
+        c.fillStyle = g;
+        c.beginPath();
+        c.arc(e.x, e.y, e.r * 2.2, 0, TAU);
+        c.fill();
+        if (Math.random() < 0.25) this.bits.push({ x: e.x + (Math.random() - 0.5) * e.r * 2, y: e.y - e.r, vx: 0, vy: -50, born: t, life: 0.6, color: '#ffd34d', r: 2 });
+        this.blit(this.enemySprite(e.def.id, (frame + (e.uid & 1)) % 2, run.t < e.flashUntil, left), e.x, e.y + bob, 0, 1, ELITE.size);
+        continue;
+      }
       this.blit(this.enemySprite(e.def.id, (frame + (e.uid & 1)) % 2, run.t < e.flashUntil, left), e.x, e.y + bob);
     }
     this.pops = this.pops.filter((p) => {
@@ -583,6 +629,7 @@ export class View {
     this.drawBits(t, dt);
     this.drawNumbers(t);
     this.drawPointers(run, t);
+    this.drawRush(run, t);
 
     // (Night at the edges, and red when you're hurt, are CSS over the canvas.)
     this.screen();
@@ -591,6 +638,11 @@ export class View {
 
   private drawMuffin(run: Run, t: number, frame: number): void {
     const c = this.ctx;
+    // A rainbow trail while the SUGAR RUSH lasts.
+    if (run.rushing && run.state === 'playing' && t - this.trailAt > 30) {
+      this.trailAt = t;
+      this.bits.push({ x: run.x - run.fx * 6 + (Math.random() - 0.5) * 6, y: run.y + 4, vx: -run.fx * 30, vy: -run.fy * 30, born: t, life: 0.5, color: `hsl(${(t * 0.6) % 360}, 95%, 65%)`, r: 5 });
+    }
     if (run.moving && run.state === 'playing' && t - this.dustAt > 140) {
       this.dustAt = t;
       this.bits.push({ x: run.x - run.fx * 8, y: run.y + 15, vx: -run.fx * 20, vy: -6, born: t, life: 0.4, color: 'rgba(250,240,225,0.45)', r: 3.5, kind: 'dust' });
@@ -625,7 +677,7 @@ export class View {
     c.fillRect(run.x - w / 2 - 1, y - 1, w + 2, 5);
     c.fillStyle = run.hp / run.stats.maxHp < 0.3 ? '#ff5c5c' : '#ff9a2e';
     c.fillRect(run.x - w / 2, y, (w * Math.max(0, run.hp)) / run.stats.maxHp, 3);
-    const ready = Math.min(1, 1 - (run.hopReadyAt - run.t) / 3.5);
+    const ready = Math.min(1, 1 - (run.hopReadyAt - run.t) / HOP.cooldown);
     if (ready < 1) {
       c.fillStyle = 'rgba(124,200,255,0.8)';
       c.fillRect(run.x - w / 2, y + 4, w * ready, 1.5);
@@ -853,7 +905,11 @@ export class View {
     const c = this.ctx;
     this.screen();
     const targets: { x: number; y: number; color: string }[] = [];
-    for (const p of run.pickups) if (p.kind === 'chest') targets.push({ x: p.x, y: p.y, color: '#ffd34d' });
+    for (const p of run.pickups) {
+      if (p.kind === 'chest') targets.push({ x: p.x, y: p.y, color: '#ffd34d' });
+      else if (p.kind === 'bomb' || p.kind === 'sugar') targets.push({ x: p.x, y: p.y, color: '#ff6fa8' });
+    }
+    for (const e of run.enemies) if (e.elite) targets.push({ x: e.x, y: e.y, color: '#ffd34d' });
     for (const e of run.enemies) if (e.def.boss) targets.push({ x: e.x, y: e.y, color: '#ff5c5c' });
     for (const p of targets) {
       const sx = (p.x - this.camX) * this.zoom + this.W / 2;
@@ -880,6 +936,37 @@ export class View {
       c.fill();
       c.stroke();
       c.restore();
+    }
+  }
+
+  /** SUGAR RUSH: rainbow at the edges of the screen. A Cherry Bomb: a white flash. */
+  private drawRush(run: Run, t: number): void {
+    const c = this.ctx;
+    this.screen();
+    if (run.rushing) {
+      const left = run.rushUntil - run.t;
+      const fade = Math.min(1, left / 0.6) * Math.min(1, (t - this.rushAt) / 200);
+      const hue = (t * 0.25) % 360;
+      const edge = Math.min(this.W, this.H) * 0.16;
+      const pulse = 0.35 + Math.sin(t * 0.015) * 0.1;
+      const sides: [number, number, number, number, number, number, number, number][] = [
+        [0, 0, 0, edge, 0, 0, this.W, edge],
+        [0, this.H, 0, this.H - edge, 0, this.H - edge, this.W, edge],
+        [0, 0, edge, 0, 0, 0, edge, this.H],
+        [this.W, 0, this.W - edge, 0, this.W - edge, 0, edge, this.H],
+      ];
+      sides.forEach(([x0, y0, x1, y1, rx, ry, rw, rh], i) => {
+        const g = c.createLinearGradient(x0, y0, x1, y1);
+        g.addColorStop(0, `hsla(${(hue + i * 90) % 360}, 95%, 60%, ${pulse * fade})`);
+        g.addColorStop(1, `hsla(${(hue + i * 90) % 360}, 95%, 60%, 0)`);
+        c.fillStyle = g;
+        c.fillRect(rx, ry, rw, rh);
+      });
+    }
+    const k = (t - this.bombAt) / 420;
+    if (k >= 0 && k < 1) {
+      c.fillStyle = `rgba(255,248,235,${(1 - k) * (this.calm ? 0.3 : 0.75)})`;
+      c.fillRect(0, 0, this.W, this.H);
     }
   }
 

@@ -6,7 +6,12 @@ only move; your weapons fire on their own. Survive until 6 AM.
 
 ## What's in it
 
-- 12-minute nights from midnight to sunrise, then overtime if you want more.
+- 8-minute nights from midnight to sunrise, packed from the first second, with
+  something happening every 20 to 30 seconds (rings, flocks, ant and mouse
+  stampedes, a fruit fly swarm, three bosses), then overtime if you want more.
+- SUGAR RUSH: squash enough pests and you go into a 7-second frenzy, rainbow
+  and all. Combos that getting touched breaks. Golden pests carrying Cherry
+  Bombs (everything on screen, gone) and Sugar Cubes (an instant rush).
 - Eight weapons, from the Blueberry Blaster to the Frosting Bomb, each with an
   evolution, and nine passives including Big Bonk and the Sous Chef cupcakes
   that fetch sprinkles for you.

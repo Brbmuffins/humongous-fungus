@@ -4,8 +4,12 @@
 // sim rely on that). The view reads this state and the events `step` returns.
 import { mulberry32 } from '@shared/rng';
 import {
+  BOMB_BOSS_DAMAGE,
+  BOMB_CHANCE,
   CHEF,
   CHEST_CRUMBS,
+  COMBO_SECONDS,
+  ELITE,
   ENEMY_BY_ID,
   EVENTS,
   HOP,
@@ -23,9 +27,11 @@ import {
   PLAYER,
   PULSE_SECONDS,
   RUN_SECONDS,
+  RUSH,
   SLOTS,
   WAVES,
   WEAPON_BY_ID,
+  WEAPON_TEMPO,
   WEAPONS,
   xpToNext,
   type EnemyDef,
@@ -79,6 +85,11 @@ export interface Enemy {
   def: EnemyDef;
   x: number;
   y: number;
+  /** Its size and speed: the kind's own, or bigger and faster for a golden one. */
+  r: number;
+  speed: number;
+  /** Golden: much tougher, and it's carrying something. */
+  elite: boolean;
   hp: number;
   maxHp: number;
   /** Knockback velocity, which fades. */
@@ -193,6 +204,13 @@ export type RunEvent =
   | { type: 'chest' }
   | { type: 'pulse' }
   | { type: 'revive' }
+  /** A golden pest turned up. */
+  | { type: 'elite'; enemy: EnemyId }
+  /** SUGAR RUSH: started, and over. */
+  | { type: 'rush' }
+  | { type: 'rushEnd' }
+  /** A Cherry Bomb went off where you are. */
+  | { type: 'bomb'; x: number; y: number; kills: number }
   | { type: 'win' }
   | { type: 'dead' };
 
@@ -213,6 +231,9 @@ export interface RunSummary {
   crumbs: number;
   won: boolean;
   bosses: number;
+  /** The longest run of kills, each within COMBO_SECONDS of the last. */
+  combo: number;
+  rushes: number;
   weapons: { id: WeaponId; level: number; evolved: boolean; damage: number; kills: number }[];
 }
 
@@ -224,9 +245,9 @@ const LOOK = 420;
 /** How far past the edge of the screen pests appear. */
 const EDGE = 40;
 /** Pests already on their way when the night starts. */
-const OPENING = 10;
+const OPENING = 24;
 /** Bosses stop summoning past this many pests. */
-const MAX_ENEMIES = 340;
+const MAX_ENEMIES = 420;
 
 export class Run {
   readonly muffin: MuffinId;
@@ -261,6 +282,16 @@ export class Run {
   levelUps = 0;
   offers: Offer[] = [];
   chest: ChestResult | null = null;
+  /** Kills in a row, each within COMBO_SECONDS of the last, and the best tonight. */
+  combo = 0;
+  bestCombo = 0;
+  private comboAt = -9;
+  /** SUGAR RUSH: the meter, what it takes to fill it, and when the one going ends. */
+  rush = 0;
+  rushNeed = RUSH.need;
+  rushUntil = -1;
+  rushes = 0;
+  private elitesDown = 0;
 
   weapons: WeaponSlot[] = [];
   passives: PassiveSlot[] = [];
@@ -280,6 +311,7 @@ export class Run {
   private wantsAutoHop: boolean;
   private spawnDebt = OPENING;
   private nextEvent = 0;
+  private nextElite = ELITE.first;
   private grid = new Map<number, Enemy[]>();
   private events: RunEvent[] = [];
 
@@ -313,15 +345,17 @@ export class Run {
     const b = MUFFIN_BY_ID[this.muffin].bonus;
     const p = (id: PassiveId) => this.passiveLevel(id) * PASSIVE_BY_ID[id].per;
     const q = (id: PantryId) => this.pantryLevel(id) * PANTRY_BY_ID[id].per;
+    // A SUGAR RUSH on top of everything.
+    const r = this.rushing;
     return {
       maxHp: PLAYER.hp + (b.hp ?? 0) + q('health') + p('batter'),
       armor: (b.armor ?? 0) + q('armor') + p('mitts'),
-      speed: PLAYER.speed * (1 + (b.speed ?? 0) + q('speed') + p('sugar')),
+      speed: PLAYER.speed * (1 + (b.speed ?? 0) + q('speed') + p('sugar')) * (r ? RUSH.speed : 1),
       area: 1 + (b.area ?? 0) + p('powder'),
-      cooldown: (1 - p('yeast')) * (1 - q('cooldown')),
-      magnet: PLAYER.magnet * (1 + (b.magnet ?? 0) + q('magnet') + p('top')),
-      might: 1 + (b.might ?? 0) + q('might'),
-      growth: 1 + (b.growth ?? 0) + q('growth'),
+      cooldown: (1 - p('yeast')) * (1 - q('cooldown')) * (r ? RUSH.cooldown : 1),
+      magnet: PLAYER.magnet * (1 + (b.magnet ?? 0) + q('magnet') + p('top')) * (r ? RUSH.magnet : 1),
+      might: (1 + (b.might ?? 0) + q('might')) * (r ? RUSH.might : 1),
+      growth: (1 + (b.growth ?? 0) + q('growth')) * (r ? RUSH.growth : 1),
       greed: 1 + q('greed'),
       regen: p('preserve'),
       bonk: PLAYER.bonk + (b.bonk ?? 0) + p('bonk'),
@@ -341,7 +375,7 @@ export class Run {
   weaponStats(w: WeaponSlot): WeaponStats {
     const def = WEAPON_BY_ID[w.id];
     const base = w.evolved ? def.evolved.stats : def.levels[w.level - 1];
-    return { ...base, area: base.area * this.stats.area, cooldown: base.cooldown * this.stats.cooldown };
+    return { ...base, area: base.area * this.stats.area, cooldown: base.cooldown * this.stats.cooldown * WEAPON_TEMPO };
   }
 
   private newWeapon(id: WeaponId): WeaponSlot {
@@ -352,6 +386,20 @@ export class Run {
   setAutoHop(on: boolean): void {
     this.wantsAutoHop = on;
     this.stats = this.computeStats();
+  }
+
+  /** In a SUGAR RUSH right now. */
+  get rushing(): boolean {
+    return this.t < this.rushUntil;
+  }
+
+  private startRush(): void {
+    this.rush = 0;
+    this.rushes += 1;
+    this.rushNeed = RUSH.need + RUSH.needMore * this.rushes;
+    this.rushUntil = this.t + RUSH.seconds;
+    this.refreshStats();
+    this.events.push({ type: 'rush' });
   }
 
   // -------------------------------------------------------------------------
@@ -377,6 +425,12 @@ export class Run {
     if (this.state !== 'playing') return this.events;
     dt = Math.min(0.05, Math.max(0, dt));
     this.t += dt;
+    if (this.rushUntil > 0 && this.t >= this.rushUntil) {
+      this.rushUntil = -1;
+      this.refreshStats();
+      this.events.push({ type: 'rushEnd' });
+    }
+    if (this.combo && this.t - this.comboAt > COMBO_SECONDS) this.combo = 0;
     this.movePlayer(dt, input);
     if (this.stats.regen) this.hp = Math.min(this.stats.maxHp, this.hp + this.stats.regen * dt);
     this.spawn(dt);
@@ -443,7 +497,7 @@ export class Run {
     if (!this.stats.autoHop) return null;
     const close = (x: number, y: number, r: number) => Math.hypot(this.x - x, this.y - y) - r - PLAYER.radius < 8;
     let threat = false;
-    for (const e of this.enemies) if (!e.dead && this.t >= e.contactAt && close(e.x, e.y, e.def.radius)) threat = true;
+    for (const e of this.enemies) if (!e.dead && this.t >= e.contactAt && close(e.x, e.y, e.r)) threat = true;
     for (const sh of this.shots) if (sh.kind === 'toast' && close(sh.x, sh.y, sh.r)) threat = true;
     if (!threat) return null;
     let best: [number, number] = [this.fx, this.fy];
@@ -458,7 +512,7 @@ export class Run {
       for (const e of this.enemies) {
         if (e.dead) continue;
         const d2 = (e.x - lx) ** 2 + (e.y - ly) ** 2;
-        if (d2 < 160 * 160) danger += (e.def.radius + 20) ** 2 / Math.max(100, d2);
+        if (d2 < 160 * 160) danger += (e.r + 20) ** 2 / Math.max(100, d2);
       }
       const score = danger - (dx * this.fx + dy * this.fy) * 0.05;
       if (score < bestScore) {
@@ -476,14 +530,17 @@ export class Run {
     return Math.hypot(this.view.w, this.view.h) / 2 + 30;
   }
 
-  private addEnemy(id: EnemyId, x: number, y: number): Enemy {
+  private addEnemy(id: EnemyId, x: number, y: number, elite = false): Enemy {
     const def = ENEMY_BY_ID[id];
-    const hp = Math.round(def.hp * this.hpScale());
+    const hp = Math.round(def.hp * this.hpScale() * (elite ? ELITE.hp : 1));
     const e: Enemy = {
       uid: this.uid++,
       def,
       x,
       y,
+      r: def.radius * (elite ? ELITE.size : 1),
+      speed: def.speed * (elite ? ELITE.speed : 1),
+      elite,
       hp,
       maxHp: hp,
       kx: 0,
@@ -542,6 +599,14 @@ export class Run {
     } else {
       this.spawnDebt = 0;
     }
+    // Every so often, a golden one.
+    if (this.t >= this.nextElite) {
+      this.nextElite += ELITE.every;
+      const [x, y] = this.offScreen();
+      const id = this.pickFrom(wave.mix);
+      this.addEnemy(id, x, y, true);
+      this.events.push({ type: 'elite', enemy: id });
+    }
     while (this.nextEvent < EVENTS.length && EVENTS[this.nextEvent].at <= this.t) {
       const ev = EVENTS[this.nextEvent++];
       if (this.overtime) continue;
@@ -555,7 +620,7 @@ export class Run {
           const a = (i / ev.n) * TAU;
           this.addEnemy(ev.enemy, this.x + Math.cos(a) * r, this.y + Math.sin(a) * r);
         }
-        this.events.push({ type: 'warning', text: `${ENEMY_BY_ID[ev.enemy].name}s! All around you!` });
+        this.events.push({ type: 'warning', text: `${ENEMY_BY_ID[ev.enemy].plural}! All around you!` });
       } else {
         // In from one side, straight across, in a loose line.
         const a = this.rnd() * TAU;
@@ -574,7 +639,7 @@ export class Run {
           );
           e.flock = { vx, vy, until };
         }
-        this.events.push({ type: 'warning', text: `A flock of ${def.name.toLowerCase()}s!` });
+        this.events.push({ type: 'warning', text: ev.text ?? `A flock of ${def.plural.toLowerCase()}!` });
       }
     }
   }
@@ -632,7 +697,7 @@ export class Run {
         vx = e.charge.vx;
         vy = e.charge.vy;
       } else {
-        const sp = e.def.speed;
+        const sp = e.speed;
         vx = (dx / d) * sp;
         vy = (dy / d) * sp;
         if (e.def.wobble) {
@@ -662,7 +727,7 @@ export class Run {
           const b = cell[j];
           const dx = b.x - a.x;
           const dy = b.y - a.y;
-          const min = (a.def.radius + b.def.radius) * 0.85;
+          const min = (a.r + b.r) * 0.85;
           const d2 = dx * dx + dy * dy;
           if (d2 >= min * min || d2 === 0) continue;
           const d = Math.sqrt(d2);
@@ -690,7 +755,7 @@ export class Run {
       }
     } else if (id === 'ratking') {
       e.nextMove = this.t + 5;
-      e.charge = { vx: ux * e.def.speed * 4, vy: uy * e.def.speed * 4, until: this.t + 0.9 };
+      e.charge = { vx: ux * e.speed * 4, vy: uy * e.speed * 4, until: this.t + 0.9 };
       this.events.push({ type: 'warning', text: 'The Rat King charges!' });
     } else if (id === 'toaster') {
       e.nextMove = this.t + 2.6;
@@ -724,7 +789,7 @@ export class Run {
     if (this.t < this.safeUntil) return;
     this.near(this.x, this.y, 50, (e) => {
       if (this.state !== 'playing' || this.t < e.contactAt) return;
-      const reach = e.def.radius + PLAYER.radius;
+      const reach = e.r + PLAYER.radius;
       if ((e.x - this.x) ** 2 + (e.y - this.y) ** 2 > reach * reach) return;
       e.contactAt = this.t + PLAYER.contactCooldown;
       this.hurt(e.def.damage * this.damageScale());
@@ -735,6 +800,8 @@ export class Run {
     if (this.t < this.safeUntil) return;
     const damage = Math.max(1, raw - this.stats.armor);
     this.hp -= damage;
+    // Getting touched breaks the combo.
+    this.combo = 0;
     this.events.push({ type: 'hurt', damage });
     if (this.hp > 0) return;
     if (this.revives > 0) {
@@ -775,13 +842,20 @@ export class Run {
     const w = this.weapons[slot];
     // Only what it actually took off counts (not the overkill).
     if (w) w.damage += d + Math.min(0, e.hp);
-    this.events.push({ type: 'hit', x: e.x, y: e.y - e.def.radius, damage: d, bonk });
+    this.events.push({ type: 'hit', x: e.x, y: e.y - e.r, damage: d, bonk });
     if (e.hp <= 0) this.kill(e, slot);
   }
 
   private kill(e: Enemy, slot: number): void {
     e.dead = true;
     this.kills += 1;
+    this.combo = this.t - this.comboAt <= COMBO_SECONDS ? this.combo + 1 : 1;
+    this.comboAt = this.t;
+    this.bestCombo = Math.max(this.bestCombo, this.combo);
+    if (!this.rushing) {
+      this.rush += e.elite ? this.rushNeed / 3 : 1;
+      if (this.rush >= this.rushNeed) this.startRush();
+    }
     const w = this.weapons[slot];
     if (w) {
       w.kills += 1;
@@ -793,12 +867,18 @@ export class Run {
       this.bosses += 1;
       this.pickups.push({ kind: 'chest', x: e.x, y: e.y, value: 1, pulled: false });
       this.events.push({ type: 'bossDown', enemy: e.def.id });
+    } else if (e.elite) {
+      // What the golden ones carry: a Cherry Bomb or a Sugar Cube, turn about, and a pile of sprinkles and crumbs.
+      this.dropXp(e.x, e.y, e.def.xp * ELITE.xp);
+      this.pickups.push({ kind: this.elitesDown++ % 2 ? 'bomb' : 'sugar', x: e.x, y: e.y, value: 1, pulled: false });
+      this.pickups.push({ kind: 'crumb', x: e.x + 8, y: e.y, value: ELITE.crumbs, pulled: false });
     } else {
       this.dropXp(e.x, e.y, e.def.xp);
       if (this.rnd() < e.def.crumbs) this.pickups.push({ kind: 'crumb', x: e.x + 6, y: e.y, value: 1 + Math.floor(this.minute / 3), pulled: false });
       const roll = this.rnd();
       if (roll < MAGNET_CHANCE) this.pickups.push({ kind: 'magnet', x: e.x, y: e.y, value: 1, pulled: false });
       else if (roll < MAGNET_CHANCE + MILK_CHANCE) this.pickups.push({ kind: 'milk', x: e.x, y: e.y, value: MILK_HEAL, pulled: false });
+      else if (roll < MAGNET_CHANCE + MILK_CHANCE + BOMB_CHANCE) this.pickups.push({ kind: 'bomb', x: e.x, y: e.y, value: 1, pulled: false });
     }
     if (e.def.splits) {
       for (let i = 0; i < e.def.splits.n; i++) {
@@ -897,7 +977,7 @@ export class Run {
           this.near(this.x, this.y, r, (e) => {
             const dx = e.x - this.x;
             const dy = e.y - this.y;
-            const reach = r + e.def.radius * 0.5;
+            const reach = r + e.r * 0.5;
             if (dx * dx + dy * dy > reach * reach) return;
             e.slowUntil = this.t + 0.6;
             e.slowBy = 0.35;
@@ -929,7 +1009,7 @@ export class Run {
             this.near(x, y, r, (e) => {
               const dx = e.x - x;
               const dy = e.y - y;
-              const reach = r + e.def.radius;
+              const reach = r + e.r;
               if (dx * dx + dy * dy <= reach * reach) this.hit(e, s.damage, slot, s.knockback, dx || 1, dy);
             });
           }
@@ -952,8 +1032,8 @@ export class Run {
               const dy = e.y - cy;
               const lx = dx * ca - dy * sa;
               const ly = dx * sa + dy * ca;
-              const ax = w2 / 2 + e.def.radius;
-              const ay = h2 / 2 + e.def.radius;
+              const ax = w2 / 2 + e.r;
+              const ay = h2 / 2 + e.r;
               if ((lx / ax) ** 2 + (ly / ay) ** 2 <= 1) this.hit(e, s.damage, slot, s.knockback, Math.cos(a), Math.sin(a));
             });
           }
@@ -1001,7 +1081,7 @@ export class Run {
     for (const k of this.orbitPositions(w)) {
       this.near(k.x, k.y, kr, (e) => {
         if (this.t - e.hitAt[slot] < s.cooldown) return;
-        const reach = kr + e.def.radius;
+        const reach = kr + e.r;
         if ((e.x - k.x) ** 2 + (e.y - k.y) ** 2 > reach * reach) return;
         e.hitAt[slot] = this.t;
         this.hit(e, s.damage, slot, s.knockback, e.x - this.x, e.y - this.y);
@@ -1048,7 +1128,7 @@ export class Run {
       if (!s) continue;
       this.near(sh.x, sh.y, sh.r, (e) => {
         if (sh.pierce <= 0 || sh.hit.includes(e.uid)) return;
-        const reach = sh.r + e.def.radius;
+        const reach = sh.r + e.r;
         if ((e.x - sh.x) ** 2 + (e.y - sh.y) ** 2 > reach * reach) return;
         sh.hit.push(e.uid);
         sh.pierce -= 1;
@@ -1067,7 +1147,7 @@ export class Run {
       if (this.t < p.landAt || this.t < p.nextTick) continue;
       p.nextTick = this.t + 0.5;
       this.near(p.x, p.y, p.r, (e) => {
-        const reach = p.r + e.def.radius * 0.5;
+        const reach = p.r + e.r * 0.5;
         if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 > reach * reach) return;
         e.slowUntil = this.t + 0.6;
         e.slowBy = 0.55;
@@ -1176,12 +1256,37 @@ export class Run {
       case 'magnet':
         for (const q of this.pickups) if (q.kind === 'xp') q.pulled = true;
         break;
+      case 'bomb':
+        this.bomb();
+        break;
+      case 'sugar':
+        if (!this.rushing) this.startRush();
+        else this.rushUntil += RUSH.seconds / 2;
+        break;
       case 'chest':
         this.chest = this.openChest();
         this.state = 'chest';
         this.events.push({ type: 'chest' });
         break;
     }
+  }
+
+  /** Cherry Bomb: every pest on screen is squashed; bosses take a chunk. */
+  private bomb(): void {
+    const hw = this.view.w / 2 + 30;
+    const hh = this.view.h / 2 + 30;
+    let n = 0;
+    for (const e of this.enemies) {
+      if (e.dead || Math.abs(e.x - this.x) > hw || Math.abs(e.y - this.y) > hh) continue;
+      if (e.def.boss) {
+        this.hit(e, (e.maxHp * BOMB_BOSS_DAMAGE) / this.stats.might, -1, 0, e.x - this.x, e.y - this.y);
+        continue;
+      }
+      e.hp = 0;
+      this.kill(e, -1);
+      n++;
+    }
+    this.events.push({ type: 'bomb', x: this.x, y: this.y, kills: n });
   }
 
   addXp(amount: number): void {
@@ -1195,8 +1300,19 @@ export class Run {
   }
 
   private openLevelUp(): void {
+    const offers = this.makeOffers();
+    // Everything maxed: nothing to choose, so no stopping the night for it.
+    if (offers.every((o) => o.type === 'snack' || o.type === 'milk')) {
+      while (this.levelUps > 0) {
+        const milk = this.hp < this.stats.maxHp / 2;
+        this.apply({ type: milk ? 'milk' : 'snack' });
+        this.events.push({ type: 'pickup', kind: milk ? 'milk' : 'crumb', value: milk ? MILK_HEAL : 25 });
+        this.levelUps -= 1;
+      }
+      return;
+    }
     this.state = 'levelup';
-    this.offers = this.makeOffers();
+    this.offers = offers;
   }
 
   /** Up to three things to pick from. */
@@ -1360,6 +1476,8 @@ export class Run {
       crumbs: this.banked(winBonus),
       won: this.overtime || this.state === 'won',
       bosses: this.bosses,
+      combo: this.bestCombo,
+      rushes: this.rushes,
       weapons: this.weapons.map((w) => ({ id: w.id, level: w.level, evolved: w.evolved, damage: Math.round(w.damage), kills: w.kills })),
     };
   }

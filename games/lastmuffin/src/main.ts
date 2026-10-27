@@ -18,6 +18,8 @@ const localSave = makeLocalSave('lastmuffin.save.v1');
 /** The longest single step of the simulation, in seconds. */
 const STEP = 1 / 30;
 const CLOUD_SAVE_MS = 30_000;
+/** Combo counts worth calling out. */
+const COMBO_MARKS = [100, 250, 500, 1000, 2000, 5000];
 
 interface HotData {
   save?: string;
@@ -47,6 +49,8 @@ class Game implements Controller {
   private smoothFor = 0;
   private lowered = 0;
   private met = new Set<EnemyId>();
+  /** The last combo milestone called out, so each is called once per combo. */
+  private comboMark = 0;
   private lastCloud = 0;
   private hadSave: boolean;
 
@@ -209,10 +213,21 @@ class Game implements Controller {
           if (e.bonk) sfx.bonk();
           else sfx.hit();
           break;
-        case 'kill':
+        case 'kill': {
           sfx.pop();
           this.met.add(e.enemy);
+          // Combo milestones.
+          const c = this.run?.combo ?? 0;
+          if (c < this.comboMark) this.comboMark = 0;
+          const mark = COMBO_MARKS.filter((m) => m <= c).pop() ?? 0;
+          if (mark > this.comboMark) {
+            this.comboMark = mark;
+            sfx.combo();
+            this.ui.comboPop();
+            this.ui.warn(`${mark} COMBO!`, 1200);
+          }
           break;
+        }
         case 'fire': {
           const kind = WEAPON_BY_ID[e.weapon].kind;
           if (kind === 'shoot' || kind === 'nova') sfx.shoot();
@@ -230,6 +245,20 @@ class Game implements Controller {
             this.ui.warn('Fridge magnet! Every sprinkle comes to you.', 1800);
           }
           break;
+        case 'elite':
+          sfx.elite();
+          this.ui.warn(`A golden ${ENEMY_BY_ID[e.enemy].name.toLowerCase()}! It’s carrying something.`, 2400);
+          break;
+        case 'rush':
+          sfx.rush();
+          buzz.heavy();
+          this.ui.banner('Everything faster', 'SUGAR RUSH!', 'rush');
+          break;
+        case 'bomb':
+          sfx.boom();
+          buzz.heavy();
+          this.ui.warn(e.kills ? `CHERRY BOMB! ${e.kills} squashed.` : 'CHERRY BOMB!', 2000);
+          break;
         case 'levelup':
           sfx.levelUp();
           buzz.tap();
@@ -237,6 +266,7 @@ class Game implements Controller {
         case 'hurt':
           sfx.hurt();
           buzz.hurt();
+          this.comboMark = 0;
           break;
         case 'hop':
           sfx.hop();
@@ -315,6 +345,7 @@ class Game implements Controller {
   start(): void {
     this.slowFor = this.smoothFor = 0;
     const run = new Run({ muffin: this.meta.muffin, pantry: this.meta.pantry, seed: Date.now() % 2147483647, autoHop: this.meta.autoHop });
+    this.comboMark = 0;
     run.view = this.view.worldView;
     this.run = run;
     this.ended = null;

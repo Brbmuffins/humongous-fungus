@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { autoPicking, bankRun, bankUnbanked, buyPantry, canUnlock, deserialize, newMeta, pantryCost, pick, serialize, unlock } from '../../games/lastmuffin/src/meta';
 import type { RunSummary } from '../../games/lastmuffin/src/run';
 
-const summary = (patch: Partial<RunSummary> = {}): RunSummary => ({ muffin: 'blueberry', seconds: 200, level: 12, kills: 300, crumbs: 40, won: false, bosses: 1, weapons: [], ...patch });
+const summary = (patch: Partial<RunSummary> = {}): RunSummary => ({ muffin: 'blueberry', seconds: 200, level: 12, kills: 300, crumbs: 40, won: false, bosses: 1, combo: 0, rushes: 0, weapons: [], ...patch });
 
 describe('the save', () => {
   it('round-trips', () => {

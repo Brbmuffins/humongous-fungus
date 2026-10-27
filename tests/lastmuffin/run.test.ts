@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HOP, MAX_LEVEL, PULSE_SECONDS, RUN_SECONDS, SLOTS, WEAPON_BY_ID, clockText, levelText, xpToNext, type EnemyId } from '../../games/lastmuffin/src/defs';
+import { BOMB_BOSS_DAMAGE, ELITE, HOP, MAX_LEVEL, PULSE_SECONDS, RUN_SECONDS, RUSH, SLOTS, WEAPON_BY_ID, clockText, levelText, xpToNext, type EnemyId } from '../../games/lastmuffin/src/defs';
 import { Run, type Enemy, type Input } from '../../games/lastmuffin/src/run';
 
 const still: Input = { x: 0, y: 0, hop: false };
@@ -20,13 +20,13 @@ function place(r: Run, id: EnemyId, x: number, y: number): Enemy {
 }
 
 describe('defs', () => {
-  it('needs 5 sprinkles for level 2, then 7 more each level, then more', () => {
+  it('needs 5 sprinkles for level 2, then 10 more each level, then more', () => {
     expect(xpToNext(1)).toBe(5);
-    expect(xpToNext(2)).toBe(12);
-    expect(xpToNext(19)).toBe(131);
-    expect(xpToNext(20)).toBe(139);
-    expect(xpToNext(21)).toBe(149);
-    expect(xpToNext(41)).toBe(352);
+    expect(xpToNext(2)).toBe(15);
+    expect(xpToNext(19)).toBe(185);
+    expect(xpToNext(20)).toBe(195);
+    expect(xpToNext(21)).toBe(211);
+    expect(xpToNext(41)).toBe(539);
   });
   it('describes each weapon level in words', () => {
     expect(levelText(WEAPON_BY_ID.blaster, 1)).toBe('+1 blueberry');
@@ -49,7 +49,8 @@ describe('defs', () => {
   });
   it('runs the clock from midnight to 6 AM', () => {
     expect(clockText(0)).toBe('12:00 AM');
-    expect(clockText(60)).toBe('12:30 AM');
+    expect(clockText(60)).toBe('12:45 AM');
+    expect(RUN_SECONDS).toBe(480);
     expect(clockText(RUN_SECONDS)).toBe('6:00 AM');
   });
 });
@@ -122,7 +123,7 @@ describe('a run', () => {
   });
   it('queues several level-ups at once', () => {
     const r = run();
-    r.addXp(5 + 12 + 19);
+    r.addXp(5 + 15 + 25);
     expect(r.level).toBe(4);
     r.step(1 / 60, still);
     r.choose(0);
@@ -142,10 +143,14 @@ describe('a run', () => {
     expect(r.weapons.length).toBeLessThanOrEqual(SLOTS);
     expect(r.passives.length).toBeLessThanOrEqual(SLOTS);
     for (const w of r.weapons) expect(w.level).toBeLessThanOrEqual(MAX_LEVEL);
-    // Everything maxed: snacks and milk.
+    // Everything maxed: nothing to pick, so it doesn't stop the night. A snack (or milk when you're low).
+    expect(r.makeOffers().map((o) => o.type)).toEqual(['snack', 'milk']);
+    const crumbs = r.crumbs;
+    r.hp = r.stats.maxHp;
     r.addXp(xpToNext(r.level));
     r.step(1 / 60, still);
-    expect(r.offers.map((o) => o.type)).toEqual(['snack', 'milk']);
+    expect(r.state).toBe('playing');
+    expect(r.crumbs).toBeGreaterThanOrEqual(crumbs + 25);
   });
   it('pests hurt on contact, armor takes some off, and never below 1', () => {
     const r = run();
@@ -255,8 +260,8 @@ describe('a run', () => {
   it('gets tougher with time', () => {
     const r = run();
     expect(r.hpScale()).toBe(1);
-    r.t = 600;
-    expect(r.hpScale()).toBeCloseTo(2.8);
+    r.t = 240;
+    expect(r.hpScale()).toBeCloseTo(2.28);
   });
 });
 
@@ -265,9 +270,9 @@ describe('automation', () => {
 
   it('Sous Chef helpers fetch sprinkles you are nowhere near', () => {
     const r = run();
-    sprinkle(r, 200, 0);
+    sprinkle(r, 200, 0, 9);
     play(r, 3);
-    expect(r.xp).toBe(0);
+    expect(r.pickups.some((p) => p.value === 9)).toBe(true);
     const c = run();
     c.passives.push({ id: 'chef', level: 1 });
     sprinkle(c, 200, 0, 3);
@@ -295,9 +300,17 @@ describe('automation', () => {
     r.hp = r.stats.maxHp = 1e9;
     expect(r.stats.pulse).toBe(PULSE_SECONDS[3]);
     for (let i = 0; i < 6; i++) sprinkle(r, 300 + i * 40, -200, 50);
-    play(r, PULSE_SECONDS[3] - 1);
+    // A quiet floor, so nothing else (a magnet, a rush) pulls them in first.
+    const quiet = (seconds: number) => {
+      for (let i = 0; i < seconds * 60; i++) {
+        r.enemies.length = 0;
+        r.step(1 / 60, still);
+        while (r.state === 'levelup') r.choose(0);
+      }
+    };
+    quiet(PULSE_SECONDS[3] - 1);
     expect(r.pickups.filter((p) => p.value === 50)).toHaveLength(6);
-    play(r, 5);
+    quiet(5);
     expect(r.pickups.filter((p) => p.value === 50)).toHaveLength(0);
     expect(run().stats.pulse).toBe(0);
   });
@@ -342,5 +355,90 @@ describe('automation', () => {
     r.offers = [{ type: 'snack' }, { type: 'milk' }];
     r.hp = 20;
     expect(r.autoChoice()).toBe(1);
+  });
+});
+
+describe('the fast stuff', () => {
+  const kill = (r: Run, e: Enemy) => (r as unknown as { kill(e: Enemy, slot: number): void }).kill(e, 0);
+
+  it('a golden pest turns up every so often, tougher, bigger and carrying something', () => {
+    const r = run();
+    r.safeUntil = 1e9;
+    let elite: Enemy | undefined;
+    for (let i = 0; i < (ELITE.first + 1) * 60 && !elite; i++) {
+      r.step(1 / 60, still);
+      while (r.state === 'levelup') r.choose(0);
+      elite = r.enemies.find((e) => e.elite);
+    }
+    expect(elite).toBeDefined();
+    expect(r.t).toBeGreaterThanOrEqual(ELITE.first);
+    expect(elite!.r).toBeCloseTo(elite!.def.radius * ELITE.size);
+    expect(elite!.maxHp).toBeGreaterThan(elite!.def.hp * ELITE.hp * 0.99);
+    kill(r, elite!);
+    expect(r.pickups.some((p) => p.kind === 'sugar')).toBe(true);
+    // The next one carries a Cherry Bomb.
+    const next = place(r, 'mouse', 500, 0);
+    next.elite = true;
+    kill(r, next);
+    expect(r.pickups.some((p) => p.kind === 'bomb')).toBe(true);
+  });
+
+  it('squashing pests fills SUGAR RUSH; a rush speeds everything up for a few seconds', () => {
+    const r = run();
+    const before = { ...r.stats };
+    for (let i = 0; i < RUSH.need; i++) kill(r, place(r, 'ant', 400, 0));
+    expect(r.rushing).toBe(true);
+    expect(r.rushes).toBe(1);
+    expect(r.stats.cooldown).toBeCloseTo(before.cooldown * RUSH.cooldown);
+    expect(r.stats.speed).toBeCloseTo(before.speed * RUSH.speed);
+    expect(r.stats.might).toBeCloseTo(before.might * RUSH.might);
+    expect(r.rushNeed).toBe(RUSH.need + RUSH.needMore);
+    r.safeUntil = 1e9;
+    for (let i = 0; i < (RUSH.seconds + 0.2) * 60; i++) {
+      r.enemies.length = 0;
+      r.step(1 / 60, still);
+      while (r.state === 'levelup') r.choose(0);
+    }
+    expect(r.rushing).toBe(false);
+    expect(r.stats.speed).toBeCloseTo(before.speed);
+  });
+
+  it('a Sugar Cube starts a rush straight away', () => {
+    const r = run();
+    r.pickups.push({ kind: 'sugar', x: r.x, y: r.y, value: 1, pulled: false });
+    r.step(1 / 60, still);
+    expect(r.rushing).toBe(true);
+  });
+
+  it('a Cherry Bomb squashes every pest on screen, and takes a chunk out of a boss', () => {
+    const r = run();
+    const near = [place(r, 'roach', 120, 40), place(r, 'raccoon', -150, -200), place(r, 'ant', 30, 300)];
+    const far = place(r, 'roach', 2000, 0);
+    const boss = place(r, 'queen', 0, -260);
+    r.pickups.push({ kind: 'bomb', x: r.x, y: r.y, value: 1, pulled: false });
+    const kills = r.kills;
+    r.step(1 / 60, still);
+    for (const e of near) expect(e.dead).toBe(true);
+    expect(far.dead).toBe(false);
+    expect(boss.dead).toBe(false);
+    expect(boss.hp).toBeLessThanOrEqual(boss.maxHp * (1 - BOMB_BOSS_DAMAGE) + 1);
+    expect(r.kills - kills).toBeGreaterThanOrEqual(3);
+  });
+
+  it('keeps a combo while the kills keep coming, and getting touched breaks it', () => {
+    const r = run();
+    for (let i = 0; i < 12; i++) kill(r, place(r, 'ant', 300, 0));
+    expect(r.combo).toBe(12);
+    expect(r.bestCombo).toBe(12);
+    (r as unknown as { hurt(n: number): void }).hurt(5);
+    expect(r.combo).toBe(0);
+    expect(r.bestCombo).toBe(12);
+  });
+
+  it('is busy from the start', () => {
+    const r = run();
+    r.safeUntil = 1e9;
+    play(r, 3);
+    expect(r.enemies.length).toBeGreaterThan(30);
   });
 });

@@ -597,6 +597,87 @@ export function drawChest(c: Ctx, s: number, t: number): void {
   c.restore();
 }
 
+/** A Cherry Bomb: two cherries with a lit fuse. Pick it up and everything on screen goes. */
+export function drawCherryBomb(c: Ctx, s: number, t: number): void {
+  const glow = c.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 2.2);
+  glow.addColorStop(0, `rgba(255,80,60,${0.45 + Math.sin(t * 0.012) * 0.2})`);
+  glow.addColorStop(1, 'rgba(255,80,60,0)');
+  c.fillStyle = glow;
+  c.fillRect(-s * 2.2, -s * 2.2, s * 4.4, s * 4.4);
+  // Stems, and the fuse where they meet.
+  c.strokeStyle = '#4a7a2a';
+  c.lineWidth = s * 0.16;
+  c.lineCap = 'round';
+  c.beginPath();
+  c.moveTo(-s * 0.45, s * 0.1);
+  c.quadraticCurveTo(-s * 0.2, -s * 0.8, s * 0.1, -s * 0.95);
+  c.moveTo(s * 0.5, s * 0.15);
+  c.quadraticCurveTo(s * 0.3, -s * 0.6, s * 0.1, -s * 0.95);
+  c.stroke();
+  for (const [x, y] of [
+    [-s * 0.5, s * 0.35],
+    [s * 0.5, s * 0.4],
+  ]) {
+    c.fillStyle = '#d81e2c';
+    c.strokeStyle = INK;
+    c.lineWidth = s * 0.1;
+    c.beginPath();
+    c.arc(x, y, s * 0.55, 0, TAU);
+    c.fill();
+    c.stroke();
+    c.fillStyle = 'rgba(255,255,255,0.55)';
+    c.beginPath();
+    c.arc(x - s * 0.18, y - s * 0.2, s * 0.14, 0, TAU);
+    c.fill();
+  }
+  // The spark.
+  const k = (Math.sin(t * 0.03) + 1) / 2;
+  c.fillStyle = k > 0.5 ? '#ffd34d' : '#ff9a2e';
+  c.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * TAU;
+    const r = i % 2 ? s * 0.12 : s * (0.3 + k * 0.12);
+    c.lineTo(s * 0.1 + Math.cos(a) * r, -s * 1.05 + Math.sin(a) * r);
+  }
+  c.closePath();
+  c.fill();
+}
+
+/** A Sugar Cube: pick it up for an instant SUGAR RUSH. */
+export function drawSugarCube(c: Ctx, s: number, t: number): void {
+  const hue = (t * 0.2) % 360;
+  const glow = c.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 2.2);
+  glow.addColorStop(0, `hsla(${hue}, 90%, 70%, 0.55)`);
+  glow.addColorStop(1, `hsla(${hue}, 90%, 70%, 0)`);
+  c.fillStyle = glow;
+  c.fillRect(-s * 2.2, -s * 2.2, s * 4.4, s * 4.4);
+  c.strokeStyle = INK;
+  c.lineWidth = s * 0.1;
+  c.lineJoin = 'round';
+  // Top, left and right faces.
+  const faces: [string, number[][]][] = [
+    ['#ffffff', [[0, -s * 0.9], [s * 0.8, -s * 0.5], [0, -s * 0.1], [-s * 0.8, -s * 0.5]]],
+    ['#e8e4f0', [[-s * 0.8, -s * 0.5], [0, -s * 0.1], [0, s * 0.85], [-s * 0.8, s * 0.45]]],
+    ['#d4cfe0', [[s * 0.8, -s * 0.5], [0, -s * 0.1], [0, s * 0.85], [s * 0.8, s * 0.45]]],
+  ];
+  for (const [fill, pts] of faces) {
+    c.fillStyle = fill;
+    c.beginPath();
+    pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+    c.closePath();
+    c.fill();
+    c.stroke();
+  }
+  // Sugar sparkle.
+  c.fillStyle = `hsl(${hue}, 90%, 65%)`;
+  for (let i = 0; i < 3; i++) {
+    const a = t * 0.004 + i * 2.1;
+    c.beginPath();
+    c.arc(Math.cos(a) * s * 1.2, Math.sin(a) * s * 1.2 - s * 0.2, s * 0.14, 0, TAU);
+    c.fill();
+  }
+}
+
 export function drawBerry(c: Ctx, s: number, color = '#4f6bd8'): void {
   ellipse(c, 0, 0, s, s);
   fillStroke(c, color, 0.2, s);

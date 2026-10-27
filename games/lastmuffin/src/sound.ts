@@ -162,6 +162,31 @@ export const sfx = {
     const a = ready('chest', 300);
     if (a) [784, 988, 1175, 1568, 1976].forEach((f, i) => tone(a, 'triangle', f, f, i * 0.06, 0.2, 0.1));
   },
+  /** SUGAR RUSH: up and up. */
+  rush(): void {
+    const a = ready('rush', 500);
+    if (!a) return;
+    [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(a, 'square', f, f * 1.02, i * 0.05, 0.12, 0.07));
+    hiss(a, 0, 0.5, 3000, 0.08);
+  },
+  /** A Cherry Bomb going off. */
+  boom(): void {
+    const a = ready('boom', 300);
+    if (!a) return;
+    hiss(a, 0, 0.9, 500, 0.5, 'lowpass');
+    hiss(a, 0, 0.25, 2500, 0.2);
+    tone(a, 'sine', 110, 30, 0, 0.7, 0.45);
+  },
+  /** A golden pest: a shimmer. */
+  elite(): void {
+    const a = ready('elite', 400);
+    if (a) [1568, 1976, 2349, 2637].forEach((f, i) => tone(a, 'sine', f, f, i * 0.05, 0.18, 0.06));
+  },
+  /** A combo milestone. */
+  combo(): void {
+    const a = ready('combo', 200);
+    if (a) [880, 1175, 1760].forEach((f, i) => tone(a, 'triangle', f, f, i * 0.05, 0.1, 0.08));
+  },
   click(): void {
     const a = ready('click', 30);
     if (a) tone(a, 'sine', 900, 700, 0, 0.04, 0.05);
