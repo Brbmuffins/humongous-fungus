@@ -11,7 +11,9 @@ const grab = (re) => [...html.matchAll(re)].map((m) => m[0]);
 
 const title = grab(/<title>[\s\S]*?<\/title>/g)[0];
 const styles = grab(/<style[^>]*>[\s\S]*?<\/style>/g);
-const scripts = grab(/<script[^>]*>[\s\S]*?<\/script>/g);
+// A minifier can turn a '\uFFFD' escape into the character itself, which the
+// artifact host takes for a damaged file: put the escape back (same string).
+const scripts = grab(/<script[^>]*>[\s\S]*?<\/script>/g).map((s) => s.replaceAll('\uFFFD', '\\uFFFD'));
 const body = (html.match(/<body[^>]*>([\s\S]*)<\/body>/) ?? [, ''])[1].replace(/<script[^>]*>[\s\S]*?<\/script>/g, '').trim();
 
 if (!title || !styles.length || !scripts.length || !body) throw new Error(`${dir}/index.html is missing styles, scripts or body`);
