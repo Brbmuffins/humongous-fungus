@@ -76,6 +76,7 @@ import {
   SELF_ORDER_BELOW,
   SELF_ORDER_TIP,
   SELF_TOILET_CHANCE,
+  SHRUG_REPLIES,
   SHOWER_COOLDOWN,
   SHOWER_FRESH,
   SHOWER_MOOD,
@@ -642,7 +643,7 @@ export function textOptions(s: HammyState): TextOption[] {
   return [0, 1, 2].map((i) => TEXT_OPTIONS[(start + i * 4) % n]);
 }
 
-function replyTo(id: string, s: HammyState, roll: Roll): string {
+export function replyTo(id: string, s: HammyState, roll: Roll): string {
   const by = (lines: string[]) => pick(lines, roll);
   switch (id) {
     case 'up':
@@ -692,6 +693,77 @@ export function sendText(s: HammyState, id: string, now: number, roll: Roll = Ma
   pushMessage(s, { at: now + (REPLY_DELAY_MIN + roll() * REPLY_DELAY_RANGE) * 1000, from: 'hammy', text: reply });
   markRead(s, now);
   return true;
+}
+
+/**
+ * You typed him something of your own. Counts like a quick reply (mood and a
+ * coin) while he isn't sick of texts. Returns whether it counted, or null if
+ * he can't get texts (he's dead). His reply comes separately, with `hammyText`.
+ */
+export function sendOwnText(s: HammyState, text: string, now: number): boolean | null {
+  const said = text.trim().slice(0, 300);
+  if (!said || !isAlive(s)) return null;
+  pushMessage(s, { at: now, from: 'you', text: said });
+  const counts = s.textBudget >= 1;
+  if (counts) {
+    s.textBudget -= 1;
+    s.mood = clamp(s.mood + TEXT_MOOD);
+    s.coins += TEXT_COINS;
+  }
+  s.stats.texts += 1;
+  markRead(s, now);
+  return counts;
+}
+
+/** His answer to what you typed shows up in the thread. */
+export function hammyReplies(s: HammyState, text: string, now: number): void {
+  const said = text.trim().slice(0, 400);
+  if (!said || !isAlive(s)) return;
+  pushMessage(s, { at: now, from: 'hammy', text: said });
+  markRead(s, now);
+}
+
+/** Words that steer a typed text to one of his canned answers, for when there's no brain to ask. */
+const CANNED: readonly [RegExp, string][] = [
+  [/\b(ate|eat|food|hungry|dinner|lunch|snack|dorkitos?)\b/i, 'ate'],
+  [/\b(stink|smell|shower|wash|gross|nasty)\b/i, 'stink'],
+  [/\b(love|miss|bestie|bro ❤️)\b/i, 'love'],
+  [/\b(wyd|doing|up to)\b/i, 'wyd'],
+  [/\b(fart|gas|toot)\b/i, 'fart'],
+  [/\b(there yet|road ?trip|drive|driving)\b/i, 'there'],
+  [/\b(unit|room|tank|cell|place)\b/i, 'tank'],
+  [/\b(lol|lmao|haha|😂)\b/i, 'lol'],
+  [/\b(pic|photo|selfie|picture)\b/i, 'pic'],
+  [/\b(proud|good job|nice)\b/i, 'proud'],
+  [/\b(clean|flush|trash|tidy|mess)\b/i, 'clean'],
+  [/\b(up|awake|sleep)\b/i, 'up'],
+];
+
+/** What he says back when nobody's there to think for him. */
+export function cannedReply(s: HammyState, said: string, roll: Roll = Math.random): string {
+  const hit = CANNED.find(([re]) => re.test(said));
+  return hit ? replyTo(hit[1], s, roll) : pick(SHRUG_REPLIES, roll);
+}
+
+/** What's going on in the unit, in a few lines, for him to talk about. */
+export function situation(s: HammyState, now: number, form: FormId): string {
+  const lines = [
+    `Today you are ${FORMS.find((f) => f.id === form)?.name ?? 'Cube Hammy'}.`,
+    `Belly: ${needWord('belly', s.belly)} (${Math.round(s.belly)}/100). Freshness: ${needWord('fresh', s.fresh)} (${Math.round(s.fresh)}/100). Mood: ${needWord('mood', s.mood)} (${Math.round(s.mood)}/100). Health: ${needWord('health', s.health)}.`,
+  ];
+  if (s.urges.length) lines.push('You have to poop right now.');
+  if (s.bowl >= BOWL_MAX) lines.push('The toilet is clogged with poop nobody flushed.');
+  else if (s.bowl) lines.push(`There's unflushed poop in the toilet (${s.bowl} ${s.bowl === 1 ? 'load' : 'loads'}). You did that.`);
+  if (s.poops.length) lines.push(`${s.poops.length} ${s.poops.length === 1 ? 'poop is' : 'poops are'} on the floor.`);
+  if (s.trash.length) lines.push(`${s.trash.length} ${s.trash.length === 1 ? 'piece of your trash is' : 'pieces of your trash are'} lying around (${[...new Set(s.trash.map((t) => t.kind))].join(', ')}).`);
+  if (s.orders.length) lines.push(`DoorDosh is on the way: ${s.orders.map((o) => FOOD_BY_ID[o.food].name).join(', ')}.`);
+  const has = s.furniture.map((f) => FURNITURE_BY_ID[f].name.toLowerCase());
+  lines.push(has.length ? `Your furniture: ${has.join(', ')}. The unit also has a toilet and a shower.` : 'The unit is bare: just a toilet and a shower. No bed, no chair, no PC.');
+  lines.push(`Your friend has ${Math.floor(s.coins)} Hammy coins.`);
+  if (s.fresh < PINCH_BELOW) lines.push('Dr. Moss is wearing a gas mask because of you.');
+  const ago = (now - s.bornAt) / 3_600_000;
+  lines.push(`You've been in the unit ${ago < 1 ? 'less than an hour' : `${Math.floor(ago)} hours`}${s.n > 1 ? `, and you're Hammy #${s.n} (the ones before you died)` : ''}.`);
+  return lines.join('\n');
 }
 
 export const canCall = (s: HammyState, now: number): boolean => isAlive(s) && now >= s.callReadyAt;

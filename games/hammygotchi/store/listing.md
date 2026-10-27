@@ -17,6 +17,13 @@ Copy these into App Store Connect. Character limits are Apple's; every field her
 | Privacy policy URL | where you host `site/hammygotchi/privacy.html` |
 | Support URL | where you host `site/hammygotchi/support.html` |
 
+The optional "talk to him" feature (Life tab) sends what the player types
+or says to Anthropic and ElevenLabs, but only with the player's own API keys
+and straight from the device. It's off until a key is added. If review asks,
+answer the privacy questions as User Content sent to third parties for App
+Functionality, not linked to the user and not used for tracking. Or ship it
+hidden in the store build and keep "Data Not Collected".
+
 If Apple or anyone objects to the name (it nods to a famous toy), the fallback
 is **Hammy: A Pet Who Is A Lot**. Nothing in the app needs to change except
 `appName` in `capacitor.config.json`.

@@ -25,7 +25,10 @@ never flushes and leaves his trash everywhere.
   balloons, cream pies, a whoopee cushion, a magnet and firecrackers. Or just
   throw him around the unit.
 - His phone: he texts you, calls you and orders food for himself with your
-  coins.
+  coins. Text him anything, or talk to him on a call, and he answers in
+  character with Claude (on your claude.ai account in the browser version, or
+  your own Anthropic key in the app), out loud with ElevenLabs or the
+  device's voice.
 - Coins from his stream (it keeps paying while you're away), furniture for
   the unit, fits to dress him in,
   robot vacuums (they pick up his trash, never his poop) and soap.

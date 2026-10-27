@@ -839,6 +839,59 @@ button {
 .budget-line {
   font-size: 12px;
 }
+/* Typing to him, in the thread and on a call. */
+.say {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.say-input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #120d1b;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+.say-input:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+.say-send,
+.say-mic {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--blue);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+.say-send:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.say-mic {
+  background: var(--panel-2);
+}
+.say-mic.on {
+  background: var(--danger);
+  animation: breathe 1s ease-in-out infinite;
+}
+.call-say {
+  align-self: stretch;
+}
+.caption-you {
+  min-height: 1.2em;
+  font-size: 13px;
+  color: #9cc3ff;
+}
 .budget {
   letter-spacing: 2px;
   color: #9cc3ff;
@@ -1002,6 +1055,53 @@ button {
   border: 1px solid var(--line);
   background: none;
   cursor: pointer;
+}
+/* Talking to Hammy: settings and keys. */
+.talk-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.talk-status {
+  font-size: 13px;
+}
+.keys {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.keys summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.keys[open] summary {
+  margin-bottom: 8px;
+}
+.keys .note {
+  margin-bottom: 8px;
+}
+.key-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.key-input {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #120d1b;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+.key-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .toggle-state {
   font-weight: 700;

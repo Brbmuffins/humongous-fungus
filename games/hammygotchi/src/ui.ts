@@ -52,6 +52,7 @@ import {
 import { paintPortrait, type Face } from './hammy';
 import { paintToyIcon } from './toys';
 import { sfx } from './sound';
+import { brain, canListen, hush, listen, loadTalk, problem, saveTalk, speakLine, speaking, voiceSource, type TalkSettings } from './talk';
 import type { HammyState } from './state';
 
 export type Tab = 'care' | 'phone' | 'shop' | 'life';
@@ -61,6 +62,12 @@ export interface Controller {
   /** What he is today. */
   readonly form: FormId;
   order(id: FoodId): void;
+  /** He's working on an answer to what you typed. */
+  readonly thinking: boolean;
+  /** Text him anything. */
+  say(text: string): void;
+  /** On a call: you said something. Resolves with his answer. */
+  callSay(text: string, signal: AbortSignal): Promise<string>;
   /** Floor poop into the toilet, as much as fits. */
   cleanPoop(): void;
   flush(): void;
@@ -256,6 +263,9 @@ class CarePanel implements Panel {
 // ---------------------------------------------------------------------------
 
 class PhonePanel implements Panel {
+  /** What you're typing survives the thread being rebuilt when he texts. */
+  private draft = '';
+  private focused = false;
   private status: HTMLElement | null = null;
   private callBtn: HTMLButtonElement | null = null;
   private replies: HTMLButtonElement[] = [];
@@ -269,7 +279,7 @@ class PhonePanel implements Panel {
     const s = this.c.state;
     const now = Date.now();
     const shown = s.messages.filter((m) => m.at <= now);
-    return `${s.n}|${isAlive(s)}|${shown.length}|${shown[shown.length - 1]?.at ?? 0}|${typing(s, now)}|${s.fit}`;
+    return `${s.n}|${isAlive(s)}|${shown.length}|${shown[shown.length - 1]?.at ?? 0}|${typing(s, now)}|${this.c.thinking}|${s.fit}`;
   }
 
   shown(): void {
@@ -299,13 +309,36 @@ class PhonePanel implements Panel {
           : h('li', { class: `msg msg-${m.from}`, title: time }, m.text),
       );
     }
-    if (typing(s, now)) this.thread.append(h('li', { class: 'msg msg-hammy typing', 'aria-label': 'Hammy is typing' }, h('span'), h('span'), h('span')));
+    if (typing(s, now) || this.c.thinking) this.thread.append(h('li', { class: 'msg msg-hammy typing', 'aria-label': 'Hammy is typing' }, h('span'), h('span'), h('span')));
     if (!alive) this.thread.append(h('li', { class: 'missed' }, 'Message not delivered'));
 
     this.replies = alive
       ? textOptions(s).map((o) => h('button', { class: 'reply', type: 'button', onclick: () => this.c.text(o.id) }, o.text))
       : [];
     this.budget = h('span', { class: 'budget', 'aria-hidden': 'true' });
+    const input = h('input', { class: 'say-input', type: 'text', maxlength: 300, autocomplete: 'off', enterkeyhint: 'send', placeholder: 'Text Hammy anything…', 'aria-label': 'Text Hammy' });
+    input.value = this.draft;
+    input.addEventListener('input', () => (this.draft = input.value));
+    input.addEventListener('focus', () => (this.focused = true));
+    input.addEventListener('blur', () => (this.focused = false));
+    const send = h('button', { class: 'say-send', type: 'submit', 'aria-label': 'Send' }, '➤');
+    if (this.c.thinking) send.disabled = true;
+    const form = h(
+      'form',
+      {
+        class: 'say',
+        onsubmit: (e: Event) => {
+          e.preventDefault();
+          const text = input.value.trim();
+          if (!text || this.c.thinking) return;
+          this.draft = '';
+          input.value = '';
+          this.c.say(text);
+        },
+      },
+      input,
+      send,
+    );
 
     root.append(
       h(
@@ -323,15 +356,20 @@ class PhonePanel implements Panel {
           ? h(
               'div',
               { class: 'compose' },
+              form,
               h('div', { class: 'replies' }, ...this.replies),
               h('p', { class: 'note budget-line' }, 'Texts he’s not sick of yet ', this.budget),
             )
           : null,
       ),
-      h('p', { class: 'note' }, 'Text him and call him, or he gets sad. He calls you too. Missed calls and unread texts make it worse.'),
+      h('p', { class: 'note' }, 'Text him anything, or tap a quick reply, and call him, or he gets sad. He calls you too. Missed calls and unread texts make it worse. Texts count for his mood until he’s sick of them.'),
     );
     paintPortrait(this.portrait, s.fit, alive ? 'happy' : 'dead', 0, this.c.form);
     this.thread.scrollTop = this.thread.scrollHeight;
+    if (this.focused && alive) {
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(input.value.length, input.value.length);
+    }
   }
 
   sync(): void {
@@ -536,13 +574,16 @@ class ShopPanel implements Panel {
 
 class LifePanel implements Panel {
   private confirming = false;
+  /** Bumped when the talk settings change, so the panel redraws. */
+  private talkKey = 0;
+  private talkStatus: HTMLElement | null = null;
   private stats: { el: HTMLElement; value: () => string }[] = [];
 
   constructor(private c: Controller) {}
 
   key(): string {
     const s = this.c.state;
-    return `${s.n}|${s.graves.length}|${isAlive(s)}|${s.sound}|${this.confirming}`;
+    return `${s.n}|${s.graves.length}|${isAlive(s)}|${s.sound}|${this.confirming}|${this.talkKey}`;
   }
 
   private setConfirm(v: boolean): void {
@@ -629,7 +670,64 @@ class LifePanel implements Panel {
         h('span', null, 'Sound (yes, the farts)'),
         h('span', { class: 'toggle-state' }, s.sound ? 'On' : 'Off'),
       ),
+      this.talkSettings(),
       h('div', { class: 'erase' }, erase),
+    );
+  }
+
+  /** Talking to him: his brain, his voice and the keys for both. */
+  private talkSettings(): HTMLElement {
+    const t = loadTalk();
+    const set = (patch: Partial<TalkSettings>) => {
+      saveTalk({ ...loadTalk(), ...patch });
+      this.talkKey += 1;
+      this.c.refresh();
+    };
+    const toggle = (label: string, on: boolean, flip: () => void) =>
+      h('button', { class: 'toggle', type: 'button', role: 'switch', 'aria-checked': String(on), onclick: flip }, h('span', null, label), h('span', { class: 'toggle-state' }, on ? 'On' : 'Off'));
+    const field = (label: string, value: string, secret: boolean, placeholder: string, save: (v: string) => void) => {
+      const input = h('input', { class: 'key-input', type: secret ? 'password' : 'text', autocomplete: 'off', spellcheck: 'false', placeholder });
+      input.value = value;
+      input.addEventListener('change', () => save(input.value.trim()));
+      return h('label', { class: 'key-field' }, h('span', null, label), input);
+    };
+    this.talkStatus = h('p', { class: 'note talk-status' }, '…');
+    const status = this.talkStatus;
+    void brain().then((b) => {
+      const head = b === 'claude' ? 'His brain: Claude, on your claude.ai account.' : b === 'key' ? 'His brain: Claude, with your Anthropic key.' : 'His brain: his canned replies. Add an Anthropic key for the real thing.';
+      const v = voiceSource();
+      const voice = v === 'eleven' ? 'His voice: ElevenLabs.' : v === 'device' ? 'His voice: this device’s.' : 'His voice: none on this device.';
+      setText(status, [head, voice, problem()].filter(Boolean).join(' '));
+    });
+    const inside = !!(window as unknown as { claude?: unknown }).claude;
+    return h(
+      'section',
+      { class: 'talk-settings' },
+      h('h2', { class: 'sub' }, 'Talking to Hammy'),
+      status,
+      toggle('He talks out loud on calls', t.speakCalls, () => set({ speakCalls: !t.speakCalls })),
+      toggle('Read his texts out loud', t.readTexts, () => set({ readTexts: !t.readTexts })),
+      h(
+        'details',
+        { class: 'keys' },
+        h('summary', null, inside ? 'Voice and keys' : 'Your own keys'),
+        h(
+          'p',
+          { class: 'note' },
+          inside
+            ? 'Inside claude.ai he already thinks with Claude on your account (it asks you once). An ElevenLabs voice needs the app: pages here can’t reach the internet.'
+            : 'Add an Anthropic API key for his brain, and an ElevenLabs key plus a voice ID for his voice (clone War’s voice on ElevenLabs and paste its ID). Keys stay on this device, never in your save. What you say to him goes to Anthropic and ElevenLabs under your account.',
+        ),
+        inside ? null : field('Anthropic API key', t.anthropicKey, true, 'sk-ant-…', (v) => set({ anthropicKey: v })),
+        inside ? null : field('ElevenLabs API key', t.elevenKey, true, 'xi-…', (v) => set({ elevenKey: v })),
+        inside ? null : field('ElevenLabs voice ID', t.voiceId, false, 'Voice ID', (v) => set({ voiceId: v })),
+        h(
+          'div',
+          { class: 'key-row' },
+          h('button', { class: 'btn btn-quiet', type: 'button', onclick: () => void speakLine(`yo its hammy. ${this.c.state.bowl ? 'i didnt flush btw' : 'are we there yet'}`).then(() => this.c.refresh()) }, 'Test his voice'),
+          inside ? null : h('button', { class: 'btn btn-quiet', type: 'button', onclick: () => set({ anthropicKey: '', elevenKey: '', voiceId: '' }) }, 'Forget keys'),
+        ),
+      ),
     );
   }
 
@@ -976,12 +1074,84 @@ export class GameUI {
   }
 
   /** On the phone with him. Returns nothing; calls onEnd with the seconds talked. */
+  /** On the phone with him. You can say (or type) anything; he answers out loud. Calls onEnd with the seconds talked. */
   showCall(incoming: boolean, onEnd: (seconds: number) => void): void {
     const pic = h('canvas', { class: 'call-pic', 'aria-hidden': 'true' });
     const timer = h('p', { class: 'call-time' }, '0:00');
     const caption = h('p', { class: 'caption', 'aria-live': 'polite' }, '“Yo!”');
+    const you = h('p', { class: 'caption-you' });
     const fill = h('span', { class: 'bar-fill' });
     const end = h('button', { class: 'round-btn decline', type: 'button', 'aria-label': 'End call' }, '✕');
+    const input = h('input', { class: 'say-input', type: 'text', maxlength: 200, autocomplete: 'off', enterkeyhint: 'send', placeholder: 'Say something…', 'aria-label': 'Say something to Hammy' });
+    const send = h('button', { class: 'say-send', type: 'submit', 'aria-label': 'Say it' }, '➤');
+    const mic = h('button', { class: 'say-mic', type: 'button', 'aria-label': 'Talk' }, '🎤');
+    mic.hidden = !canListen();
+    const ctl = new AbortController();
+    let pending = false;
+    let stopListening: (() => void) | null = null;
+    const started = Date.now();
+    /** When you last said something, or he last answered you. */
+    let lastTalk = 0;
+    let lastLine = started;
+    const out = (line: string) => {
+      setText(caption, `“${line}”`);
+      lastLine = Date.now();
+      if (loadTalk().speakCalls) void speakLine(line);
+    };
+    const say = async (text: string) => {
+      const said = text.trim();
+      if (pending || !said) return;
+      pending = true;
+      send.disabled = true;
+      setText(you, `You: “${said}”`);
+      setText(caption, '…');
+      lastTalk = Date.now();
+      try {
+        const reply = await this.c.callSay(said, ctl.signal);
+        if (!ctl.signal.aborted) out(reply);
+      } finally {
+        pending = false;
+        send.disabled = false;
+        lastTalk = Date.now();
+      }
+    };
+    const form = h(
+      'form',
+      {
+        class: 'say call-say',
+        onsubmit: (e: Event) => {
+          e.preventDefault();
+          const text = input.value;
+          input.value = '';
+          void say(text);
+        },
+      },
+      mic,
+      input,
+      send,
+    );
+    mic.addEventListener('click', () => {
+      if (stopListening) {
+        stopListening();
+        return;
+      }
+      mic.classList.add('on');
+      stopListening = listen(
+        (text, final) => {
+          input.value = text;
+          if (!final) return;
+          input.value = '';
+          mic.classList.remove('on');
+          stopListening = null;
+          void say(text);
+        },
+        () => {
+          mic.classList.remove('on');
+          stopListening = null;
+          mic.hidden = !canListen();
+        },
+      );
+    });
     const card = h(
       'div',
       { class: 'modal-card call-card', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'modal-title' },
@@ -990,27 +1160,37 @@ export class GameUI {
       h('h2', { id: 'modal-title' }, 'Hammy'),
       timer,
       caption,
+      you,
+      form,
       h('p', { class: 'note' }, 'Mood from this call'),
       h('span', { class: 'bar' }, fill),
       h('div', { class: 'call-row' }, h('span', { class: 'call-opt' }, end, 'End call')),
     );
-    const started = Date.now();
     const lines = [...CALL_LINES].sort(() => Math.random() - 0.5);
     let line = 0;
-    let lastLine = started;
     const faces: Face[] = ['happy', 'joy', 'smug', 'eat', 'happy'];
     end.addEventListener('click', () => this.closeModal());
-    this.open(card, () => onEnd((Date.now() - started) / 1000), end);
+    this.open(
+      card,
+      () => {
+        ctl.abort();
+        stopListening?.();
+        hush();
+        onEnd((Date.now() - started) / 1000);
+      },
+      end,
+    );
+    out(incoming ? 'Yo! You actually picked up.' : 'Yo! What’s up!');
     const tick = () => {
       const now = Date.now();
       const secs = (now - started) / 1000;
       setText(timer, `${Math.floor(secs / 60)}:${String(Math.floor(secs % 60)).padStart(2, '0')}`);
       setBar(fill, callMood(secs, false) / CALL_MAX_MOOD);
-      if (now - lastLine > 2600) {
-        lastLine = now;
-        setText(caption, `“${lines[line++ % lines.length]}”`);
-      }
-      paintPortrait(pic, this.c.state.fit, faces[Math.floor(secs / 2.6) % faces.length], now, this.c.form);
+      // He rambles while you don't say anything, and waits while you do.
+      const quiet = now - lastTalk > (lastTalk ? 14_000 : 0);
+      if (!pending && !stopListening && !speaking() && quiet && now - lastLine > 4200) out(lines[line++ % lines.length]);
+      const talking = speaking() && Math.sin(now * 0.025) > 0;
+      paintPortrait(pic, this.c.state.fit, talking ? 'joy' : faces[Math.floor(secs / 2.6) % faces.length], now, this.c.form);
     };
     tick();
     this.callTimer = window.setInterval(tick, 250);

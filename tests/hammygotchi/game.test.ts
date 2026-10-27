@@ -15,6 +15,7 @@ import {
   SELF_ORDER_TIP,
   SHOWER_COOLDOWN,
   SHOWER_FRESH,
+  SHRUG_REPLIES,
   START_COINS,
   TIDY_COINS,
   TOY_BY_ID,
@@ -31,6 +32,7 @@ import {
   buyToy,
   buyUpgrade,
   canCall,
+  cannedReply,
   declineCall,
   endCall,
   dumpAll,
@@ -39,6 +41,7 @@ import {
   flush,
   formFor,
   formOnDay,
+  hammyReplies,
   shower,
   hasFurniture,
   isAlive,
@@ -48,7 +51,9 @@ import {
   play,
   rest,
   rotDone,
+  sendOwnText,
   sendText,
+  situation,
   step,
   textOptions,
   tidy,
@@ -302,6 +307,58 @@ describe('the phone', () => {
     expect(live.events.some((e) => e.type === 'ring')).toBe(true);
     const away = step(s, T0 + hours(6), half);
     expect(away.away!.missedCalls).toBeGreaterThan(0);
+  });
+});
+
+describe('talking to him yourself', () => {
+  it('your own texts count like quick replies until he is sick of them', () => {
+    const s = newGame(T0);
+    s.mood = 40;
+    const coins = s.coins;
+    expect(sendOwnText(s, '  did u flush  ', T0)).toBe(true);
+    expect(s.messages[s.messages.length - 1]).toEqual({ at: T0, from: 'you', text: 'did u flush' });
+    expect(s.mood).toBeGreaterThan(40);
+    expect(s.coins).toBe(coins + 1);
+    for (let i = 0; i < MAX_TEXTS; i++) sendOwnText(s, 'yo', T0);
+    const mood = s.mood;
+    expect(sendOwnText(s, 'yo???', T0)).toBe(false);
+    expect(s.mood).toBe(mood);
+    expect(sendOwnText(s, '   ', T0)).toBeNull();
+  });
+  it('his answer lands in the thread, already read', () => {
+    const s = newGame(T0);
+    sendOwnText(s, 'wyd', T0);
+    hammyReplies(s, 'laying in my own filth', T0 + sec(2));
+    expect(s.messages[s.messages.length - 1]).toEqual({ at: T0 + sec(2), from: 'hammy', text: 'laying in my own filth' });
+    expect(unread(s, T0 + sec(3))).toBe(0);
+  });
+  it('a dead Hammy gets no texts', () => {
+    const s = newGame(T0);
+    s.diedAt = T0;
+    expect(sendOwnText(s, 'hello?', T0)).toBeNull();
+    hammyReplies(s, 'boo', T0);
+    expect(s.messages.some((m) => m.text === 'boo')).toBe(false);
+  });
+  it('with nobody to think for him, he still answers something', () => {
+    const s = newGame(T0);
+    s.belly = 10;
+    expect(cannedReply(s, 'did you EAT today', half)).toMatch(/dorkitos|eat|dust/i);
+    expect(SHRUG_REPLIES).toContain(cannedReply(s, 'qwzx', half));
+  });
+  it('knows what is going on in the unit', () => {
+    const s = newGame(T0);
+    s.urges = [T0 + sec(30)];
+    s.bowl = BOWL_MAX;
+    s.trash = [{ x: 0.2, up: false, kind: 'sock' }];
+    s.furniture = ['bed'];
+    const about = situation(s, T0 + hours(3), 'sub');
+    expect(about).toContain('Meatball sub');
+    expect(about).toContain('poop right now');
+    expect(about).toContain('clogged');
+    expect(about).toContain('1 piece of your trash is');
+    expect(about).toContain('bed');
+    expect(about).toContain('3 hours');
+    expect(situation(newGame(T0), T0, 'cube')).toContain('bare');
   });
 });
 

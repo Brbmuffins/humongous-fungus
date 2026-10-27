@@ -76,6 +76,40 @@ function hiss(at: number, dur: number, freq: number, peak: number, type: BiquadF
   src.stop(t + dur + 0.05);
 }
 
+let clip: AudioBufferSourceNode | null = null;
+
+/**
+ * Play an encoded recording (an MP3 of his voice) through the game's own
+ * audio, which a tap has already unlocked, so phones don't block it as
+ * autoplay. Resolves when it ends; false if it couldn't play (sound off).
+ */
+export async function playClip(data: ArrayBuffer): Promise<boolean> {
+  const a = ready();
+  if (!a) return false;
+  const buffer = await a.decodeAudioData(data.slice(0));
+  stopClip();
+  const src = a.createBufferSource();
+  src.buffer = buffer;
+  src.connect(master!);
+  clip = src;
+  return new Promise((resolve) => {
+    src.onended = () => {
+      if (clip === src) clip = null;
+      resolve(true);
+    };
+    src.start();
+  });
+}
+
+export function stopClip(): void {
+  try {
+    clip?.stop();
+  } catch {
+    // Already stopped.
+  }
+  clip = null;
+}
+
 export const sfx = {
   /** size about 0.4 (squeak) to 1.4 (the big one). */
   fart(size: number): void {

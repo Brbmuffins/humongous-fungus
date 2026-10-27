@@ -182,14 +182,46 @@ he dies:
 ## The phone
 
 - **Texts.** He texts you every 10–30 minutes about whatever is going on
-  (hungry, stinky, lonely, or random road-trip nonsense). You pick from three
-  replies; each text is worth 7 mood and a coin. Five texts in a row and he
-  tells you to chill; one comes back every 3 minutes.
+  (hungry, stinky, lonely, or random road-trip nonsense). Type him anything,
+  or pick one of three quick replies; each text is worth 7 mood and a coin.
+  Five texts in a row and they stop counting (one comes back every 3
+  minutes); he still answers, a bit over it.
 - **Calls.** Call him from the Phone tab: mood builds 1.2 a second, up to 30.
   Calls over 8 seconds pay coins. Afterwards he's "in a game" for 4 minutes.
   He calls you too, every 6–14 minutes while you're watching: answering is
   worth extra, declining hurts more than missing it. While you're away he
-  calls every 1–3 hours, and you miss every one.
+  calls every 1–3 hours, and you miss every one. On a call he rambles until
+  you say something (type it, or tap the mic where the browser can listen),
+  then answers you, out loud.
+
+### Talking to him for real
+
+What you type to him, and what you say on a call, gets an answer in
+character from Claude, who plays him from `HAMMY_PERSONA` in `src/defs.ts`
+plus a few lines about what's going on in the unit right now (`situation`
+in `src/game.ts`: his meters, whether he has to go, what's unflushed, his
+trash, his furniture, today's form). He remembers the last 16 messages of a
+thread or call. `src/talk.ts` does the asking and the speaking:
+
+- **His brain.** Inside claude.ai the page asks Claude itself (the `sample`
+  capability, quick tier), on the viewer's own account; Claude asks them to
+  allow it the first time. Anywhere else (the phone apps, a plain browser)
+  it uses an Anthropic API key added in the Life tab (Claude Opus 5.5 at low
+  effort, with server-side refusal fallback on). With neither, or when a
+  call fails, he answers from his canned replies, picked by keywords.
+- **His voice.** ElevenLabs (`eleven_flash_v2_5`) with a key and a voice ID
+  from the Life tab: clone War's voice on ElevenLabs and paste its ID. On the
+  phone apps that request goes through Capacitor's native HTTP. Without it,
+  or inside claude.ai (whose pages can't reach the network), he uses the
+  device's own speech, pitched down. Either way it plays through the game's
+  own audio, so the sound switch mutes him too. He talks out loud on calls
+  by default; reading his texts out loud is a switch in the Life tab.
+- **Your voice.** The call screen's mic uses the browser's speech
+  recognition where there is one (Chrome, Safari). It's hidden where there
+  isn't, which includes the phone apps' web views for now.
+- **The keys** are kept on the device under their own storage key, never in
+  the save, which syncs to the cloud. The privacy page says what's sent where
+  when they're added.
 
 ## Cube Hammy, and some days a meatball sub
 

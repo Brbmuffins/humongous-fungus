@@ -33,6 +33,7 @@ import {
   buyToy,
   buyUpgrade,
   canCall,
+  cannedReply,
   declineCall,
   dumpAll,
   dumpPoop,
@@ -41,6 +42,7 @@ import {
   fling,
   flush,
   formFor,
+  hammyReplies,
   isAlive,
   movePoop,
   order,
@@ -49,8 +51,10 @@ import {
   play,
   rest,
   deadFor,
+  sendOwnText,
   sendText,
   shower,
+  situation,
   step,
   tidy,
   tidyAll,
@@ -62,6 +66,7 @@ import {
   type HammyEvent,
 } from './game';
 import { TankScene, type ToiletResult } from './scene';
+import { ask, loadTalk, setTalkSound, speakLine, type Turn } from './talk';
 import { setSound, sfx, unlock } from './sound';
 import { setVoice } from './voice';
 import { deserialize, newGame, serialize, type HammyState, type Poop } from './state';
@@ -103,6 +108,10 @@ class Game implements Controller {
   private shownMessages = 0;
   /** Today's form, worked out once a minute rather than every frame. */
   private formCache = { at: 0, form: 'cube' as FormId };
+  /** He's working on an answer to what you typed. */
+  thinking = false;
+  /** What's been said on the call that's on now. */
+  private callTurns: Turn[] = [];
 
   constructor(hot: HotData) {
     const saves = [hot.save, hot.native, localSave.load()]
@@ -159,7 +168,10 @@ class Game implements Controller {
     const shown = this.visibleMessages();
     if (shown !== this.shownMessages) {
       const last = this.state.messages.filter((m) => m.at <= now).pop();
-      if (shown > this.shownMessages && last?.from === 'hammy') sfx.ding();
+      if (shown > this.shownMessages && last?.from === 'hammy') {
+        sfx.ding();
+        if (!last.missed && loadTalk().readTexts) void speakLine(last.text);
+      }
       this.shownMessages = shown;
     }
     const s = this.state;
@@ -414,6 +426,13 @@ class Game implements Controller {
   private sound(on: boolean): void {
     setSound(on);
     setVoice(on);
+    setTalkSound(on);
+  }
+
+  /** The texts so far, for him to remember when he answers. */
+  private chatHistory(): Turn[] {
+    const now = Date.now();
+    return this.state.messages.filter((m) => !m.missed && m.at <= now).map((m) => ({ from: m.from, text: m.text }));
   }
 
   private ring(): void {
@@ -431,6 +450,7 @@ class Game implements Controller {
   }
 
   private talk(incoming: boolean): void {
+    this.callTurns = [];
     this.ui.showCall(incoming, (seconds) => {
       const { mood, coins } = endCall(this.state, seconds, Date.now(), incoming);
       this.ui.toast(`Call ended · +${Math.round(mood)} mood${coins ? ` · +${coins} coins` : ''}`);
@@ -499,6 +519,36 @@ class Game implements Controller {
     const level = UPGRADE_BY_ID[id].levels[this.state.upgrades[id] - 1];
     this.ui.toast(`${level.name}: ${level.blurb}`);
     this.changed(true);
+  }
+
+  /** You typed him something. He thinks about it (Claude, when there is one) and texts back. */
+  say(text: string): void {
+    const s = this.state;
+    if (this.thinking) return;
+    const now = Date.now();
+    const history = this.chatHistory();
+    const counted = sendOwnText(s, text, now);
+    if (counted === null) return;
+    sfx.send();
+    this.shownMessages = this.visibleMessages();
+    this.thinking = true;
+    this.changed();
+    const about = situation(s, now, this.form) + (counted ? '' : '\nYour friend has been texting you a lot. You’re a bit over it.');
+    void ask(about, history, text.trim(), 'text').then((got) => {
+      this.thinking = false;
+      if (isAlive(this.state)) hammyReplies(this.state, got?.text ?? cannedReply(this.state, text), Date.now());
+      this.changed();
+    });
+  }
+
+  /** On a call: you said something, and he answers (the call screen says it out loud). */
+  async callSay(text: string, signal: AbortSignal): Promise<string> {
+    const s = this.state;
+    const about = `${situation(s, Date.now(), this.form)}\nYou're on a phone call with your friend right now.`;
+    const got = await ask(about, this.callTurns, text, 'call', signal);
+    const reply = got?.text ?? cannedReply(s, text);
+    this.callTurns.push({ from: 'you', text }, { from: 'hammy', text: reply });
+    return reply;
   }
 
   text(id: string): void {
