@@ -435,9 +435,30 @@ export const SAYS = {
   cushion: ['IT WASN’T ME.', 'HAHAHA', 'Classic.', 'Do it again.'],
   magnet: ['I’m flying!', 'Whoa.', 'Put me down. Actually, don’t.'],
   bang: ['My eyebrows!', '…what?', 'I can’t hear anything.', 'Cool.'],
+  // His habits. He has a lot of them.
+  burp: ['Better out than in.', 'Tastes like nachos. Again.', 'Excuse you.', 'Beautiful.'],
+  pick: ['Gold.', 'Found one.', 'Don’t look at me like that.', 'Saving this for later.'],
+  sniff: ['Still good.', 'Oof. Still good.', 'Smells like a winner.', 'Two more days.'],
+  scratch: ['Ahhh, that’s the spot.', 'Mind your business.', 'Itchy.'],
+  avoided: ['Even the robot.', 'Rude.', 'I can see you backing away.', 'It’s called musk.'],
 } as const;
 
-/** The scientist watching through the observation window. Nobody likes him. */
+/**
+ * Dr. Moss, the scientist who studies Hammy through the observation window.
+ * She takes notes, wears a gas mask when he gets bad and leaves when it's
+ * worse. She does not want him near the glass.
+ */
+export const SCIENTIST_NAME = 'Dr. Moss';
+export const SCIENTIST_INTRO = 'I’m Dr. Moss. I study him. Keep him clean or I’m leaving.';
+/** When you tap her window. */
+export const SCIENTIST_TAP: readonly string[] = [
+  'Dr. Moss, containment. Please don’t tap the glass.',
+  'I take notes. He gives me a lot to write.',
+  'Keep him clean and I stay. That’s the deal.',
+  'Yes, the glass is airtight. Mostly.',
+];
+/** When he comes up to her window. */
+export const SCIENTIST_NEAR: readonly string[] = ['Not near the glass!', 'Back. Up.', 'I can smell him from here.', 'Please step away from the window.'];
 export const SCIENTIST_LINES: readonly string[] = [
   'Subject is… ripe.',
   'Writing that down.',

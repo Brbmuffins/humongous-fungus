@@ -23,6 +23,10 @@ is too lazy to use the toilet on his own.
 - A new look in this release: lit rooms with lamps, shadows and reflections,
   a lab that dims in the evening by your own clock, a wall clock on real time,
   and a lot more detail in every piece of furniture.
+- He's gross even when he's clean: burps, nose-picking, armpit sniffs, a fly
+  that never leaves, and a room full of crumbs and stains. The robot vacuums
+  back away from him, the plant leans away, and Dr. Moss, the scientist at
+  the observation window, holds her nose when he comes up to her glass.
 - If he isn't looked after, he dies, and you lose.
 
 ## Play it

@@ -423,6 +423,23 @@ export function paintRoom(c: Ctx, m: Room, night = 0): void {
   paintBed(c, m.bed);
   paintDesk(c, m.pc);
   paintPizzaBoxes(c, m.fridge);
+  // A sock. Nobody knows whose. (His.)
+  const sk = (m.chair.x1 + m.fridge.x0) / 2;
+  const ss = Math.max(4, m.r * 0.2);
+  c.fillStyle = '#f2efe6';
+  c.strokeStyle = 'rgba(31,26,36,0.6)';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.moveTo(sk - ss * 0.4, ground - ss * 1.4);
+  c.lineTo(sk + ss * 0.1, ground - ss * 1.4);
+  c.lineTo(sk + ss * 0.15, ground - ss * 0.5);
+  c.quadraticCurveTo(sk + ss * 0.9, ground - ss * 0.55, sk + ss * 0.9, ground);
+  c.lineTo(sk - ss * 0.4, ground);
+  c.closePath();
+  c.fill();
+  c.stroke();
+  c.fillStyle = '#b9b2a2';
+  c.fillRect(sk - ss * 0.4, ground - ss * 1.4, ss * 0.5, ss * 0.3);
   for (const l of lamps) lampFixture(c, l, night);
 }
 
@@ -481,6 +498,28 @@ function paintWindow(c: Ctx, m: Room, night: number): void {
   rect(c, w.x0 - 6, w.y1 + 2, ww + 12, 5, 1.5);
   c.fill();
   fade(c, w.x0 - 6, w.y1 + 7, ww + 12, 10, SHADOW, 0.22, 'top');
+  // The sign over it says what it is.
+  const room = w.y0 - (m.loft + LOFT_SLAB) - 6;
+  if (room >= 9) {
+    const sh = Math.min(16, room - 2);
+    const size = Math.max(6, Math.round(sh * 0.62));
+    c.font = `800 ${size}px Rubik, system-ui, sans-serif`;
+    const label = 'OBSERVATION';
+    const sw = Math.min(ww, c.measureText(label).width + 12);
+    const sx = w.x0 + (ww - sw) / 2;
+    const sy = w.y0 - 4 - sh;
+    c.fillStyle = '#2b323c';
+    rect(c, sx, sy, sw, sh, 3);
+    c.fill();
+    c.fillStyle = '#e0332a';
+    c.beginPath();
+    c.arc(sx + 5, sy + sh / 2, Math.max(1.5, sh * 0.14), 0, TAU);
+    c.fill();
+    c.fillStyle = '#e8eef4';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(label, sx + sw / 2 + 3, sy + sh / 2 + 0.5, sw - 12);
+  }
 }
 
 function paintPoster(c: Ctx, x: number, y: number, w: number, h: number): void {
@@ -831,66 +870,137 @@ function paintShower(c: Ctx, b: Box): void {
   c.fill();
   c.fillStyle = '#5e6a75';
   c.fillRect(b.x0 + w * 0.33, b.y0 + 18.5, w * 0.34, 1.5);
+  // The stall's chrome frame on the open side.
+  const fg = c.createLinearGradient(b.x1 - 3, 0, b.x1 + 1, 0);
+  fg.addColorStop(0, '#eef2f5');
+  fg.addColorStop(1, '#7d8893');
+  c.fillStyle = fg;
+  c.fillRect(b.x1 - 2.5, b.y0, 3.5, h - 6);
+  c.fillStyle = 'rgba(200,230,255,0.5)';
+  c.fillRect(b.x1 - 1, b.y0 + h * 0.1, 1, h * 0.5);
 }
 
+/** Where the bowl's middle is: he sits here, and the flush swirls here. */
+export const toiletSeat = (b: Box): { x: number; y: number } => ({ x: b.x0 + (b.x1 - b.x0) * 0.54, y: b.y0 + (b.y1 - b.y0) * 0.1 });
+
+/** A toilet you can't mistake: tank, lid up, seat and bowl, plus a plunger and a mat. */
 function paintToilet(c: Ctx, b: Box): void {
   const w = b.x1 - b.x0;
   const h = b.y1 - b.y0;
+  const { x: cx, y: sy } = toiletSeat(b);
   const porcelain = (x0: number, x1: number) => {
     const g = c.createLinearGradient(x0, 0, x1, 0);
     g.addColorStop(0, '#ffffff');
-    g.addColorStop(0.6, '#f0f4f7');
-    g.addColorStop(1, '#cdd7df');
+    g.addColorStop(0.55, '#eef3f6');
+    g.addColorStop(1, '#c4cfd8');
     return g;
   };
   c.strokeStyle = INK;
   c.lineWidth = 1.5;
-  // Tank and lid, with a spare roll sitting on top.
-  c.fillStyle = porcelain(b.x0, b.x0 + w * 0.42);
-  rect(c, b.x0, b.y0 - h * 0.7, w * 0.42, h * 1.1, 3);
+  // The tank, its lid, the flush handle and a spare roll on top.
+  const tw = w * 0.82;
+  const tTop = b.y0 - h * 0.85;
+  c.fillStyle = porcelain(cx - tw / 2, cx + tw / 2);
+  rect(c, cx - tw / 2, tTop, tw, sy - tTop + h * 0.04, 4);
   c.fill();
   c.stroke();
-  c.fillStyle = porcelain(b.x0, b.x0 + w * 0.45);
-  rect(c, b.x0 - 1.5, b.y0 - h * 0.76, w * 0.42 + 3, h * 0.09, 2);
+  rect(c, cx - tw / 2 - 2, tTop - 5, tw + 4, 6, 2);
   c.fill();
   c.stroke();
-  c.fillStyle = chrome(c, b.y0 - h * 0.58, b.y0 - h * 0.52);
-  c.fillRect(b.x0 + w * 0.25, b.y0 - h * 0.58, w * 0.13, 2.5);
+  c.fillStyle = chrome(c, tTop + 6, tTop + 10);
+  rect(c, cx - tw / 2 + 3, tTop + 6, Math.max(6, w * 0.16), 3, 1.5);
+  c.fill();
   const rr = Math.max(3, w * 0.12);
-  const ry = b.y0 - h * 0.76;
   c.fillStyle = '#fbfaf4';
   c.lineWidth = 1;
-  rect(c, b.x0 + w * 0.06, ry - rr * 1.6, rr * 1.8, rr * 1.6, 1.5);
+  rect(c, cx + tw / 2 - rr * 2 - 2, tTop - 5 - rr * 1.6, rr * 1.8, rr * 1.6, 1.5);
   c.fill();
   c.stroke();
   c.fillStyle = '#c9b48e';
   c.beginPath();
-  c.ellipse(b.x0 + w * 0.06 + rr * 0.9, ry - rr * 1.6, rr * 0.3, rr * 0.18, 0, 0, TAU);
+  c.ellipse(cx + tw / 2 - rr * 1.1 - 2, tTop - 5 - rr * 1.6, rr * 0.3, rr * 0.18, 0, 0, TAU);
   c.fill();
+  // The lid, raised against the tank.
   c.lineWidth = 1.5;
-  // The bowl.
-  c.fillStyle = porcelain(b.x0 + w * 0.3, b.x1);
+  c.fillStyle = porcelain(cx - w * 0.36, cx + w * 0.36);
   c.beginPath();
-  c.moveTo(b.x0 + w * 0.3, b.y0 + h * 0.1);
-  c.lineTo(b.x1, b.y0 + h * 0.1);
-  c.quadraticCurveTo(b.x1, b.y0 + h * 0.75, b.x0 + w * 0.62, b.y0 + h * 0.8);
-  c.lineTo(b.x0 + w * 0.68, b.y1);
-  c.lineTo(b.x0 + w * 0.36, b.y1);
-  c.lineTo(b.x0 + w * 0.4, b.y0 + h * 0.75);
+  c.ellipse(cx, b.y0 - h * 0.3, w * 0.36, h * 0.42, 0, 0, TAU);
+  c.fill();
+  c.stroke();
+  c.strokeStyle = 'rgba(31,26,36,0.25)';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.ellipse(cx, b.y0 - h * 0.3, w * 0.26, h * 0.31, 0, 0, TAU);
+  c.stroke();
+  // The bowl, narrowing to its foot.
+  c.strokeStyle = INK;
+  c.lineWidth = 1.5;
+  c.fillStyle = porcelain(cx - w * 0.47, cx + w * 0.47);
+  c.beginPath();
+  c.moveTo(cx - w * 0.47, sy + h * 0.02);
+  c.quadraticCurveTo(cx - w * 0.46, sy + h * 0.42, cx - w * 0.2, sy + h * 0.52);
+  c.lineTo(cx - w * 0.25, b.y1);
+  c.lineTo(cx + w * 0.25, b.y1);
+  c.lineTo(cx + w * 0.2, sy + h * 0.52);
+  c.quadraticCurveTo(cx + w * 0.46, sy + h * 0.42, cx + w * 0.47, sy + h * 0.02);
   c.closePath();
   c.fill();
   c.stroke();
   c.strokeStyle = 'rgba(255,255,255,0.95)';
   c.lineWidth = 1.5;
   c.beginPath();
-  c.moveTo(b.x0 + w * 0.45, b.y0 + h * 0.25);
-  c.quadraticCurveTo(b.x0 + w * 0.5, b.y0 + h * 0.55, b.x0 + w * 0.62, b.y0 + h * 0.62);
+  c.moveTo(cx - w * 0.36, sy + h * 0.14);
+  c.quadraticCurveTo(cx - w * 0.33, sy + h * 0.36, cx - w * 0.16, sy + h * 0.44);
   c.stroke();
-  // The seat.
+  // The seat ring, with water in the bowl.
   c.strokeStyle = INK;
-  c.fillStyle = '#e3e9ee';
-  c.fillRect(b.x0 + w * 0.3, b.y0, w * 0.7, h * 0.12);
-  c.strokeRect(b.x0 + w * 0.3, b.y0, w * 0.7, h * 0.12);
+  c.fillStyle = '#ffffff';
+  c.beginPath();
+  c.ellipse(cx, sy, w * 0.5, h * 0.12, 0, 0, TAU);
+  c.fill();
+  c.stroke();
+  const water = c.createLinearGradient(0, sy - h * 0.07, 0, sy + h * 0.07);
+  water.addColorStop(0, '#5f9fc0');
+  water.addColorStop(1, '#a8d8ee');
+  c.fillStyle = water;
+  c.lineWidth = 1;
+  c.beginPath();
+  c.ellipse(cx, sy + h * 0.005, w * 0.33, h * 0.065, 0, 0, TAU);
+  c.fill();
+  c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.7)';
+  c.beginPath();
+  c.ellipse(cx - w * 0.1, sy - h * 0.02, w * 0.1, h * 0.015, 0, 0, TAU);
+  c.fill();
+  // A fluffy mat in front, and the plunger beside it.
+  c.fillStyle = '#86bfe0';
+  c.beginPath();
+  c.ellipse(cx, b.y1 + 1.5, w * 0.58, 3, 0, 0, TAU);
+  c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.5)';
+  c.setLineDash([1.5, 2]);
+  c.stroke();
+  c.setLineDash([]);
+  const px = b.x1 + Math.max(4, w * 0.1);
+  const cup = Math.max(4, w * 0.11);
+  c.strokeStyle = '#a8743f';
+  c.lineWidth = 2.5;
+  c.lineCap = 'round';
+  c.beginPath();
+  c.moveTo(px, b.y1 - cup * 0.9);
+  c.lineTo(px - 1, b.y1 - h * 0.62);
+  c.stroke();
+  c.lineCap = 'butt';
+  c.fillStyle = '#c8322b';
+  c.strokeStyle = INK;
+  c.lineWidth = 1;
+  c.beginPath();
+  c.moveTo(px - cup, b.y1);
+  c.quadraticCurveTo(px - cup, b.y1 - cup * 1.1, px, b.y1 - cup * 1.1);
+  c.quadraticCurveTo(px + cup, b.y1 - cup * 1.1, px + cup, b.y1);
+  c.closePath();
+  c.fill();
+  c.stroke();
 }
 
 function paintChair(c: Ctx, b: Box): void {
@@ -951,6 +1061,17 @@ function paintChair(c: Ctx, b: Box): void {
   c.stroke();
   c.fillStyle = 'rgba(255,255,255,0.28)';
   c.fillRect(b.x0 + 7, b.y0 + h * 0.35 + 2, w - 14, 1.5);
+  // The shape of him, worn into the cushion, and the crumbs he left.
+  c.fillStyle = 'rgba(60,30,10,0.28)';
+  c.beginPath();
+  c.ellipse(b.x0 + w * 0.52, b.y0 + h * 0.5, w * 0.22, h * 0.07, 0.1, 0, TAU);
+  c.fill();
+  c.fillStyle = 'rgba(60,30,10,0.18)';
+  c.beginPath();
+  c.ellipse(b.x0 + w * 0.36, b.y0 + h * 0.62, w * 0.08, h * 0.04, 0, 0, TAU);
+  c.fill();
+  c.fillStyle = '#e0b56a';
+  for (let i = 0; i < 6; i++) c.fillRect(b.x0 + w * (0.25 + hash(i, 5) * 0.5), b.y0 + h * (0.4 + hash(i, 6) * 0.3), 1.5, 1.5);
   // Rolled arms.
   for (const x of [b.x0 - w * 0.02, b.x1 - w * 0.16]) {
     const arm = c.createLinearGradient(x, 0, x + w * 0.18, 0);
@@ -1079,6 +1200,13 @@ function paintBed(c: Ctx, b: Box): void {
   c.moveTo(px + w * 0.11, py + 3);
   c.quadraticCurveTo(px + w * 0.09, py + h * 0.16, px + w * 0.11, py + h * 0.3);
   c.stroke();
+  // Drool on the pillow, crumbs in the bed.
+  c.fillStyle = 'rgba(200,180,90,0.4)';
+  c.beginPath();
+  c.ellipse(px + w * 0.15, py + h * 0.22, w * 0.045, h * 0.06, 0.4, 0, TAU);
+  c.fill();
+  c.fillStyle = '#e0b56a';
+  for (let i = 0; i < 8; i++) c.fillRect(b.x0 + w * (0.42 + hash(i, 11) * 0.5), b.y0 + h * (0.02 + hash(i, 12) * 0.3), 1.5, 1.5);
 }
 
 function paintDesk(c: Ctx, b: Box): void {
@@ -1128,44 +1256,130 @@ function paintDesk(c: Ctx, b: Box): void {
   c.fillRect(can.x, deskY - can.h - 1, can.w, 1.5);
   c.fillStyle = 'rgba(255,255,255,0.5)';
   c.fillRect(can.x + 1, deskY - can.h + 1, 1, can.h - 2);
-  // Gaming chair in front of it: red, with black panels and a headrest.
-  const cx0 = b.x0;
-  const cy0 = b.y1 - h * 0.72;
-  const cw = w * 0.16;
-  const ch = h * 0.42;
-  const red = c.createLinearGradient(cx0, 0, cx0 + cw, 0);
+  // A pizza box and crushed cans under the desk. He eats where he games.
+  const px0 = dx0 + w * 0.08;
+  const pw = Math.min(w * 0.2, tx - px0 - 6);
+  if (pw > 10) {
+    c.fillStyle = '#c99d63';
+    c.strokeStyle = 'rgba(80,50,20,0.8)';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(px0, b.y1 - 4);
+    c.lineTo(px0 + pw * 0.15, b.y1 - 4 - pw * 0.45);
+    c.lineTo(px0 + pw * 1.15, b.y1 - 4 - pw * 0.45);
+    c.lineTo(px0 + pw, b.y1 - 4);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    c.fillStyle = '#e2bf87';
+    c.fillRect(px0, b.y1 - 4, pw, 4);
+    c.strokeRect(px0 + 0.5, b.y1 - 3.5, pw - 1, 3.5);
+    c.fillStyle = '#f2c14e';
+    c.beginPath();
+    c.moveTo(px0 + pw * 0.3, b.y1 - 5);
+    c.lineTo(px0 + pw * 0.62, b.y1 - 5);
+    c.lineTo(px0 + pw * 0.5, b.y1 - 5 - pw * 0.3);
+    c.closePath();
+    c.fill();
+    c.fillStyle = '#d6332b';
+    c.beginPath();
+    c.arc(px0 + pw * 0.48, b.y1 - 5 - pw * 0.1, Math.max(1, pw * 0.05), 0, TAU);
+    c.fill();
+    for (const [u, col, rot] of [
+      [1.25, '#4fc65e', 1.2],
+      [1.45, '#d6332b', -0.3],
+    ] as const) {
+      c.save();
+      c.translate(px0 + pw * u, b.y1 - 2.5);
+      c.rotate(rot);
+      c.fillStyle = col;
+      c.fillRect(-3.5, -2, 7, 4);
+      c.fillStyle = '#c8d0d8';
+      c.fillRect(2.5, -2, 1.5, 4);
+      c.restore();
+    }
+  }
+  // The gaming chair, facing you: winged red back, headrest, seat, arms and wheels.
+  const ccx = b.x0 + w * 0.15;
+  const bw = Math.max(18, w * 0.26);
+  const bTop = b.y1 - h * 0.86;
+  const bBot = b.y1 - h * 0.36;
+  c.strokeStyle = INK;
+  c.lineWidth = 1.5;
+  const red = c.createLinearGradient(ccx - bw / 2, 0, ccx + bw / 2, 0);
   red.addColorStop(0, '#ee5248');
-  red.addColorStop(1, '#ad221c');
+  red.addColorStop(1, '#b0241e');
   c.fillStyle = red;
-  rect(c, cx0, cy0, cw, ch, 5);
+  c.beginPath();
+  c.moveTo(ccx - bw * 0.36, bTop);
+  c.lineTo(ccx + bw * 0.36, bTop);
+  c.quadraticCurveTo(ccx + bw * 0.5, bTop + (bBot - bTop) * 0.45, ccx + bw * 0.5, bBot);
+  c.lineTo(ccx - bw * 0.5, bBot);
+  c.quadraticCurveTo(ccx - bw * 0.5, bTop + (bBot - bTop) * 0.45, ccx - bw * 0.36, bTop);
+  c.closePath();
   c.fill();
   c.stroke();
   c.fillStyle = '#1b1b22';
-  rect(c, cx0 + cw * 0.3, cy0 + ch * 0.22, cw * 0.4, ch * 0.7, 3);
+  rect(c, ccx - bw * 0.22, bTop + (bBot - bTop) * 0.26, bw * 0.44, (bBot - bTop) * 0.7, 3);
   c.fill();
-  rect(c, cx0 + cw * 0.18, cy0 + ch * 0.05, cw * 0.64, ch * 0.13, 3);
+  rect(c, ccx - bw * 0.2, bTop + 3, bw * 0.4, (bBot - bTop) * 0.13, 3);
   c.fill();
   c.strokeStyle = 'rgba(255,255,255,0.25)';
   c.lineWidth = 1;
   c.setLineDash([2, 2]);
-  rect(c, cx0 + 2, cy0 + 2, cw - 4, ch - 4, 4);
+  c.beginPath();
+  c.moveTo(ccx - bw * 0.3, bTop + 4);
+  c.lineTo(ccx - bw * 0.4, bBot - 3);
+  c.moveTo(ccx + bw * 0.3, bTop + 4);
+  c.lineTo(ccx + bw * 0.4, bBot - 3);
   c.stroke();
   c.setLineDash([]);
+  // Arms.
   c.strokeStyle = INK;
   c.lineWidth = 1.5;
+  for (const sx of [-1, 1]) {
+    const ax = ccx + sx * bw * 0.62;
+    c.fillStyle = '#4a4f58';
+    c.fillRect(ax - 1.5, b.y1 - h * 0.46, 3, h * 0.12);
+    c.fillStyle = '#1b1b22';
+    rect(c, ax - bw * 0.14, b.y1 - h * 0.48, bw * 0.28, 4, 2);
+    c.fill();
+    c.stroke();
+  }
+  // Seat cushion with red piping.
   c.fillStyle = '#1b1b22';
-  rect(c, b.x0, b.y1 - h * 0.34, w * 0.3, h * 0.08, 3);
+  rect(c, ccx - bw * 0.62, b.y1 - h * 0.37, bw * 1.24, h * 0.08, 4);
   c.fill();
   c.stroke();
   c.fillStyle = '#d6332b';
-  c.fillRect(b.x0 + 3, b.y1 - h * 0.34 + 1.5, w * 0.3 - 6, 1.5);
-  c.fillStyle = '#9aa3ad';
-  c.fillRect(b.x0 + w * 0.13, b.y1 - h * 0.26, 3, h * 0.2);
-  c.fillStyle = '#1b1b22';
-  c.fillRect(b.x0 + w * 0.04, b.y1 - 5, w * 0.22, 3);
-  for (const wx of [b.x0 + w * 0.05, b.x0 + w * 0.25]) {
+  c.fillRect(ccx - bw * 0.55, b.y1 - h * 0.37 + h * 0.08 - 2.5, bw * 1.1, 1.5);
+  // Gas lift and a five-star base on wheels.
+  const lg = c.createLinearGradient(ccx - 2, 0, ccx + 2, 0);
+  lg.addColorStop(0, '#e9edf0');
+  lg.addColorStop(1, '#7d8893');
+  c.fillStyle = lg;
+  c.fillRect(ccx - 2, b.y1 - h * 0.29, 4, h * 0.2);
+  c.strokeStyle = '#1b1b22';
+  c.lineWidth = 2.5;
+  c.lineCap = 'round';
+  const hub = b.y1 - h * 0.09;
+  const feet: [number, number][] = [
+    [-bw * 0.7, b.y1 - 3],
+    [-bw * 0.3, b.y1 - 1.5],
+    [bw * 0.3, b.y1 - 1.5],
+    [bw * 0.7, b.y1 - 3],
+  ];
+  c.beginPath();
+  for (const [dx, fy] of feet) {
+    c.moveTo(ccx, hub);
+    c.lineTo(ccx + dx, fy);
+  }
+  c.stroke();
+  c.lineCap = 'butt';
+  c.fillStyle = '#2b2b33';
+  for (const [dx, fy] of feet) {
     c.beginPath();
-    c.arc(wx, b.y1 - 1.8, 1.8, 0, TAU);
+    c.arc(ccx + dx, fy + 1, 2, 0, TAU);
     c.fill();
   }
 }
@@ -1287,14 +1501,15 @@ export function drawMonitor(c: Ctx, b: Box, t: number, on: boolean): void {
 }
 
 /** 0 is a happy plant, 1 is dead. */
-export function drawPlant(c: Ctx, b: Box, wilt: number, t: number): void {
+/** lean: -1 to 1, the plant leaning away from him (toward that side). */
+export function drawPlant(c: Ctx, b: Box, wilt: number, t: number, lean = 0): void {
   const w = b.x1 - b.x0;
   const h = b.y1 - b.y0;
   const green: RGB = [Math.round(70 + 90 * wilt), Math.round(170 - 90 * wilt), Math.round(70 - 30 * wilt)];
   const dark: RGB = [Math.round(green[0] * 0.6), Math.round(green[1] * 0.6), Math.round(green[2] * 0.6)];
   const cx = (b.x0 + b.x1) / 2;
   const base = b.y1 - h * 0.35;
-  const sway = Math.sin(t * 0.0015) * 0.05;
+  const sway = Math.sin(t * 0.0015) * 0.05 + lean * 0.35;
   c.strokeStyle = INK;
   c.lineWidth = 1.5;
   for (const a of [-0.9, -0.4, 0, 0.45, 0.95]) {
@@ -1576,8 +1791,18 @@ export function drawOven(c: Ctx, b: Box, heat: number): void {
   if (heat > 0) flatGlow(c, (b.x0 + b.x1) / 2, b.y0 - 2, w * 0.45, 5, [255, 120, 40], 0.5 * heat);
 }
 
-/** The scientist at the window. mask: wearing a gas mask. gone: evacuated. */
-export function drawScientist(c: Ctx, w: Box, mask: boolean, gone: boolean, t: number): { x: number; y: number } {
+/** Where Hammy is, for the scientist: his x, and how close he is to her glass (0 far, 1 right there). */
+export interface Watch {
+  x: number;
+  near: number;
+}
+
+/**
+ * Dr. Moss at the observation window. She watches him (her eyes follow him),
+ * takes notes on a clipboard, and leans back holding her nose when he comes
+ * up to the glass. mask: wearing a gas mask. gone: evacuated.
+ */
+export function drawScientist(c: Ctx, w: Box, mask: boolean, gone: boolean, t: number, watch: Watch = { x: (w.x0 + w.x1) / 2, near: 0 }): { x: number; y: number } {
   const cx = (w.x0 + w.x1) / 2;
   const ww = w.x1 - w.x0;
   const hh = w.y1 - w.y0;
@@ -1601,12 +1826,16 @@ export function drawScientist(c: Ctx, w: Box, mask: boolean, gone: boolean, t: n
     c.restore();
     return { x: cx, y: w.y0 };
   }
-  const s = Math.min(ww, hh) * 0.32;
+  const near = Math.max(0, Math.min(1, watch.near));
+  // Leaning back from the glass: smaller and higher.
+  const back = 1 - near * 0.22;
+  const s = Math.min(ww, hh) * 0.32 * back;
   const bob = Math.sin(t * 0.002) * 1.5;
-  const hy = w.y0 + hh * 0.48 + bob;
+  const hx = cx - (watch.x > cx ? 1 : -1) * near * s * 0.25;
+  const hy = w.y0 + hh * 0.48 + bob - near * s * 0.35;
   c.strokeStyle = INK;
   c.lineWidth = 1.5;
-  // Lab coat, with lapels and a pocket full of pens.
+  // Lab coat, with lapels, a pocket full of pens and her badge.
   const coat = c.createLinearGradient(cx - s * 1.6, 0, cx + s * 1.6, 0);
   coat.addColorStop(0, '#ffffff');
   coat.addColorStop(1, '#cfd7de');
@@ -1634,56 +1863,170 @@ export function drawScientist(c: Ctx, w: Box, mask: boolean, gone: boolean, t: n
     c.fillStyle = col;
     c.fillRect(cx + s * dx, w.y1 - s * 0.62, 2, s * 0.22);
   }
-  // Head and hair.
-  const skin = c.createRadialGradient(cx - s * 0.3, hy - s * 0.3, s * 0.1, cx, hy, s);
+  const bw = s * 0.62;
+  c.fillStyle = '#ffffff';
+  c.lineWidth = 1;
+  rect(c, cx - s * 1.0, w.y1 - s * 0.62, bw, s * 0.3, 2);
+  c.fill();
+  c.stroke();
+  c.fillStyle = '#4f86c6';
+  c.fillRect(cx - s * 1.0, w.y1 - s * 0.62, bw, s * 0.08);
+  if (bw >= 16) {
+    c.fillStyle = '#1c2836';
+    c.font = `800 ${Math.max(5, Math.round(s * 0.13))}px Rubik, system-ui, sans-serif`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText('DR. MOSS', cx - s * 1.0 + bw / 2, w.y1 - s * 0.43, bw - 2);
+  }
+  c.lineWidth = 1.5;
+  c.strokeStyle = INK;
+  // Hair: a bun with a pencil through it, and a fringe.
+  c.fillStyle = '#4a3324';
+  c.beginPath();
+  c.arc(hx + s * 0.15, hy - s * 1.02, s * 0.42, 0, TAU);
+  c.fill();
+  c.stroke();
+  c.strokeStyle = '#f2c14e';
+  c.lineWidth = Math.max(1.5, s * 0.08);
+  c.beginPath();
+  c.moveTo(hx - s * 0.35, hy - s * 1.28);
+  c.lineTo(hx + s * 0.65, hy - s * 0.8);
+  c.stroke();
+  c.strokeStyle = INK;
+  c.lineWidth = 1.5;
+  // Head.
+  const skin = c.createRadialGradient(hx - s * 0.3, hy - s * 0.3, s * 0.1, hx, hy, s);
   skin.addColorStop(0, '#f4c4a0');
   skin.addColorStop(1, '#d99c76');
   c.fillStyle = skin;
   c.beginPath();
-  c.arc(cx, hy, s, 0, TAU);
+  c.arc(hx, hy, s, 0, TAU);
   c.fill();
   c.stroke();
   c.fillStyle = '#4a3324';
   c.beginPath();
-  c.arc(cx, hy - s * 0.2, s * 1.02, Math.PI * 1.05, Math.PI * 1.95);
+  c.arc(hx, hy - s * 0.2, s * 1.02, Math.PI * 1.02, Math.PI * 1.98);
+  c.fill();
+  c.beginPath();
+  c.ellipse(hx - s * 0.86, hy + s * 0.1, s * 0.2, s * 0.45, 0.1, 0, TAU);
+  c.ellipse(hx + s * 0.86, hy + s * 0.1, s * 0.2, s * 0.45, -0.1, 0, TAU);
   c.fill();
   if (mask) {
     c.fillStyle = '#3d4a3a';
     c.beginPath();
-    c.ellipse(cx, hy + s * 0.35, s * 0.75, s * 0.55, 0, 0, TAU);
+    c.ellipse(hx, hy + s * 0.35, s * 0.75, s * 0.55, 0, 0, TAU);
     c.fill();
     c.stroke();
     c.fillStyle = '#2a3329';
     c.beginPath();
-    c.arc(cx, hy + s * 0.75, s * 0.28, 0, TAU);
+    c.arc(hx, hy + s * 0.75, s * 0.28, 0, TAU);
     c.fill();
     c.stroke();
   } else {
     c.fillStyle = 'rgba(230,110,110,0.35)';
     for (const dx of [-0.55, 0.55]) {
       c.beginPath();
-      c.arc(cx + dx * s, hy + s * 0.35, s * 0.16, 0, TAU);
+      c.arc(hx + dx * s, hy + s * 0.35, s * 0.16, 0, TAU);
       c.fill();
     }
+    // A flat line most of the time; a grimace when he's close.
     c.beginPath();
-    c.moveTo(cx - s * 0.22, hy + s * 0.5);
-    c.quadraticCurveTo(cx, hy + s * 0.42, cx + s * 0.22, hy + s * 0.52);
+    if (near > 0.3) {
+      c.moveTo(hx - s * 0.25, hy + s * 0.58);
+      c.quadraticCurveTo(hx, hy + s * 0.44, hx + s * 0.25, hy + s * 0.58);
+    } else {
+      c.moveTo(hx - s * 0.22, hy + s * 0.5);
+      c.quadraticCurveTo(hx, hy + s * 0.46, hx + s * 0.22, hy + s * 0.52);
+    }
     c.stroke();
   }
-  // Goggles.
+  // Goggles, and her eyes on him.
+  const look = Math.max(-1, Math.min(1, (watch.x - hx) / (ww * 1.5)));
   c.fillStyle = 'rgba(160,220,255,0.8)';
   for (const dx of [-0.42, 0.42]) {
     c.beginPath();
-    c.arc(cx + dx * s, hy - s * 0.05, s * 0.32, 0, TAU);
+    c.arc(hx + dx * s, hy - s * 0.05, s * 0.32, 0, TAU);
     c.fill();
     c.stroke();
+    c.fillStyle = '#1c2836';
+    c.beginPath();
+    c.arc(hx + dx * s + look * s * 0.14, hy - s * 0.02 + near * s * 0.05, s * 0.1, 0, TAU);
+    c.fill();
+    c.fillStyle = 'rgba(160,220,255,0.8)';
   }
   c.fillStyle = 'rgba(255,255,255,0.85)';
   for (const dx of [-0.42, 0.42]) {
     c.beginPath();
-    c.arc(cx + dx * s - s * 0.1, hy - s * 0.15, s * 0.08, 0, TAU);
+    c.arc(hx + dx * s - s * 0.12, hy - s * 0.17, s * 0.07, 0, TAU);
     c.fill();
   }
+  if (near > 0.3) {
+    // Brows down, and a hand pinching her nose.
+    c.beginPath();
+    c.moveTo(hx - s * 0.7, hy - s * 0.42);
+    c.lineTo(hx - s * 0.2, hy - s * 0.32);
+    c.moveTo(hx + s * 0.7, hy - s * 0.42);
+    c.lineTo(hx + s * 0.2, hy - s * 0.32);
+    c.stroke();
+    if (!mask) {
+      // Her sleeve comes up from the shoulder; the hand pinches her nose.
+      const sleeve = () => {
+        c.beginPath();
+        c.moveTo(cx - s * 1.05, w.y1 + s * 0.1);
+        c.quadraticCurveTo(hx - s * 1.25, hy + s * 1.0, hx - s * 0.18, hy + s * 0.3);
+      };
+      c.lineCap = 'round';
+      c.strokeStyle = INK;
+      c.lineWidth = s * 0.26 + 3;
+      sleeve();
+      c.stroke();
+      c.strokeStyle = '#eef2f5';
+      c.lineWidth = s * 0.26;
+      sleeve();
+      c.stroke();
+      c.lineCap = 'butt';
+      c.strokeStyle = INK;
+      c.lineWidth = 1.5;
+      c.fillStyle = '#e8b08a';
+      c.beginPath();
+      c.ellipse(hx, hy + s * 0.25, s * 0.22, s * 0.18, 0, 0, TAU);
+      c.fill();
+      c.stroke();
+    }
+  }
+  // Her clipboard, and the pen going while he's at a safe distance.
+  const bx = cx + s * 0.55;
+  const by = w.y1 - s * 0.95;
+  c.save();
+  c.translate(bx, by);
+  c.rotate(-0.12);
+  c.fillStyle = '#a8743f';
+  rect(c, 0, 0, s * 0.75, s * 0.95, 2);
+  c.fill();
+  c.stroke();
+  c.fillStyle = '#ffffff';
+  c.fillRect(s * 0.08, s * 0.12, s * 0.59, s * 0.76);
+  c.fillStyle = '#9aa7b6';
+  for (let i = 0; i < 4; i++) c.fillRect(s * 0.14, s * (0.24 + i * 0.15), s * (0.45 - (i % 2) * 0.15), 1);
+  c.fillStyle = '#5c6670';
+  c.fillRect(s * 0.25, -s * 0.04, s * 0.25, s * 0.12);
+  if (near <= 0.3) {
+    const k = (t * 0.003) % 1;
+    const penX = s * (0.18 + k * 0.4);
+    const penY = s * (0.24 + Math.floor((t * 0.003) % 4) * 0.15);
+    c.fillStyle = '#e8b08a';
+    c.beginPath();
+    c.arc(penX + s * 0.08, penY + s * 0.06, s * 0.13, 0, TAU);
+    c.fill();
+    c.stroke();
+    c.strokeStyle = '#1c2836';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(penX, penY);
+    c.lineTo(penX + s * 0.18, penY - s * 0.2);
+    c.stroke();
+  }
+  c.restore();
   glass(c, w, ww, hh);
   c.restore();
   return { x: cx, y: w.y0 };

@@ -237,4 +237,41 @@ export const sfx = {
     tone('sawtooth', 300, 900, 0, 0.25, 0.06);
     hiss(0, 0.3, 2500, 0.12);
   },
+  /** A long, wet, low burp. */
+  burp(): void {
+    const a = ready();
+    if (!a) return;
+    const t = a.currentTime;
+    const dur = 0.45 + Math.random() * 0.25;
+    const o = a.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(95 + Math.random() * 25, t);
+    o.frequency.linearRampToValueAtTime(70, t + dur);
+    const lfo = a.createOscillator();
+    lfo.frequency.value = 28 + Math.random() * 10;
+    const depth = a.createGain();
+    depth.gain.value = 18;
+    lfo.connect(depth).connect(o.frequency);
+    const f = a.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 520;
+    f.Q.value = 3;
+    const g = a.createGain();
+    env(g, t, 0.5, 0.03, dur * 0.6, dur * 0.4);
+    o.connect(f).connect(g).connect(master!);
+    o.start(t);
+    lfo.start(t);
+    o.stop(t + dur + 0.05);
+    lfo.stop(t + dur + 0.05);
+  },
+  /** Something small and wet. */
+  squelch(): void {
+    tone('sine', 900, 220, 0, 0.09, 0.12);
+    hiss(0, 0.08, 1400, 0.06);
+  },
+  /** The robot vacuum backing off. */
+  beep(): void {
+    tone('square', 1320, 1320, 0, 0.06, 0.05);
+    tone('square', 990, 990, 0.08, 0.08, 0.05);
+  },
 };

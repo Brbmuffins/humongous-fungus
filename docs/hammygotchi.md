@@ -35,6 +35,11 @@ The scientist's window is in the back wall downstairs, and DoorDosh comes
 through a hatch in the ceiling. Everything is drawn in `src/room.ts`;
 `src/scene.ts` runs it.
 
+Each piece of furniture is drawn to read at a glance on a phone: the toilet
+faces you with its lid up, water in the bowl, a plunger and a mat; the
+gaming chair faces you on its wheels; the window has an OBSERVATION sign over
+it and Dr. Moss's badge on her coat.
+
 How it looks: glazed tiles, strip lights with soft beams and pools of light on
 the floors, shade in the corners and under the loft, and a shadow under every
 piece of furniture and under Hammy (smaller the higher he's thrown). The walls
@@ -67,6 +72,28 @@ Furniture is a drop target. Let go of him over it (or throw him onto it) and
 he uses it: the bed and the chair lift his mood a little every few seconds,
 up to a point, and the PC does too and earns a coin every 30 seconds from his
 stream. He gets up after a while, or when food lands near him.
+
+## Gross by nature
+
+Hammy is gross even when he's clean, and the unit knows it:
+
+- There's always a whiff coming off him and at least one fly; both get worse
+  as he gets less fresh.
+- Every 9–21 seconds he does one of his habits: a long green burp (BUUURP),
+  picking his nose (and flicking it), sniffing his armpit (and regretting it)
+  or scratching his butt. He has a line for each.
+- Everything avoids him. The robot vacuums beep and back away when they get
+  close (and wait for him to move before getting the poop under him). The
+  plant on the loft leans away when he stands next to it.
+- **Dr. Moss**, the scientist behind the observation window, watches him all
+  day. Her eyes follow him, she takes notes on her clipboard, and when he
+  comes up to her glass she leans back, holds her nose and tells him to back
+  up. She introduces herself the first time you play, and tapping her window
+  gets a word from her. She puts on a gas mask below 45% fresh and evacuates
+  below 18%.
+- The room shows it: a grease stain where he sits in the armchair, drool on
+  his pillow, crumbs in the bed, a pizza box and crushed cans under the desk,
+  and a sock on the floor.
 
 ## Being a burden
 

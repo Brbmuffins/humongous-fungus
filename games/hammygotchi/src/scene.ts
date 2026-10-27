@@ -17,7 +17,10 @@ import {
   ROAD_TRIP,
   ROT_SECONDS,
   SAYS,
+  SCIENTIST_INTRO,
   SCIENTIST_LINES,
+  SCIENTIST_NEAR,
+  SCIENTIST_TAP,
   type FitId,
   type FoodId,
   type FormId,
@@ -42,6 +45,7 @@ import {
   nightLevel,
   paintRoom,
   panSpot,
+  toiletSeat,
   type Box,
   type Room,
 } from './room';
@@ -155,7 +159,15 @@ interface Vacuum {
   x: number;
   up: boolean;
   dir: number;
+  /** Backing away from him. */
+  shy?: boolean;
 }
+
+/** His habits: he does one every so often, wherever he is. */
+type Habit = 'burp' | 'pick' | 'sniff' | 'scratch';
+const HABITS: readonly Habit[] = ['burp', 'pick', 'sniff', 'scratch'];
+const HABIT_MS: Record<Habit, number> = { burp: 1100, pick: 1900, sniff: 1700, scratch: 1500 };
+const MET_MOSS = 'hammygotchi.metMoss';
 
 type Glitch = { kind: 'float' | 'moon' | 'sideways' | 'bouncy'; until: number; dir: number };
 type Mode = 'idle' | 'walk' | 'eat' | 'mope' | 'climb';
@@ -225,6 +237,13 @@ export class TankScene {
   private nextWhine = 0;
   private glitch: Glitch | null = null;
   private nextGlitchAt = 0;
+  private habit: { kind: Habit; start: number; until: number } | null = null;
+  private nextHabitAt = 0;
+  /** How close he is to Dr. Moss's glass (eased), and when she last told him off. */
+  private sciNear = 0;
+  private nextNearLine = 0;
+  private metMoss = false;
+  private plantLean = 0;
   private youLose = false;
   private roll = 0;
 
@@ -286,6 +305,12 @@ export class TankScene {
     this.targetX = this.x;
     this.nextLineAt = performance.now() + 4000;
     this.nextGlitchAt = performance.now() + 90_000 + Math.random() * 90_000;
+    this.nextHabitAt = performance.now() + 7000 + Math.random() * 6000;
+    try {
+      this.metMoss = localStorage.getItem(MET_MOSS) === '1';
+    } catch {
+      this.metMoss = false;
+    }
   }
 
   resize(): void {
@@ -444,7 +469,7 @@ export class TankScene {
       case 'shower':
         return { x: b.x0 + w * 0.5, y: b.y1 - hh - 4 };
       case 'toilet':
-        return { x: b.x0 + w * 0.66, y: b.y0 - hh * 0.5 };
+        return { x: toiletSeat(b).x, y: b.y0 - hh * 0.5 };
       case 'chair':
         return { x: b.x0 + w * 0.5, y: b.y0 + h * 0.35 - hh * 0.9 };
       case 'bed':
@@ -767,6 +792,11 @@ export class TankScene {
       }
       if (this.inBox(this.room.fridge, p.x, p.y, 4)) {
         this.openFridge();
+        return;
+      }
+      if (this.inBox(this.room.window, p.x, p.y, 6)) {
+        if (this.scientistGone) this.say(pick(['She left. Can’t imagine why.', 'Dr. Moss went home.', 'More room for me.']), 1800);
+        else this.scientistBubble = { text: pick(SCIENTIST_TAP), born: this.t, ms: 2800 };
         return;
       }
       // Knocking on the glass: he looks over.
@@ -1155,6 +1185,127 @@ export class TankScene {
       this.nextLineAt = now + 14_000 + Math.random() * 18_000;
       if (!this.bubble) this.idleLine(v);
     }
+    this.updateHabit(now, dead);
+    this.updateMoss(now, dt, dead);
+  }
+
+  // -------------------------------------------------------------------------
+  // Gross by nature
+
+  private updateHabit(now: number, dead: boolean): void {
+    const h = this.habit;
+    if (h && (this.held || !this.grounded || dead)) this.habit = null;
+    else if (h && now > h.until) {
+      this.habit = null;
+      if (h.kind === 'pick') {
+        // Flicked. Somewhere.
+        const f = this.facePos();
+        this.puffs.push({ x: f.x + this.facing * f.s * 0.2, y: f.y + f.s * 0.1, vx: this.facing * (90 + Math.random() * 80), vy: -80 - Math.random() * 40, r: Math.max(1.5, this.r * 0.06), born: now, life: 900, color: '#9bc23a' });
+        sfx.squelch();
+      }
+    }
+    if (this.habit || dead || this.held || !this.grounded || now < this.nextHabitAt) return;
+    if (this.mode === 'eat' || this.mode === 'climb' || (this.at && this.at.id !== 'chair' && this.at.id !== 'pc')) return;
+    this.nextHabitAt = now + 9000 + Math.random() * 12_000;
+    const kind = pick(HABITS);
+    this.habit = { kind, start: now, until: now + HABIT_MS[kind] };
+    if (!this.at) {
+      this.mode = 'idle';
+      this.vx = 0;
+      this.modeUntil = now + HABIT_MS[kind];
+    }
+    const f = this.facePos();
+    if (kind === 'burp') {
+      for (let i = 0; i < (this.calm ? 2 : 6); i++) {
+        this.puffs.push({ x: f.x + this.facing * f.s * 0.3, y: f.y + f.s * 0.25, vx: this.facing * (30 + Math.random() * 50), vy: -20 - Math.random() * 30, r: this.r * (0.1 + Math.random() * 0.12), born: now, life: 1200 + Math.random() * 600, color: Math.random() < 0.5 ? '#d8e27a' : '#b9d65a' });
+      }
+      this.popups.push({ x: f.x + this.facing * f.s, y: f.y - f.s * 0.2, born: now, text: pick(['BUUURP', 'BRAAAP', '*burp*']), color: '#d8e27a' });
+      sfx.burp();
+      if (!this.bubble && Math.random() < 0.5) window.setTimeout(() => this.view?.deadFor === null && !this.bubble && this.sayKind('burp', 1800), 900);
+    } else if (kind === 'sniff') {
+      if (!this.bubble && Math.random() < 0.7) window.setTimeout(() => this.view?.deadFor === null && !this.bubble && this.sayKind('sniff', 1700), 900);
+    } else if (kind === 'pick') {
+      if (!this.bubble && Math.random() < 0.4) window.setTimeout(() => this.view?.deadFor === null && !this.bubble && this.sayKind('pick', 1600), 1300);
+    } else {
+      this.popups.push({ x: this.x - this.facing * this.size().hw, y: this.y + this.size().hh * 0.2, born: now, text: '*scritch*', color: '#ffe3b0' });
+      if (!this.bubble && Math.random() < 0.3) window.setTimeout(() => this.view?.deadFor === null && !this.bubble && this.sayKind('scratch', 1600), 800);
+    }
+  }
+
+  /** Dr. Moss: says hello once, and wants him away from her glass. */
+  private updateMoss(now: number, dt: number, dead: boolean): void {
+    const w = this.room.window;
+    const ww = w.x1 - w.x0;
+    const dist = Math.abs(this.x - (w.x0 + w.x1) / 2);
+    const near = !dead && !this.up ? Math.max(0, Math.min(1, 1 - (dist - ww * 0.3) / (ww * 1.4))) : 0;
+    this.sciNear += (near - this.sciNear) * Math.min(1, dt * 4);
+    if (this.scientistGone || this.scientistBubble) return;
+    if (!this.metMoss && now > 5000) {
+      this.metMoss = true;
+      try {
+        localStorage.setItem(MET_MOSS, '1');
+      } catch {
+        // Fine: she'll say hello again next time.
+      }
+      this.scientistBubble = { text: SCIENTIST_INTRO, born: now, ms: 4600 };
+    } else if (this.sciNear > 0.6 && now > this.nextNearLine) {
+      this.nextNearLine = now + 12_000 + Math.random() * 8000;
+      this.scientistBubble = { text: pick(SCIENTIST_NEAR), born: now, ms: 2200 };
+    }
+  }
+
+  /** What his hands are doing, drawn over him. */
+  private drawHabit(c: CanvasRenderingContext2D, now: number): void {
+    const h = this.habit;
+    if (!h) return;
+    const { hw, hh } = this.size();
+    const k = (now - h.start) / (h.until - h.start);
+    const skin = '#e8b08a';
+    const arm = (x0: number, y0: number, x1: number, y1: number) => {
+      c.lineCap = 'round';
+      c.strokeStyle = '#1f1a24';
+      c.lineWidth = Math.max(4, this.r * 0.2);
+      c.beginPath();
+      c.moveTo(x0, y0);
+      c.lineTo(x1, y1);
+      c.stroke();
+      c.strokeStyle = skin;
+      c.lineWidth = Math.max(2.5, this.r * 0.14);
+      c.stroke();
+      c.lineCap = 'butt';
+    };
+    if (h.kind === 'pick') {
+      // A hand comes up from under his chin, one finger in.
+      const f = this.facePos();
+      const jig = Math.sin(now * 0.05) * f.s * 0.03;
+      const tipX = f.x + this.facing * f.s * 0.05 + jig;
+      const tipY = f.y + f.s * 0.14;
+      arm(tipX + this.facing * f.s * 0.3, tipY + f.s * 0.75, tipX, tipY);
+      c.fillStyle = '#e8b08a';
+      c.strokeStyle = '#1f1a24';
+      c.lineWidth = 1.2;
+      c.beginPath();
+      c.arc(tipX + this.facing * f.s * 0.24, tipY + f.s * 0.62, Math.max(3, this.r * 0.14), 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+    } else if (h.kind === 'scratch') {
+      const bx = this.x - this.facing * hw * 0.85;
+      const by = this.y + hh * (0.45 + Math.sin(now * 0.04) * 0.08);
+      arm(this.x - this.facing * hw * 0.3, this.y + hh * 0.1, bx, by);
+      c.strokeStyle = 'rgba(255,255,255,0.7)';
+      c.lineWidth = 1.2;
+      for (let i = 0; i < 3; i++) {
+        c.beginPath();
+        c.moveTo(bx - this.facing * (6 + i * 3), by - 4 + i * 4);
+        c.lineTo(bx - this.facing * (11 + i * 3), by - 4 + i * 4);
+        c.stroke();
+      }
+    } else if (h.kind === 'sniff') {
+      // Nose in the armpit, then the wave of regret.
+      const ax = this.x + this.facing * hw * 0.8;
+      const ay = this.y - hh * 0.1;
+      if (k > 0.35) this.stinkLines(c, ax, ay - hh * 0.2, this.r * 0.8, 3, 0.85 * (1 - k));
+    }
   }
 
   private ladderX(): number {
@@ -1226,6 +1377,21 @@ export class TankScene {
           target = i;
         }
       });
+      // It wants nothing to do with him.
+      const reach = this.size().hw + s * 1.5;
+      if (this.up === vac.up && !this.held && Math.abs(this.x - vac.x) < reach) {
+        const away = vac.x < this.x ? -1 : 1;
+        if (!vac.shy) {
+          vac.shy = true;
+          sfx.beep();
+          this.popup('!', '#5ee0b0', vac.x, (vac.up ? m.loft : m.ground) - s * 1.3);
+          if (!this.bubble && Math.random() < 0.25) this.sayKind('avoided', 1500);
+        }
+        vac.dir = away;
+        vac.x = Math.min(hi, Math.max(lo, vac.x + away * this.r * 2.6 * dt));
+        continue;
+      }
+      vac.shy = false;
       if (target >= 0) {
         const px = this.poopPos(v.poops[target]).x;
         vac.dir = px > vac.x ? 1 : -1;
@@ -1240,12 +1406,6 @@ export class TankScene {
       if (vac.x < lo || vac.x > hi) {
         vac.x = Math.min(hi, Math.max(lo, vac.x));
         vac.dir = -vac.dir;
-      }
-      // It bumps into him.
-      if (this.grounded && this.up === vac.up && Math.abs(this.x - vac.x) < this.size().hw && !this.at && Math.random() < dt * 0.8) {
-        this.vy = -this.H * 0.5;
-        this.grounded = false;
-        if (!this.bubble) this.say(pick(['Hey!', 'Watch it, robot.', 'It ate my sock.']), 1300);
       }
     }
   }
@@ -1929,14 +2089,20 @@ export class TankScene {
     if (now < this.dizzyUntil) face = 'sick';
     if (now < this.sootUntil && now > this.sootUntil - 1500) face = 'shock';
     if (now < this.tickleUntil) face = 'joy';
+    const hb = this.habit;
+    if (hb) {
+      const k = (now - hb.start) / (hb.until - hb.start);
+      face = hb.kind === 'burp' ? 'smug' : hb.kind === 'pick' ? 'meh' : hb.kind === 'sniff' ? (k < 0.35 ? 'happy' : 'sick') : 'joy';
+    }
     look.face = face;
     look.green = Math.max(0, Math.min(1, Math.max(((50 - v.fresh) / 50) * 0.45, ((60 - v.health) / 60) * 0.85)));
     look.fog = Math.max(0, 1 - v.fresh / 70);
     look.flip = this.facing < 0;
     if (now > this.blinkAt + 140 && Math.random() < 0.004) this.blinkAt = now;
     look.blink = now - this.blinkAt < 140;
-    look.armsUp = this.held || fast || this.magnet !== null || (this.mode === 'climb' && this.climbing()) || (this.glitch !== null && !this.grounded);
-    if (this.mode === 'eat') look.mouth = (Math.sin(now * 0.03) + 1) / 2;
+    look.armsUp = this.held || fast || this.magnet !== null || (this.mode === 'climb' && this.climbing()) || (this.glitch !== null && !this.grounded) || hb?.kind === 'sniff';
+    if (hb?.kind === 'burp' && now - hb.start < 700) look.mouth = 0.9;
+    else if (this.mode === 'eat') look.mouth = (Math.sin(now * 0.03) + 1) / 2;
     else if (now < this.tickleUntil) look.mouth = 0.5 + Math.sin(now * 0.05) * 0.3;
     else if (this.bubble && now - this.bubble.born < 700) look.mouth = (Math.sin(now * 0.04) + 1) / 2.4;
     const walk = this.mode === 'walk' && this.grounded ? Math.sin(now * 0.02) * 0.05 : 0;
@@ -1953,6 +2119,7 @@ export class TankScene {
     }
     look.lean = this.spin + (this.grounded ? walk * 2 : Math.max(-0.3, Math.min(0.3, this.vx * 0.0008)));
     if (this.mode === 'climb' && this.climbing()) look.lean = Math.sin(now * 0.02) * 0.1;
+    if (hb?.kind === 'sniff') look.lean += this.facing * 0.18;
     return look;
   }
 
@@ -1987,8 +2154,13 @@ export class TankScene {
 
     // The furniture that changes.
     drawWallLife(c, m, t, new Date(), this.calm);
-    const sci = drawScientist(c, m.window, v.fresh < PINCH_BELOW, this.scientistGone, t);
-    drawPlant(c, m.plant, dead ? 1 : Math.min(1, Math.max(0, (65 - v.fresh) / 55)), t);
+    const sci = drawScientist(c, m.window, v.fresh < PINCH_BELOW, this.scientistGone, t, { x: this.x, near: this.sciNear });
+    // The plant leans away when he's next to it.
+    const pcx = (m.plant.x0 + m.plant.x1) / 2;
+    const pd = this.x - pcx;
+    const lean = this.up && !dead && Math.abs(pd) < r * 2.4 ? -Math.sign(pd) * (1 - Math.abs(pd) / (r * 2.4)) : 0;
+    this.plantLean += (lean - this.plantLean) * Math.min(1, dt * 3);
+    drawPlant(c, m.plant, dead ? 1 : Math.min(1, Math.max(0, (65 - v.fresh) / 55)), t, this.plantLean);
     drawMonitor(c, m.pc, t, this.at?.id === 'pc');
     drawFridge(c, m.fridge, t < this.fridgeOpenUntil ? 1 : 0);
     const cooking = this.foods.some((f) => f.panAt !== null);
@@ -2068,6 +2240,7 @@ export class TankScene {
         c.restore();
       }
       drawHammy(c, this.x, this.y, r, look, t);
+      this.drawHabit(c, t);
       this.drawAfterEffects(c, t);
       if (this.at?.id === 'bed') {
         // Tucked in.
@@ -2084,9 +2257,10 @@ export class TankScene {
         c.fill();
         c.stroke();
       }
+      // He always smells a bit, and there's always at least one fly.
       const stink = 1 - v.fresh / 100;
-      this.stinkLines(c, this.x, this.y - this.size().hh * 1.1, r * 1.4, Math.round(stink * 5), Math.min(0.85, stink));
-      const flies = (v.fresh < 30 ? 2 : v.fresh < 50 ? 1 : 0) + (v.poops.length >= 4 ? 1 : 0);
+      this.stinkLines(c, this.x, this.y - this.size().hh * 1.1, r * 1.4, Math.max(1, Math.round(stink * 5)), Math.max(0.3, Math.min(0.85, stink)));
+      const flies = 1 + (v.fresh < 30 ? 2 : v.fresh < 50 ? 1 : 0) + (v.poops.length >= 4 ? 1 : 0);
       for (let i = 0; i < flies; i++) this.fly(c, this.x, this.y - r * 0.4, i, r * 1.2);
     }
 
@@ -2112,7 +2286,8 @@ export class TankScene {
       c.strokeStyle = `rgba(90,170,255,${1 - k})`;
       c.lineWidth = 2;
       c.beginPath();
-      c.arc(b.x0 + (b.x1 - b.x0) * 0.65, b.y0 + 4, 6 + k * 8, t * 0.02, t * 0.02 + 4);
+      const seat = toiletSeat(b);
+      c.arc(seat.x, seat.y, 6 + k * 8, t * 0.02, t * 0.02 + 4);
       c.stroke();
     }
 
