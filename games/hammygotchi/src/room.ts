@@ -1,7 +1,7 @@
 // The containment unit: a two-floor glass cell in a lab. Ground floor:
-// shower, toilet, armchair, fridge and oven, with an observation window where
-// a scientist watches. The loft: bed, a plant and a gaming PC, reached by a
-// ladder on the right. It comes with only the toilet and the shower; the rest
+// shower, toilet, armchair, fridge and oven, with an intercom the scientist
+// talks through (she watches on the camera). The loft: bed, a plant and a
+// gaming PC, reached by a ladder on the right. It comes with only the toilet and the shower; the rest
 // waits as taped-out spots until it's bought. This file lays it out and draws
 // the furniture and his trash; the scene decides what happens in it.
 import type { FurnitureId, TrashKind } from './defs';
@@ -37,7 +37,8 @@ export interface Room {
   fridge: Box;
   oven: Box;
   ladder: Box;
-  window: Box;
+  /** The scientist's intercom on the back wall. */
+  intercom: Box;
   bed: Box;
   plant: Box;
   pc: Box;
@@ -48,6 +49,10 @@ export interface Room {
 }
 
 export const LOFT_SLAB = 8;
+
+function intercomBox(cx: number, cy: number, s: number): Box {
+  return { x0: cx - s * 0.6, x1: cx + s * 0.6, y0: cy - s * 0.8, y1: cy + s * 0.8 };
+}
 
 export function layoutRoom(W: number, H: number): Room {
   const side = Math.max(8, W * 0.025);
@@ -77,7 +82,7 @@ export function layoutRoom(W: number, H: number): Room {
     fridge: box(0.56, 0.7, low * 0.72, ground),
     oven: box(0.72, 0.87, low * 0.42, ground),
     ladder: box(0.89, 0.97, ground - loft + 18, ground),
-    window: { x0: fx(0.35), x1: fx(0.54), y0: loft + LOFT_SLAB + low * 0.08, y1: loft + LOFT_SLAB + low * 0.46 },
+    intercom: intercomBox(fx(0.445), loft + LOFT_SLAB + low * 0.24, Math.max(13, Math.min(26, low * 0.11))),
     bed: box(0.01, 0.33, high * 0.26, loft),
     plant: box(0.35, 0.43, high * 0.4, loft),
     pc: box(0.46, 0.77, high * 0.66, loft),
@@ -327,8 +332,7 @@ export function paintRoom(c: Ctx, m: Room, night = 0, has: (id: FurnitureId) => 
   paintCamera(c, m);
   paintChute(c, m);
 
-  // Observation window, with the lab behind it.
-  paintWindow(c, m, night);
+  paintIntercom(c, m.intercom);
 
   // Night falls on the walls before the lamps light them.
   if (night > 0) {
@@ -775,83 +779,38 @@ export function drawTrash(c: Ctx, kind: TrashKind, x: number, y: number, s: numb
   c.restore();
 }
 
-function paintWindow(c: Ctx, m: Room, night: number): void {
-  const w = m.window;
-  const ww = w.x1 - w.x0;
-  const wh = w.y1 - w.y0;
-  c.save();
-  rect(c, w.x0, w.y0, ww, wh, 4);
-  c.clip();
-  const lab = c.createLinearGradient(0, w.y0, 0, w.y1);
-  lab.addColorStop(0, mix([44, 62, 88], [24, 32, 50], night));
-  lab.addColorStop(1, mix([24, 32, 46], [14, 18, 28], night));
-  c.fillStyle = lab;
-  c.fillRect(w.x0, w.y0, ww, wh);
-  // A strip light and shelves of glowing bottles in the lab.
-  c.fillStyle = 'rgba(220,240,255,0.55)';
-  c.fillRect(w.x0 + ww * 0.15, w.y0 + 3, ww * 0.7, 2);
-  glow(c, w.x0 + ww / 2, w.y0 + 3, ww * 0.6, [200, 230, 255], 0.2);
-  const bottles: RGB[] = [
-    [110, 230, 160],
-    [255, 120, 170],
-    [120, 190, 255],
-    [255, 210, 90],
-  ];
-  for (const [sx0, sx1] of [
-    [w.x0, w.x0 + ww * 0.32],
-    [w.x1 - ww * 0.32, w.x1],
-  ] as const) {
-    for (const sy of [w.y0 + wh * 0.4, w.y0 + wh * 0.72]) {
-      for (let i = 0; i < 3; i++) {
-        const bx = sx0 + (sx1 - sx0) * (0.22 + i * 0.28);
-        const bh = wh * 0.1 * (0.7 + hash(i, Math.round(sy)) * 0.7);
-        const col = bottles[(i + Math.round(sy) + Math.round(sx0)) % bottles.length];
-        glow(c, bx, sy - bh / 2, bh * 1.2, col, 0.25);
-        c.fillStyle = rgba(col, 0.85);
-        rect(c, bx - 2.5, sy - bh, 5, bh, 1.5);
-        c.fill();
-        c.fillRect(bx - 1, sy - bh - 3, 2, 3);
-      }
-      c.fillStyle = '#5a6a80';
-      c.fillRect(sx0, sy, sx1 - sx0, 2);
+/** The intercom Dr. Moss talks through: a speaker grille, a button and a light. */
+function paintIntercom(c: Ctx, b: Box): void {
+  const w = b.x1 - b.x0;
+  const h = b.y1 - b.y0;
+  const cx = (b.x0 + b.x1) / 2;
+  footShadow(c, b.x0 + 2, b.x1 + 2, b.y1 + 3, 0.12);
+  c.strokeStyle = INK;
+  c.lineWidth = 1.5;
+  c.fillStyle = chrome(c, b.y0, b.y1);
+  rect(c, b.x0, b.y0, w, h, 3);
+  c.fill();
+  c.stroke();
+  // The grille.
+  c.fillStyle = '#2b3038';
+  for (let j = 0; j < 4; j++) {
+    for (let i = 0; i < 3; i++) {
+      c.beginPath();
+      c.arc(cx + (i - 1) * w * 0.24, b.y0 + h * (0.2 + j * 0.12), Math.max(0.9, w * 0.06), 0, TAU);
+      c.fill();
     }
   }
-  c.restore();
-  // A deep steel frame and a sill.
-  c.strokeStyle = '#3f4752';
-  c.lineWidth = 5;
-  rect(c, w.x0, w.y0, ww, wh, 4);
-  c.stroke();
-  c.strokeStyle = 'rgba(200,210,222,0.55)';
-  c.lineWidth = 1;
-  rect(c, w.x0 - 2.5, w.y0 - 2.5, ww + 5, wh + 5, 6);
-  c.stroke();
-  c.fillStyle = chrome(c, w.y1 + 2, w.y1 + 7);
-  rect(c, w.x0 - 6, w.y1 + 2, ww + 12, 5, 1.5);
+  // The talk button.
+  c.fillStyle = '#d6332b';
+  c.beginPath();
+  c.arc(cx, b.y0 + h * 0.8, Math.max(2, w * 0.16), 0, TAU);
   c.fill();
-  fade(c, w.x0 - 6, w.y1 + 7, ww + 12, 10, SHADOW, 0.22, 'top');
-  // The sign over it says what it is.
-  const room = w.y0 - (m.loft + LOFT_SLAB) - 6;
-  if (room >= 9) {
-    const sh = Math.min(16, room - 2);
-    const size = Math.max(6, Math.round(sh * 0.62));
-    c.font = `800 ${size}px Rubik, system-ui, sans-serif`;
-    const label = 'OBSERVATION';
-    const sw = Math.min(ww, c.measureText(label).width + 12);
-    const sx = w.x0 + (ww - sw) / 2;
-    const sy = w.y0 - 4 - sh;
-    c.fillStyle = '#2b323c';
-    rect(c, sx, sy, sw, sh, 3);
-    c.fill();
-    c.fillStyle = '#e0332a';
-    c.beginPath();
-    c.arc(sx + 5, sy + sh / 2, Math.max(1.5, sh * 0.14), 0, TAU);
-    c.fill();
-    c.fillStyle = '#e8eef4';
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText(label, sx + sw / 2 + 3, sy + sh / 2 + 0.5, sw - 12);
-  }
+  c.stroke();
+  c.font = `700 ${Math.max(6, Math.min(8, w * 0.32))}px Rubik, system-ui, sans-serif`;
+  c.textAlign = 'center';
+  c.textBaseline = 'top';
+  c.fillStyle = 'rgba(31,26,36,0.55)';
+  c.fillText('LAB', cx, b.y1 + 3);
 }
 
 function paintPoster(c: Ctx, x: number, y: number, w: number, h: number): void {
@@ -1673,7 +1632,7 @@ function paintDesk(c: Ctx, b: Box): void {
   }
 }
 
-/** Things that change: the monitor, the plant, the fridge door, the oven, the scientist. */
+/** Things that change: the monitor, the plant, the fridge door, the oven, the intercom. */
 export function drawMonitor(c: Ctx, b: Box, t: number, on: boolean): void {
   const w = b.x1 - b.x0;
   const h = b.y1 - b.y0;
@@ -2080,256 +2039,39 @@ export function drawOven(c: Ctx, b: Box, heat: number): void {
   if (heat > 0) flatGlow(c, (b.x0 + b.x1) / 2, b.y0 - 2, w * 0.45, 5, [255, 120, 40], 0.5 * heat);
 }
 
-/** Where Hammy is, for the scientist: his x, and how close he is to her glass (0 far, 1 right there). */
-export interface Watch {
-  x: number;
-  near: number;
-}
-
 /**
- * Dr. Moss at the observation window. She watches him (her eyes follow him),
- * takes notes on a clipboard, and leans back holding her nose when he comes
- * up to the glass. mask: wearing a gas mask. gone: evacuated.
+ * The intercom's light and the sound coming out of it. talking: Dr. Moss is
+ * saying something. gone: she evacuated, so the light is off. Returns where
+ * her words come out.
  */
-export function drawScientist(c: Ctx, w: Box, mask: boolean, gone: boolean, t: number, watch: Watch = { x: (w.x0 + w.x1) / 2, near: 0 }): { x: number; y: number } {
-  const cx = (w.x0 + w.x1) / 2;
-  const ww = w.x1 - w.x0;
-  const hh = w.y1 - w.y0;
-  c.save();
+export function drawIntercom(c: Ctx, b: Box, talking: boolean, gone: boolean, t: number): { x: number; y: number } {
+  const w = b.x1 - b.x0;
+  const cx = (b.x0 + b.x1) / 2;
+  const lx = b.x1 - w * 0.2;
+  const ly = b.y0 + w * 0.18;
+  const on = !gone && (talking ? Math.sin(t * 0.03) > -0.4 : Math.sin(t * 0.004) > 0.6);
+  if (on) glow(c, lx, ly, w * 0.35, [120, 255, 140], 0.6);
+  c.fillStyle = gone ? '#3a3f46' : on ? '#7dff9a' : '#2f6b3d';
   c.beginPath();
-  c.roundRect(w.x0, w.y0, ww, hh, 4);
-  c.clip();
-  if (gone) {
-    const on = Math.sin(t * 0.008) > 0;
-    c.fillStyle = on ? 'rgba(255,50,40,0.55)' : 'rgba(80,10,10,0.4)';
-    c.fillRect(w.x0, w.y0, ww, hh);
-    c.fillStyle = '#ffd0c8';
-    // Two lines, sized to fit the window across.
-    const size = Math.max(7, Math.min(hh * 0.16, ww * 0.15));
-    c.font = `700 ${Math.round(size)}px Rubik, system-ui, sans-serif`;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText('EVAC-', cx, w.y0 + hh / 2 - size * 0.6, ww - 6);
-    c.fillText('UATED', cx, w.y0 + hh / 2 + size * 0.6, ww - 6);
-    glass(c, w, ww, hh);
-    c.restore();
-    return { x: cx, y: w.y0 };
-  }
-  const near = Math.max(0, Math.min(1, watch.near));
-  // Leaning back from the glass: smaller and higher.
-  const back = 1 - near * 0.22;
-  const s = Math.min(ww, hh) * 0.32 * back;
-  const bob = Math.sin(t * 0.002) * 1.5;
-  const hx = cx - (watch.x > cx ? 1 : -1) * near * s * 0.25;
-  const hy = w.y0 + hh * 0.48 + bob - near * s * 0.35;
-  c.strokeStyle = INK;
-  c.lineWidth = 1.5;
-  // Lab coat, with lapels, a pocket full of pens and her badge.
-  const coat = c.createLinearGradient(cx - s * 1.6, 0, cx + s * 1.6, 0);
-  coat.addColorStop(0, '#ffffff');
-  coat.addColorStop(1, '#cfd7de');
-  c.fillStyle = coat;
-  c.beginPath();
-  c.ellipse(cx, w.y1 + s * 0.3, s * 1.6, s * 1.2, 0, 0, TAU);
+  c.arc(lx, ly, Math.max(1.3, w * 0.07), 0, TAU);
   c.fill();
-  c.stroke();
-  c.fillStyle = '#7fa6c9';
-  c.beginPath();
-  c.moveTo(cx - s * 0.35, w.y1 - s * 0.85);
-  c.lineTo(cx, w.y1 - s * 0.2);
-  c.lineTo(cx + s * 0.35, w.y1 - s * 0.85);
-  c.fill();
-  c.beginPath();
-  c.moveTo(cx - s * 0.5, w.y1 - s * 0.82);
-  c.lineTo(cx, w.y1 - s * 0.05);
-  c.lineTo(cx + s * 0.5, w.y1 - s * 0.82);
-  c.stroke();
-  c.strokeRect(cx + s * 0.55, w.y1 - s * 0.45, s * 0.45, s * 0.4);
-  for (const [dx, col] of [
-    [0.65, '#d6332b'],
-    [0.8, '#4f86c6'],
-  ] as const) {
-    c.fillStyle = col;
-    c.fillRect(cx + s * dx, w.y1 - s * 0.62, 2, s * 0.22);
-  }
-  const bw = s * 0.62;
-  c.fillStyle = '#ffffff';
-  c.lineWidth = 1;
-  rect(c, cx - s * 1.0, w.y1 - s * 0.62, bw, s * 0.3, 2);
-  c.fill();
-  c.stroke();
-  c.fillStyle = '#4f86c6';
-  c.fillRect(cx - s * 1.0, w.y1 - s * 0.62, bw, s * 0.08);
-  if (bw >= 16) {
-    c.fillStyle = '#1c2836';
-    c.font = `800 ${Math.max(5, Math.round(s * 0.13))}px Rubik, system-ui, sans-serif`;
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText('DR. MOSS', cx - s * 1.0 + bw / 2, w.y1 - s * 0.43, bw - 2);
-  }
-  c.lineWidth = 1.5;
-  c.strokeStyle = INK;
-  // Hair: a bun with a pencil through it, and a fringe.
-  c.fillStyle = '#4a3324';
-  c.beginPath();
-  c.arc(hx + s * 0.15, hy - s * 1.02, s * 0.42, 0, TAU);
-  c.fill();
-  c.stroke();
-  c.strokeStyle = '#f2c14e';
-  c.lineWidth = Math.max(1.5, s * 0.08);
-  c.beginPath();
-  c.moveTo(hx - s * 0.35, hy - s * 1.28);
-  c.lineTo(hx + s * 0.65, hy - s * 0.8);
-  c.stroke();
-  c.strokeStyle = INK;
-  c.lineWidth = 1.5;
-  // Head.
-  const skin = c.createRadialGradient(hx - s * 0.3, hy - s * 0.3, s * 0.1, hx, hy, s);
-  skin.addColorStop(0, '#f4c4a0');
-  skin.addColorStop(1, '#d99c76');
-  c.fillStyle = skin;
-  c.beginPath();
-  c.arc(hx, hy, s, 0, TAU);
-  c.fill();
-  c.stroke();
-  c.fillStyle = '#4a3324';
-  c.beginPath();
-  c.arc(hx, hy - s * 0.2, s * 1.02, Math.PI * 1.02, Math.PI * 1.98);
-  c.fill();
-  c.beginPath();
-  c.ellipse(hx - s * 0.86, hy + s * 0.1, s * 0.2, s * 0.45, 0.1, 0, TAU);
-  c.ellipse(hx + s * 0.86, hy + s * 0.1, s * 0.2, s * 0.45, -0.1, 0, TAU);
-  c.fill();
-  if (mask) {
-    c.fillStyle = '#3d4a3a';
-    c.beginPath();
-    c.ellipse(hx, hy + s * 0.35, s * 0.75, s * 0.55, 0, 0, TAU);
-    c.fill();
-    c.stroke();
-    c.fillStyle = '#2a3329';
-    c.beginPath();
-    c.arc(hx, hy + s * 0.75, s * 0.28, 0, TAU);
-    c.fill();
-    c.stroke();
-  } else {
-    c.fillStyle = 'rgba(230,110,110,0.35)';
-    for (const dx of [-0.55, 0.55]) {
-      c.beginPath();
-      c.arc(hx + dx * s, hy + s * 0.35, s * 0.16, 0, TAU);
-      c.fill();
-    }
-    // A flat line most of the time; a grimace when he's close.
-    c.beginPath();
-    if (near > 0.3) {
-      c.moveTo(hx - s * 0.25, hy + s * 0.58);
-      c.quadraticCurveTo(hx, hy + s * 0.44, hx + s * 0.25, hy + s * 0.58);
-    } else {
-      c.moveTo(hx - s * 0.22, hy + s * 0.5);
-      c.quadraticCurveTo(hx, hy + s * 0.46, hx + s * 0.22, hy + s * 0.52);
-    }
-    c.stroke();
-  }
-  // Goggles, and her eyes on him.
-  const look = Math.max(-1, Math.min(1, (watch.x - hx) / (ww * 1.5)));
-  c.fillStyle = 'rgba(160,220,255,0.8)';
-  for (const dx of [-0.42, 0.42]) {
-    c.beginPath();
-    c.arc(hx + dx * s, hy - s * 0.05, s * 0.32, 0, TAU);
-    c.fill();
-    c.stroke();
-    c.fillStyle = '#1c2836';
-    c.beginPath();
-    c.arc(hx + dx * s + look * s * 0.14, hy - s * 0.02 + near * s * 0.05, s * 0.1, 0, TAU);
-    c.fill();
-    c.fillStyle = 'rgba(160,220,255,0.8)';
-  }
-  c.fillStyle = 'rgba(255,255,255,0.85)';
-  for (const dx of [-0.42, 0.42]) {
-    c.beginPath();
-    c.arc(hx + dx * s - s * 0.12, hy - s * 0.17, s * 0.07, 0, TAU);
-    c.fill();
-  }
-  if (near > 0.3) {
-    // Brows down, and a hand pinching her nose.
-    c.beginPath();
-    c.moveTo(hx - s * 0.7, hy - s * 0.42);
-    c.lineTo(hx - s * 0.2, hy - s * 0.32);
-    c.moveTo(hx + s * 0.7, hy - s * 0.42);
-    c.lineTo(hx + s * 0.2, hy - s * 0.32);
-    c.stroke();
-    if (!mask) {
-      // Her sleeve comes up from the shoulder; the hand pinches her nose.
-      const sleeve = () => {
-        c.beginPath();
-        c.moveTo(cx - s * 1.05, w.y1 + s * 0.1);
-        c.quadraticCurveTo(hx - s * 1.25, hy + s * 1.0, hx - s * 0.18, hy + s * 0.3);
-      };
-      c.lineCap = 'round';
-      c.strokeStyle = INK;
-      c.lineWidth = s * 0.26 + 3;
-      sleeve();
-      c.stroke();
-      c.strokeStyle = '#eef2f5';
-      c.lineWidth = s * 0.26;
-      sleeve();
-      c.stroke();
-      c.lineCap = 'butt';
-      c.strokeStyle = INK;
-      c.lineWidth = 1.5;
-      c.fillStyle = '#e8b08a';
-      c.beginPath();
-      c.ellipse(hx, hy + s * 0.25, s * 0.22, s * 0.18, 0, 0, TAU);
-      c.fill();
-      c.stroke();
-    }
-  }
-  // Her clipboard, and the pen going while he's at a safe distance.
-  const bx = cx + s * 0.55;
-  const by = w.y1 - s * 0.95;
-  c.save();
-  c.translate(bx, by);
-  c.rotate(-0.12);
-  c.fillStyle = '#a8743f';
-  rect(c, 0, 0, s * 0.75, s * 0.95, 2);
-  c.fill();
-  c.stroke();
-  c.fillStyle = '#ffffff';
-  c.fillRect(s * 0.08, s * 0.12, s * 0.59, s * 0.76);
-  c.fillStyle = '#9aa7b6';
-  for (let i = 0; i < 4; i++) c.fillRect(s * 0.14, s * (0.24 + i * 0.15), s * (0.45 - (i % 2) * 0.15), 1);
-  c.fillStyle = '#5c6670';
-  c.fillRect(s * 0.25, -s * 0.04, s * 0.25, s * 0.12);
-  if (near <= 0.3) {
-    const k = (t * 0.003) % 1;
-    const penX = s * (0.18 + k * 0.4);
-    const penY = s * (0.24 + Math.floor((t * 0.003) % 4) * 0.15);
-    c.fillStyle = '#e8b08a';
-    c.beginPath();
-    c.arc(penX + s * 0.08, penY + s * 0.06, s * 0.13, 0, TAU);
-    c.fill();
-    c.stroke();
-    c.strokeStyle = '#1c2836';
+  if (talking && !gone) {
+    // Sound waves, both ways.
+    c.strokeStyle = 'rgba(40,60,90,0.45)';
     c.lineWidth = 1.5;
-    c.beginPath();
-    c.moveTo(penX, penY);
-    c.lineTo(penX + s * 0.18, penY - s * 0.2);
-    c.stroke();
+    for (let i = 0; i < 3; i++) {
+      const k = ((t * 0.002 + i / 3) % 1) * w * 0.7;
+      const r = w * 0.55 + k;
+      c.globalAlpha = 1 - k / (w * 0.7);
+      for (const dir of [-1, 1]) {
+        c.beginPath();
+        c.arc(cx, (b.y0 + b.y1) / 2, r, dir > 0 ? -0.5 : Math.PI - 0.5, dir > 0 ? 0.5 : Math.PI + 0.5);
+        c.stroke();
+      }
+    }
+    c.globalAlpha = 1;
   }
-  c.restore();
-  glass(c, w, ww, hh);
-  c.restore();
-  return { x: cx, y: w.y0 };
-}
-
-/** The window's own glass: a sheen across whatever is behind it. */
-function glass(c: Ctx, w: Box, ww: number, hh: number): void {
-  c.fillStyle = 'rgba(255,255,255,0.08)';
-  c.beginPath();
-  c.moveTo(w.x0 + ww * 0.55, w.y0);
-  c.lineTo(w.x0 + ww * 0.8, w.y0);
-  c.lineTo(w.x0 + ww * 0.35, w.y0 + hh);
-  c.lineTo(w.x0 + ww * 0.1, w.y0 + hh);
-  c.fill();
+  return { x: cx, y: b.y0 };
 }
 
 /**

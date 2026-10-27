@@ -7,7 +7,7 @@ lives like a Sim, badly: he goes about his day on his own, walks to the
 toilet himself and never flushes, and leaves his trash wherever he's done
 with it, so you go to sleep and wake up to a mess. He only eats delivery
 (DoorDosh, mostly Dorkitos) or what you cook him, he farts, he stinks, and
-he won't shower. The scientist watching him through the window can't stand
+he won't shower. The scientist watching him on the camera can't stand
 him. Keep him fed, clean and happy, and clean up after him, or he dies,
 rots, turns into mushrooms, and leaves a skeleton that says YOU LOSE.
 
@@ -35,8 +35,9 @@ whatever didn't make it there.
 
 Two floors. Downstairs: the shower, the toilet, his armchair, the fridge, the
 oven and a ladder. Upstairs, on a loft: his bed, a plant and his gaming PC.
-The scientist's window is in the back wall downstairs, DoorDosh comes
-through a hatch in the ceiling, and a trash chute is on the stairwell wall.
+The scientist's intercom is on the back wall downstairs (she watches on the
+security camera), DoorDosh comes through a hatch in the ceiling, and a trash
+chute is on the stairwell wall.
 Everything is drawn in `src/room.ts`; `src/scene.ts` runs it.
 
 A new unit comes with the plumbing only: the toilet and the shower. Where
@@ -53,12 +54,12 @@ fully furnished unit they had.
 | Bed | 80 | Mood while he naps |
 | Fridge | 90 | Raw steak, 5 coins each; he raids it himself when he's hungry |
 | Oven | 120 | Cooks the steak, or burns it |
-| Gaming PC | 250 | Mood, and his stream pays a coin every 30 seconds |
+| Gaming PC | 250 | Mood, and his stream pays 3 coins every 10 seconds while he plays, and 30 an hour while you're away |
 
 Each piece of furniture is drawn to read at a glance on a phone: the toilet
 faces you with its lid up, water in the bowl, a plunger and a mat; the
-gaming chair faces you on its wheels; the window has an OBSERVATION sign over
-it and Dr. Moss's badge on her coat.
+gaming chair faces you on its wheels; the intercom has a grille, a red talk
+button and a LAB label.
 
 How it looks: glazed tiles, strip lights with soft beams and pools of light on
 the floors, shade in the corners and under the loft, and a shadow under every
@@ -119,8 +120,8 @@ What he won't do by himself:
 
 Furniture is a drop target. Let go of him over it (or throw him onto it) and
 he uses it: the bed and the chair lift his mood a little every few seconds,
-up to a point, and the PC does too and earns a coin every 30 seconds from his
-stream. He gets up after a while, or when food lands near him.
+up to a point, and the PC does too and earns 3 coins every 10 seconds from
+his stream. He gets up after a while, or when food lands near him.
 
 ## Gross by nature
 
@@ -134,12 +135,13 @@ Hammy is gross even when he's clean, and the unit knows it:
 - Everything avoids him. The robot vacuums beep and back away when they get
   close, and won't go near his poop either. The plant on the loft leans away
   when he stands next to it.
-- **Dr. Moss**, the scientist behind the observation window, watches him all
-  day. Her eyes follow him, she takes notes on her clipboard, and when he
-  comes up to her glass she leans back, holds her nose and tells him to back
-  up. She introduces herself the first time you play, and tapping her window
-  gets a word from her. She puts on a gas mask below 45% fresh and evacuates
-  below 18%.
+- **Dr. Moss**, the scientist, watches him all day on the security camera
+  and talks over the intercom: its light blinks and sound comes out when she
+  does. When he comes up to the intercom she asks if he's breathing on the
+  mic. She introduces herself the first time you play, and tapping the
+  intercom gets a word from her. Below 45% fresh she puts on a gas mask and
+  says so ("This mask is not rated for him."); below 18% she announces she's
+  evacuating and the light goes off.
 - The room shows it: a grease stain where he sits in the armchair, drool on
   his pillow, crumbs in the bed, and whatever trash he left lying around.
 
@@ -160,9 +162,9 @@ Hammy is gross even when he's clean, and the unit knows it:
 - **Gas.** He farts every few minutes on an empty stomach and every ~12
   seconds after a burrito. Each fart costs some freshness, makes a green cloud,
   a noise (synthesized, no two the same), and pushes him across the unit.
-- **The scientist.** Watches him through the window, says things when it
-  smells, puts on a gas mask below 45 fresh and evacuates below 18 (back
-  above 33). The plant on the loft wilts as it gets worse.
+- **The scientist.** Watches him on the camera, says things over the
+  intercom when it smells, puts on a gas mask below 45 fresh and evacuates
+  below 18 (back above 33). The plant on the loft wilts as it gets worse.
 
 ## Stuff for the unit
 
@@ -236,10 +238,11 @@ when he dies.
 ## Hammy coins and fits
 
 Coins come from flushing, binning trash, texting, calls, toys, his stream,
-and 12 an hour while he's in a good mood (he won't say how). They buy fits: Road trip (40), Gamer (90),
+and 12 an hour while he's in a good mood (he won't say how), plus 30 an hour
+from his stream while you're away once he has a gaming PC. They buy fits: Road trip (40), Gamer (90),
 Cowboy (150), Shroom hat (220), Hot dog (320), Astronaut (480, the stink
 fogs up the helmet), Wizard (650) and Golden Hammy (1000). Fits are kept
-when he dies; coins start over at 50.
+when he dies; coins start over at 150, which is also what you start with.
 
 ## Weird physics
 

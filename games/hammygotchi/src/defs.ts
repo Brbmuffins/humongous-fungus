@@ -8,7 +8,8 @@ export type Cause = Need | 'sushi';
 // ---------------------------------------------------------------------------
 // Needs, per hour of real time (also while the game is closed)
 
-export const START_COINS = 50;
+/** Enough for the first bit of furniture, or most of the way to a PC. */
+export const START_COINS = 150;
 /** Needs, 0..100, where full is good. */
 export const BELLY_PER_HOUR = 7;
 export const FRESH_PER_HOUR = 2;
@@ -27,6 +28,8 @@ export const NEED_OK = 25;
 /** He earns pocket change (somehow) while he's in a good mood. */
 export const COINS_PER_HOUR = 12;
 export const COIN_MOOD = 50;
+/** With a gaming PC he streams while you're away too (he never sleeps), on top of that. */
+export const STREAM_PER_HOUR = 30;
 
 /** Gaps at least this long get the welcome-back screen. */
 export const WELCOME_SECONDS = 60;
@@ -214,7 +217,7 @@ export const FURNITURE: readonly FurnitureDef[] = [
   { id: 'bed', name: 'Bed', blurb: 'On the loft. He naps, he drools, he cheers up.', price: 80, icon: '🛏️' },
   { id: 'fridge', name: 'Fridge', blurb: 'Raw steak, 5 coins each. When he’s hungry he raids it himself and eats it raw.', price: 90, icon: '🧊' },
   { id: 'oven', name: 'Oven', blurb: 'Drag a raw steak onto it and it cooks. Leave it too long and it burns.', price: 120, icon: '🍳' },
-  { id: 'pc', name: 'Gaming PC', blurb: 'He streams: a coin every 30 seconds while he plays. Leaves cans everywhere.', price: 250, icon: '🖥️' },
+  { id: 'pc', name: 'Gaming PC', blurb: 'He streams: 3 coins every 10 seconds while he plays, and 30 an hour while you’re away. Leaves cans everywhere.', price: 250, icon: '🖥️' },
 ];
 
 export const FURNITURE_BY_ID = Object.fromEntries(FURNITURE.map((f) => [f.id, f])) as Record<FurnitureId, FurnitureDef>;
@@ -232,7 +235,7 @@ export interface RestDef {
 export const REST: Partial<Record<SpotId, RestDef>> = {
   bed: { mood: 2, cap: 60, every: 6 },
   chair: { mood: 1, cap: 55, every: 4 },
-  pc: { mood: 1, cap: 70, every: 6, coins: 1, coinEvery: 30 },
+  pc: { mood: 1, cap: 70, every: 6, coins: 3, coinEvery: 10 },
 };
 
 // ---------------------------------------------------------------------------
@@ -509,26 +512,32 @@ export const SAYS = {
 } as const;
 
 /**
- * Dr. Moss, the scientist who studies Hammy through the observation window.
- * She takes notes, wears a gas mask when he gets bad and leaves when it's
- * worse. She does not want him near the glass.
+ * Dr. Moss, the scientist who studies Hammy. She watches him on the camera
+ * and talks over the intercom: she takes notes, puts on a gas mask when he
+ * gets bad and evacuates when it's worse. She does not want him near the
+ * intercom.
  */
 export const SCIENTIST_NAME = 'Dr. Moss';
-export const SCIENTIST_INTRO = 'I’m Dr. Moss. I study him. Keep him clean or I’m leaving.';
-/** When you tap her window. */
+export const SCIENTIST_INTRO = 'Dr. Moss, on the intercom. I study him. Keep him clean or I’m leaving.';
+/** When you tap her intercom. */
 export const SCIENTIST_TAP: readonly string[] = [
-  'Dr. Moss, containment. Please don’t tap the glass.',
+  'Dr. Moss, containment. Don’t press that.',
   'I take notes. He gives me a lot to write.',
   'Keep him clean and I stay. That’s the deal.',
-  'Yes, the glass is airtight. Mostly.',
+  'Yes, I can hear him. All of him.',
+  'The camera sees everything. Unfortunately.',
 ];
-/** When he comes up to her window. */
-export const SCIENTIST_NEAR: readonly string[] = ['Not near the glass!', 'Back. Up.', 'I can smell him from here.', 'Please step away from the window.'];
+/** When he comes up to her intercom. */
+export const SCIENTIST_NEAR: readonly string[] = ['Is he breathing on the mic?', 'Back away from the speaker.', 'I can smell him through the intercom.', 'Stop licking the speaker.'];
+/** With her gas mask on. */
+export const SCIENTIST_MASK: readonly string[] = ['*wheeze* Mask is on.', 'Even through the mask.', 'This mask is not rated for him.', '*muffled gagging*', 'My eyes are watering. Through the camera.'];
+/** Evacuating. */
+export const SCIENTIST_LEAVES: readonly string[] = ['That’s it. I’m evacuating.', 'I’m out. Good luck in there.', 'Lab is closed. Call me when he’s clean.'];
 export const SCIENTIST_LINES: readonly string[] = [
   'Subject is… ripe.',
   'Writing that down.',
   'Day 40. He did it again.',
-  'I can taste it through the glass.',
+  'I can taste it through the vents.',
   'Who approved this?',
   'Do not open the hatch.',
   'I need a raise.',
@@ -546,7 +555,7 @@ export const LEAVE_BELOW = 18;
 /** Things he texts you, by what's going on. */
 export const HAMMY_TEXTS = {
   hungry: ['im starving', 'can u doordosh me something', 'theres steak in the fridge. cook it for me', 'how much is a burrito. asking for me', 'FOOD'],
-  stinky: ["it smells weird in here. not me tho", 'the scientist put on a gas mask. rude', 'can u open a window', 'the plant is dying and i think its my fault'],
+  stinky: ["it smells weird in here. not me tho", 'the scientist said shes putting on a gas mask. rude', 'can u open a window. theres no window', 'the plant is dying and i think its my fault'],
   sad: ['nobody ever calls me', 'u forgot about me didnt u', 'im just gonna lay here', 'hello??', 'u up'],
   poopy: ["there's a situation on the floor", 'dont come in here for a bit', 'the floor is a minefield lol'],
   urge: ['i gotta go. carry me to the toilet', 'BATHROOM. NOW.', 'its coming. help'],
@@ -556,7 +565,7 @@ export const HAMMY_TEXTS = {
   any: [
     'u up',
     'what r u doing',
-    'the scientist keeps writing stuff down',
+    'the scientist keeps talking to me on the intercom',
     'they slid a pamphlet under the door. it says hygiene',
     'are we there yet',
     'come cook for me',
@@ -600,7 +609,7 @@ export const CHILL_REPLIES = ['bro chill 💀', 'ur blowing up my phone', 'ok ok
 export const CALL_LINES: readonly string[] = [
   'Yo! What’s up!',
   'So anyway.',
-  'Wait, hold on, the scientist is staring at me.',
+  'Wait, hold on, the scientist is on the intercom again.',
   'Can you hear me? I’m going through a tunnel.',
   '*crunching sounds*',
   'Sorry, I’m eating.',

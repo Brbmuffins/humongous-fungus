@@ -24,7 +24,9 @@ import {
   ROT_SECONDS,
   SAYS,
   SCIENTIST_INTRO,
+  SCIENTIST_LEAVES,
   SCIENTIST_LINES,
+  SCIENTIST_MASK,
   SCIENTIST_NEAR,
   SCIENTIST_TAP,
   SELF_TOILET_CHANCE,
@@ -49,7 +51,7 @@ import {
   drawOven,
   drawPan,
   drawPlant,
-  drawScientist,
+  drawIntercom,
   drawSteak,
   drawTrash,
   drawVacuum,
@@ -296,7 +298,7 @@ export class TankScene {
   private nextGlitchAt = 0;
   private habit: { kind: Habit; start: number; until: number } | null = null;
   private nextHabitAt = 0;
-  /** How close he is to Dr. Moss's glass (eased), and when she last told him off. */
+  /** How close he is to Dr. Moss's intercom (eased), and when she last told him off. */
   private sciNear = 0;
   private nextNearLine = 0;
   private metMoss = false;
@@ -579,9 +581,11 @@ export class TankScene {
     this.say(pick(SAYS[kind]), ms, kind.toLowerCase());
   }
 
+  /** Dr. Moss on the intercom. Through a gas mask, when it's that bad. */
   private scientistSays(): void {
     if (this.scientistGone || this.scientistBubble) return;
-    this.scientistBubble = { text: pick(SCIENTIST_LINES), born: this.t, ms: 2600 };
+    const masked = (this.view?.fresh ?? 100) < PINCH_BELOW && Math.random() < 0.5;
+    this.scientistBubble = { text: pick(masked ? SCIENTIST_MASK : SCIENTIST_LINES), born: this.t, ms: 2600 };
   }
 
   // -------------------------------------------------------------------------
@@ -989,7 +993,7 @@ export class TankScene {
         this.openFridge();
         return;
       }
-      if (this.inBox(this.room.window, p.x, p.y, 6)) {
+      if (this.inBox(this.room.intercom, p.x, p.y, 8)) {
         if (this.scientistGone) this.say(pick(['She left. Can’t imagine why.', 'Dr. Moss went home.', 'More room for me.']), 1800);
         else this.scientistBubble = { text: pick(SCIENTIST_TAP), born: this.t, ms: 2800 };
         return;
@@ -1404,9 +1408,11 @@ export class TankScene {
       }
     }
 
-    // The scientist evacuates when it gets bad enough, and comes back when it doesn't.
-    if (dead || v.fresh < LEAVE_BELOW) this.scientistGone = true;
-    else if (v.fresh > LEAVE_BELOW + 15) this.scientistGone = false;
+    // The scientist evacuates when it gets bad enough (and says so), and comes back when it doesn't.
+    if (dead || v.fresh < LEAVE_BELOW) {
+      if (!this.scientistGone && !dead) this.scientistBubble = { text: pick(SCIENTIST_LEAVES), born: now, ms: 3000 };
+      this.scientistGone = true;
+    } else if (v.fresh > LEAVE_BELOW + 15) this.scientistGone = false;
     if (this.scientistBubble && now - this.scientistBubble.born > this.scientistBubble.ms) this.scientistBubble = null;
     if (!dead && v.fresh < 60 && now > this.nextComplainAt) {
       this.nextComplainAt = now + 18_000 + Math.random() * 22_000;
@@ -1485,12 +1491,12 @@ export class TankScene {
     }
   }
 
-  /** Dr. Moss: says hello once, and wants him away from her glass. */
+  /** Dr. Moss: says hello once, and wants him away from her intercom. */
   private updateMoss(now: number, dt: number, dead: boolean): void {
-    const w = this.room.window;
-    const ww = w.x1 - w.x0;
+    const w = this.room.intercom;
     const dist = Math.abs(this.x - (w.x0 + w.x1) / 2);
-    const near = !dead && !this.up ? Math.max(0, Math.min(1, 1 - (dist - ww * 0.3) / (ww * 1.4))) : 0;
+    const reach = this.r * 2.2;
+    const near = !dead && !this.up ? Math.max(0, Math.min(1, 1 - (dist - reach * 0.4) / reach)) : 0;
     this.sciNear += (near - this.sciNear) * Math.min(1, dt * 4);
     if (this.scientistGone || this.scientistBubble) return;
     if (!this.metMoss && now > 5000) {
@@ -2459,7 +2465,7 @@ export class TankScene {
 
     // The furniture that changes.
     drawWallLife(c, m, t, new Date(), this.calm);
-    const sci = drawScientist(c, m.window, v.fresh < PINCH_BELOW, this.scientistGone, t, { x: this.x, near: this.sciNear });
+    const sci = drawIntercom(c, m.intercom, !!this.scientistBubble, this.scientistGone, t);
     if (this.has('plant')) {
       // The plant leans away when he's next to it.
       const pcx = (m.plant.x0 + m.plant.x1) / 2;

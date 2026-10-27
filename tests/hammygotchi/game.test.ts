@@ -593,14 +593,28 @@ describe('furniture', () => {
     expect(rest(s, 'bed', T0 + sec(REST.bed!.every))?.mood).toBe(0);
     expect(s.mood).toBe(REST.bed!.cap);
   });
-  it('at the PC his stream pays a coin now and then', () => {
+  it('at the PC his stream pays every few seconds', () => {
     const s = newGame(T0);
     s.furniture = ['pc'];
     s.mood = 40;
     const coins = s.coins;
-    expect(rest(s, 'pc', T0)?.coins).toBe(1);
+    const pay = REST.pc!.coins!;
+    expect(rest(s, 'pc', T0)?.coins).toBe(pay);
     expect(rest(s, 'pc', T0 + sec(REST.pc!.every))?.coins).toBe(0);
-    expect(s.coins).toBe(coins + 1);
+    expect(rest(s, 'pc', T0 + sec(Math.max(REST.pc!.coinEvery!, REST.pc!.every * 2)))?.coins).toBe(pay);
+    expect(s.coins).toBe(coins + pay * 2);
+  });
+  it('with a PC he keeps streaming while you are away, if he is in a good mood', () => {
+    const plain = newGame(T0);
+    const streamer = newGame(T0);
+    streamer.furniture = ['pc'];
+    for (const s of [plain, streamer]) {
+      s.mood = 100;
+      s.belly = 100;
+    }
+    step(plain, T0 + hours(3), half);
+    step(streamer, T0 + hours(3), half);
+    expect(streamer.coins - plain.coins).toBeGreaterThan(60);
   });
 });
 

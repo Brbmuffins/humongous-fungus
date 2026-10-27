@@ -7,7 +7,8 @@
 import '@fontsource/bagel-fat-one/latin-400.css';
 import '@fontsource/rubik/latin-600.css';
 import { EXTENTS, defaultLook, drawHammy } from '../src/hammy';
-import { drawFridge, drawGlass, drawMonitor, drawOven, drawPan, drawPlant, drawScientist, drawSteak, drawWallLife, layoutRoom, paintRoom } from '../src/room';
+import { BOWL_MAX } from '../src/defs';
+import { drawBowl, drawFridge, drawGlass, drawIntercom, drawMonitor, drawOven, drawPan, drawPlant, drawSteak, drawTrash, drawWallLife, layoutRoom, paintRoom } from '../src/room';
 
 const kind = new URLSearchParams(location.search).get('kind') ?? 'icon';
 const BG = '#1a1026';
@@ -94,7 +95,13 @@ function unit(w: number, h: number): HTMLCanvasElement {
   paintRoom(c, m);
   // The clock at ten past ten, like every clock in an advert.
   drawWallLife(c, m, 0, new Date(2026, 0, 1, 10, 10, 30), true);
-  drawScientist(c, m.window, true, false, 0);
+  drawIntercom(c, m.intercom, false, false, 0);
+  // He didn't flush, and he left some stuff around.
+  drawBowl(c, m.toilet, 2, BOWL_MAX, 0);
+  const ts = m.r * 0.55;
+  drawTrash(c, 'pizza', m.chair.x1 + ts * 0.6, m.ground - 1, ts, 0.05);
+  drawTrash(c, 'can', m.ladder.x0 - ts * 0.9, m.ground - 1, ts, -0.1);
+  drawTrash(c, 'sock', m.bed.x1 - ts * 1.5, m.loft - 1, ts);
   drawPlant(c, m.plant, 0.6, 0);
   drawMonitor(c, m.pc, 900, true);
   drawFridge(c, m.fridge, 0);
@@ -144,8 +151,8 @@ async function main(): Promise<void> {
     c.font = '600 24px Rubik';
     c.textAlign = 'center';
     c.fillText('A virtual pet who is a lot.', 236, 240);
-    c.fillText('Keep him fed, showered and', 236, 300);
-    c.fillText('off the floor. Good luck.', 236, 332);
+    c.fillText('He never flushes. He leaves', 236, 300);
+    c.fillText('trash everywhere. Good luck.', 236, 332);
     drawHammy(c, 120, 420, 34, { ...defaultLook('classic', 'sub'), face: 'happy' }, 0);
     drawHammy(c, 236, 425, 30, { ...defaultLook('classic', 'hamster'), face: 'joy' }, 0);
     drawHammy(c, 352, 418, 32, { ...defaultLook('cowboy', 'train'), face: 'smug', roll: 0.6 }, 0);

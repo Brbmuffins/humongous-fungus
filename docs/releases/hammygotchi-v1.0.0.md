@@ -8,8 +8,9 @@ never flushes and leaves his trash everywhere.
 
 - The containment unit: it comes with a toilet and a shower, and you furnish
   the rest from the Shop: an armchair, a fridge and an oven downstairs, a
-  bed, a plant and a gaming PC on the loft. A scientist behind the window
-  puts on a gas mask and, if it gets bad enough, evacuates.
+  bed, a plant and a gaming PC on the loft. A scientist watches him on the
+  camera, talks over the intercom, puts on a gas mask and, if it gets bad
+  enough, evacuates.
 - He lives like a Sim, badly: he naps, games and raids the fridge on his own,
   walks to the toilet himself and never flushes, and leaves his trash
   (wrappers, pizza boxes, cans, socks, tissues) wherever he's done with it,
@@ -25,15 +26,16 @@ never flushes and leaves his trash everywhere.
   throw him around the unit.
 - His phone: he texts you, calls you and orders food for himself with your
   coins.
-- Coins from his stream, furniture for the unit, fits to dress him in,
+- Coins from his stream (it keeps paying while you're away), furniture for
+  the unit, fits to dress him in,
   robot vacuums (they pick up his trash, never his poop) and soap.
 - A new look in this release: lit rooms with lamps, shadows and reflections,
   a lab that dims in the evening by your own clock, a wall clock on real time,
   and a lot more detail in every piece of furniture.
 - He's gross even when he's clean: burps, nose-picking, armpit sniffs, a fly
   that never leaves, and a room full of crumbs and stains. The robot vacuums
-  back away from him, the plant leans away, and Dr. Moss, the scientist at
-  the observation window, holds her nose when he comes up to her glass.
+  back away from him, the plant leans away, and Dr. Moss, the scientist on
+  the intercom, wants him to stop breathing on the mic.
 - If he isn't looked after, he dies, and you lose.
 
 ## Play it

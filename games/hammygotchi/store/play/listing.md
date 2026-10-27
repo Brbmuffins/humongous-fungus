@@ -29,12 +29,12 @@ Keep Hammy alive. He farts, he never flushes, and he leaves trash everywhere.
 ```
 Meet Hammy. He's a cube. He lives in a containment unit now. He's a lot.
 
-The unit came with a toilet and a shower, and that's it. The bed, the armchair, the fridge, the oven and the gaming PC are on you. He only eats delivery, mostly Dorkitos. He farts, a lot, and every fart sends him flying. The scientist watching him through the window puts on a gas mask, and eventually evacuates.
+The unit came with a toilet and a shower, and that's it. The bed, the armchair, the fridge, the oven and the gaming PC are on you. He only eats delivery, mostly Dorkitos. He farts, a lot, and every fart sends him flying. The scientist watching him on the camera puts on a gas mask, and eventually evacuates.
 
 You have to keep him alive.
 
 HE LIVES LIKE A SIM. BADLY.
-He does his own thing: naps in his bed, sits in his armchair, games at his PC (his stream earns a few coins), raids the fridge and eats the steak raw. He walks to the toilet himself, usually, and never flushes. He leaves his trash wherever he's done with it: Dorkitos bags, pizza boxes, cans, socks, tissues. Go to sleep and wake up to a mess. He won't shower, so carry him in when he stinks.
+He does his own thing: naps in his bed, sits in his armchair, games at his PC (his stream pays, even while you're away), raids the fridge and eats the steak raw. He walks to the toilet himself, usually, and never flushes. He leaves his trash wherever he's done with it: Dorkitos bags, pizza boxes, cans, socks, tissues. Go to sleep and wake up to a mess. He won't shower, so carry him in when he stinks.
 
 FEED HIM
 Order DoorDosh and it drops through the hatch. Or cook: tap the fridge for a raw steak and drag it onto the oven. Leave it too long and it's charcoal, and the smoke alarm goes off. He'll eat it raw if you let him. Let him get hungry and he orders for himself, on your coins, and tips the driver.
@@ -46,7 +46,7 @@ FURNISH THE UNIT
 Spend Hammy coins on the furniture: an armchair, a bed, a plant, a fridge, an oven and a gaming PC. It all stays, even when he doesn't.
 
 TEXT HIM. CALL HIM.
-Hammy has a phone, and he uses it. He texts you all day about whatever is going on ("the scientist put on a gas mask. rude"). Text him back, call him, and pick up when he calls you, or he gets sad. Spam him and he tells you to chill.
+Hammy has a phone, and he uses it. He texts you all day about whatever is going on ("the scientist said shes putting on a gas mask. rude"). Text him back, call him, and pick up when he calls you, or he gets sad. Spam him and he tells you to chill.
 
 THROW HIM AROUND
 Grab him and throw him. He bounces off the glass, squishes on landing and climbs the ladder when he feels like it, and every few minutes gravity just stops working. Open the toy box: a feather to tickle him, bouncy balls he kicks back, a boxing glove on a spring, water balloons, cream pies, a whoopee cushion, a magnet and firecrackers. Nice toys make him happy. Mean toys pay more coins.

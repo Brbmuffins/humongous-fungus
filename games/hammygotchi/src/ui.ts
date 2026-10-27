@@ -904,7 +904,7 @@ export class GameUI {
         pic,
         h('p', { class: 'eyebrow' }, 'Subject: Hammy'),
         h('h2', { id: 'modal-title' }, 'This is Hammy. He’s a lot.'),
-        h('p', null, 'He lives in a containment unit now. It came with a toilet and a shower, and that’s it: the bed, the chair, the fridge and the gaming PC are on you, from the Shop. He eats DoorDosh, he farts, and the scientist watching him needs a gas mask.'),
+        h('p', null, 'He lives in a containment unit now. It came with a toilet and a shower, and that’s it: the bed, the chair, the fridge and the gaming PC are on you, from the Shop. He eats DoorDosh, he farts, and the scientist watching him on the camera needs a gas mask.'),
         h(
           'p',
           null,

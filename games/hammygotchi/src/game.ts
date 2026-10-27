@@ -82,6 +82,7 @@ import {
   SOAP_FRESH,
   SOAP_MOOD,
   START_COINS,
+  STREAM_PER_HOUR,
   TEXT_COINS,
   TEXT_GAP_MIN,
   TEXT_GAP_RANGE,
@@ -359,7 +360,7 @@ function tick(s: HammyState, from: number, to: number, live: boolean, roll: Roll
   const farts = live ? (roll() < rate * dt ? 1 : 0) : Math.floor(rate * dt + roll());
   for (let i = 0; i < farts; i++) events.push({ type: 'fart', size: fart(s) });
 
-  if (s.mood >= COIN_MOOD) s.coins += COINS_PER_HOUR * h;
+  if (s.mood >= COIN_MOOD) s.coins += (COINS_PER_HOUR + (!live && hasFurniture(s, 'pc') ? STREAM_PER_HOUR : 0)) * h;
   s.textBudget = Math.min(MAX_TEXTS, s.textBudget + dt / TEXT_REFILL_SECONDS);
 
   // The phone.
@@ -659,11 +660,11 @@ function replyTo(id: string, s: HammyState, roll: Roll): string {
     case 'there':
       return by(['recalculating…', '5 more minutes', 'we been there', 'r u driving??']);
     case 'tank':
-      return s.fresh < PINCH_BELOW ? by(['the scientist is wearing a gas mask lol', 'kinda foggy in here', 'the plant died']) : by(['its chill', 'the scientist waved at me', 'cozy. 10/10']);
+      return s.fresh < PINCH_BELOW ? by(['the scientist sounds like shes in a gas mask lol', 'kinda foggy in here', 'the plant died']) : by(['its chill', 'the scientist said hi on the intercom', 'cozy. 10/10']);
     case 'lol':
       return by(['lmao', 'lol', '😂', 'what r we laughing at']);
     case 'pic':
-      return by(['📸 [blurry photo of a dorkito]', '📸 [selfie, mostly nostril]', '📸 [the scientist, unaware]', 'no ur gonna post it']);
+      return by(['📸 [blurry photo of a dorkito]', '📸 [selfie, mostly nostril]', '📸 [the toilet. unflushed]', 'no ur gonna post it']);
     case 'proud':
       return by(['aw 🥹', 'of what lol', 'thanks i pooped earlier', 'finally someone notices']);
     case 'clean':
