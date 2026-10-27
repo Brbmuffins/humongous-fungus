@@ -26,6 +26,7 @@ import {
 } from './defs';
 import { EXTENTS, HEADS, drawHammy, drawSkeleton, defaultLook, type Face, type Look } from './hammy';
 import {
+  DUVET,
   LOFT_SLAB,
   drawFridge,
   drawGlass,
@@ -36,7 +37,9 @@ import {
   drawScientist,
   drawSteak,
   drawVacuum,
+  drawWallLife,
   layoutRoom,
+  nightLevel,
   paintRoom,
   panSpot,
   type Box,
@@ -178,6 +181,9 @@ export class TankScene {
   private dpr = 1;
   private t = 0;
   private last = 0;
+  /** How dark it is in the lab (0 day, 1 night), stepped so the room repaints rarely. */
+  private night = 0;
+  private lightsAt = 0;
   private readonly calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   private view: SceneView | null = null;
   private room: Room = layoutRoom(400, 400);
@@ -313,7 +319,7 @@ export class TankScene {
   private paintBase(): void {
     const c = this.base.getContext('2d')!;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    paintRoom(c, this.room);
+    paintRoom(c, this.room, this.night);
   }
 
   get r(): number {
@@ -1960,6 +1966,14 @@ export class TankScene {
     const m = this.room;
     const { W, H, r } = this;
     const { L, R, T, B } = m;
+    if (t >= this.lightsAt) {
+      this.lightsAt = t + 30_000;
+      const night = Math.round(nightLevel(new Date()) * 8) / 8;
+      if (night !== this.night) {
+        this.night = night;
+        this.paintBase();
+      }
+    }
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     c.drawImage(this.base, 0, 0, W, H);
     if (!v) return;
@@ -1972,6 +1986,7 @@ export class TankScene {
     c.clip();
 
     // The furniture that changes.
+    drawWallLife(c, m, t, new Date(), this.calm);
     const sci = drawScientist(c, m.window, v.fresh < PINCH_BELOW, this.scientistGone, t);
     drawPlant(c, m.plant, dead ? 1 : Math.min(1, Math.max(0, (65 - v.fresh) / 55)), t);
     drawMonitor(c, m.pc, t, this.at?.id === 'pc');
@@ -2036,12 +2051,32 @@ export class TankScene {
       this.stinkLines(c, this.x, floor - r * 1.2, r * 1.6, 4, 0.7 * fade);
       for (let i = 0; i < 4; i++) this.fly(c, this.x, floor - r * 1.1, i, r * 1.1);
     } else {
+      if (!this.at) {
+        // His shadow on the floor below, smaller the higher he is.
+        const { hw, hh } = this.size();
+        const bottom = this.y + hh;
+        const floor = this.surface(this.x, bottom - 1).y;
+        const k = Math.max(0.25, 1 - Math.max(0, floor - bottom) / (r * 8));
+        c.save();
+        c.translate(this.x, floor);
+        c.scale(1, 0.14);
+        const g = c.createRadialGradient(0, 0, 0, 0, 0, hw * 1.1 * k);
+        g.addColorStop(0, `rgba(22,28,44,${0.38 * k})`);
+        g.addColorStop(1, 'rgba(22,28,44,0)');
+        c.fillStyle = g;
+        c.fillRect(-hw * 1.2, -hw * 1.2, hw * 2.4, hw * 2.4);
+        c.restore();
+      }
       drawHammy(c, this.x, this.y, r, look, t);
       this.drawAfterEffects(c, t);
       if (this.at?.id === 'bed') {
         // Tucked in.
         const b = m.bed;
-        c.fillStyle = '#5a7bd6';
+        const top = this.y + this.size().hh * 0.1;
+        const g = c.createLinearGradient(0, top, 0, b.y1);
+        g.addColorStop(0, DUVET[0]);
+        g.addColorStop(1, DUVET[1]);
+        c.fillStyle = g;
         c.strokeStyle = '#1f1a24';
         c.lineWidth = 1.5;
         c.beginPath();
@@ -2100,6 +2135,10 @@ export class TankScene {
       c.fillStyle = `rgba(150,200,60,${haze})`;
       c.fillRect(L, T, R - L, B - T);
     }
+    if (this.night > 0) {
+      c.fillStyle = `rgba(16,20,48,${0.12 * this.night})`;
+      c.fillRect(L, T, R - L, B - T);
+    }
     const flash = 1 - (t - this.flash) / 250;
     if (flash > 0) {
       c.fillStyle = `rgba(255,240,200,${flash * 0.6})`;
@@ -2109,8 +2148,15 @@ export class TankScene {
 
     // The glass and frame, then the hatch and what's coming through it.
     drawGlass(c, m);
+    // The hatch: a slot in the ceiling with a red flap.
+    c.fillStyle = '#15191f';
+    c.beginPath();
+    c.roundRect(m.hatchX - 17, T - 7, 34, 7, [3, 3, 0, 0]);
+    c.fill();
     c.fillStyle = '#ff3d2e';
     c.fillRect(m.hatchX - 14, T - 5, 28, 5);
+    c.fillStyle = 'rgba(255,255,255,0.35)';
+    c.fillRect(m.hatchX - 14, T - 5, 28, 1);
     const next = [...v.orders].sort((a, b) => a.arriveAt - b.arriveAt)[0];
     if (next && !dead) {
       const secs = Math.max(0, Math.ceil((next.arriveAt - v.now) / 1000));

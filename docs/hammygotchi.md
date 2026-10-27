@@ -35,6 +35,18 @@ The scientist's window is in the back wall downstairs, and DoorDosh comes
 through a hatch in the ceiling. Everything is drawn in `src/room.ts`;
 `src/scene.ts` runs it.
 
+How it looks: glazed tiles, strip lights with soft beams and pools of light on
+the floors, shade in the corners and under the loft, and a shadow under every
+piece of furniture and under Hammy (smaller the higher he's thrown). The walls
+have a HANG IN THERE poster, a NO FARTING sign nobody reads, a spice shelf,
+pizza boxes on the fridge, a security camera with its recording light, and a
+clock that tells your real time. The lab follows your clock too: from 6pm the
+unit dims and the lamps take over, back to daylight by 8am. The PC plays a
+little platformer with RGB on everything, the fridge lights up inside, and the
+oven glows when something's cooking. All of that is painted once into a
+cached layer (repainted only when the light level steps), so the frame cost is
+just the moving parts.
+
 Hammy walks around on whichever floor he's on, sits in his chair, goes to bed
 and games at his PC on his own, and now and then climbs the ladder or walks
 off the edge of the loft. What he won't do by himself:

@@ -7,7 +7,7 @@
 import '@fontsource/bagel-fat-one/latin-400.css';
 import '@fontsource/rubik/latin-600.css';
 import { EXTENTS, defaultLook, drawHammy } from '../src/hammy';
-import { drawFridge, drawGlass, drawMonitor, drawOven, drawPan, drawPlant, drawScientist, drawSteak, layoutRoom, paintRoom } from '../src/room';
+import { drawFridge, drawGlass, drawMonitor, drawOven, drawPan, drawPlant, drawScientist, drawSteak, drawWallLife, layoutRoom, paintRoom } from '../src/room';
 
 const kind = new URLSearchParams(location.search).get('kind') ?? 'icon';
 const BG = '#1a1026';
@@ -92,6 +92,8 @@ function unit(w: number, h: number): HTMLCanvasElement {
   const c = canvas.getContext('2d')!;
   const m = layoutRoom(w, h);
   paintRoom(c, m);
+  // The clock at ten past ten, like every clock in an advert.
+  drawWallLife(c, m, 0, new Date(2026, 0, 1, 10, 10, 30), true);
   drawScientist(c, m.window, true, false, 0);
   drawPlant(c, m.plant, 0.6, 0);
   drawMonitor(c, m.pc, 900, true);

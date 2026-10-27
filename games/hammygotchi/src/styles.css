@@ -47,7 +47,10 @@ body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: var(--room);
+  /* A soft glow from the unit's lights behind the app. */
+  background:
+    radial-gradient(120% 60% at 50% 45%, #2a1a3e 0%, rgba(26, 16, 38, 0) 70%),
+    var(--room);
   color: var(--text);
   font: 400 15px/1.45 var(--font-ui);
   -webkit-font-smoothing: antialiased;
@@ -224,7 +227,8 @@ button {
   bottom: 3px;
   padding: 1px 8px;
   border-radius: 6px;
-  background: #3a2716;
+  background: linear-gradient(180deg, #4a321c, #2e1e10);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   color: #f2d9b0;
   font-size: 11px;
   font-weight: 600;
@@ -255,13 +259,22 @@ button {
   padding: 0;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: var(--panel);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 0 rgba(0, 0, 0, 0.35);
   cursor: pointer;
+  transition: transform 0.08s ease-out;
+}
+.toy-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.96);
 }
 .toy-btn[aria-pressed='true'] {
   border-color: var(--cheese);
-  background: var(--panel-2);
-  box-shadow: 0 0 0 1px var(--cheese) inset;
+  background: linear-gradient(180deg, #4a3260, var(--panel-2));
+  box-shadow:
+    0 0 0 1px var(--cheese) inset,
+    0 0 14px -2px rgba(255, 154, 46, 0.55);
 }
 .toy-btn:disabled {
   opacity: 0.5;
@@ -342,19 +355,26 @@ button {
   }
 }
 .meter .bar {
-  height: 6px;
+  height: 7px;
 }
 [data-need='belly'] .bar-fill {
-  background: var(--cheese);
+  --glow: var(--cheese);
+  background-color: var(--cheese);
 }
 [data-need='fresh'] .bar-fill {
-  background: var(--stink);
+  --glow: var(--stink);
+  background-color: var(--stink);
 }
 [data-need='mood'] .bar-fill {
-  background: var(--love);
+  --glow: var(--love);
+  background-color: var(--love);
 }
 [data-need='health'] .bar-fill {
-  background: var(--mint);
+  --glow: var(--mint);
+  background-color: var(--mint);
+}
+.meter .bar-fill {
+  box-shadow: 0 0 8px -1px var(--glow);
 }
 .meter.low .meter-word {
   color: var(--danger);
@@ -996,14 +1016,16 @@ button {
   height: 6px;
   border-radius: 999px;
   background: var(--panel-2);
-  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 .bar-fill {
   display: block;
   height: 100%;
   width: 0;
   border-radius: inherit;
-  background: var(--mint);
+  background-color: var(--mint);
+  /* A glassy shine along the top. */
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.15));
   transition: width 0.3s linear;
 }
 
@@ -1154,7 +1176,7 @@ button {
   width: 100%;
 }
 .call-card .bar-fill {
-  background: var(--love);
+  background-color: var(--love);
 }
 .call-row {
   display: flex;
