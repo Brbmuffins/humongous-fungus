@@ -6,7 +6,7 @@ Three mobile games that share one codebase.
 |---|---|---|
 | **Humongous Fungus** | Idle game: you are a mycelium network growing a terrarium in real time, even while the game is closed | `games/fungus` |
 | **Sporemonger** | Trading game: buy and sell goods on a live market in a mushroom town, before they rot | `games/sporemonger` |
-| **Ticker Rush** | Real-time day trading in a make-believe market of food companies: a whole session in three minutes on a live tick chart, with breaking news, halts, squeezes and a risk desk watching your losses | `games/tickerrush` |
+| **Ticker Rush** | Real-time day trading in a make-believe market of food companies: a whole session in four minutes on a live tick chart, with breaking news, halts, squeezes and a risk desk watching your losses | `games/tickerrush` |
 
 ## Branches
 

@@ -5,7 +5,7 @@
 // All of them show yesterday's close, your position and its brackets, your
 // fills and the news. Canvas 2D, redrawn every frame; the price range eases
 // so it doesn't jitter, but always widens at once to fit a new high or low.
-import { CANDLE, STEP } from './defs';
+import { CANDLE, DAY_MINUTES, STEP } from './defs';
 import type { Position } from './desk';
 import type { Candle, News, Ticker } from './market';
 
@@ -81,6 +81,19 @@ export function candlesFromTicks(tk: Ticker, count: number, minutes: number, slo
   return { candles: out, first };
 }
 
+/** A line through the points, rounded at each one (through the midpoints between them). */
+function smoothPath(c: CanvasRenderingContext2D, pts: readonly (readonly [number, number])[], continuing = false): void {
+  if (!pts.length) return;
+  if (!continuing) c.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [x, y] = pts[i];
+    const [nx, ny] = pts[i + 1];
+    c.quadraticCurveTo(x, y, (x + nx) / 2, (y + ny) / 2);
+  }
+  const last = pts[pts.length - 1];
+  c.lineTo(last[0], last[1]);
+}
+
 interface Frame {
   plotW: number;
   plotH: number;
@@ -136,7 +149,7 @@ export class CandleChart {
   private live(d: ChartData, f: Frame, now: number): void {
     const { c } = this;
     const tk = d.tk;
-    const win = this.w < 600 ? 20 : 30;
+    const win = this.w < 600 ? 30 : 45;
     const head = d.count - 1;
     // The head glides from the previous tick to the latest one, so the line
     // is drawn one tick behind the sim (about 1/20 s) and never jumps.
@@ -159,7 +172,10 @@ export class CandleChart {
       if (vw > 0 && vw < lo) lo = vw;
       if (vw > hi) hi = vw;
     }
-    const { yAt } = this.range(d, f, lo, hi, 0.005, `live:${tk.def.id}`);
+    // Never zoom in past the stock's usual swing over the window, so a quiet
+    // spell looks quiet instead of filling the chart with wiggles.
+    const usual = 1.5 * tk.def.vol * Math.sqrt(win / DAY_MINUTES);
+    const { yAt } = this.range(d, f, lo, hi, Math.max(0.006, usual), `live:${tk.def.id}`);
     this.grid(f, yAt);
 
     // Time: every 5 minutes.
@@ -231,7 +247,8 @@ export class CandleChart {
     c.fillStyle = area;
     c.beginPath();
     c.moveTo(pts[0][0], f.priceH);
-    for (const [x, y] of pts) c.lineTo(x, y);
+    c.lineTo(pts[0][0], pts[0][1]);
+    smoothPath(c, pts, true);
     c.lineTo(hx, f.priceH);
     c.closePath();
     c.fill();
@@ -239,7 +256,7 @@ export class CandleChart {
     c.lineWidth = 2;
     c.lineJoin = 'round';
     c.beginPath();
-    pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+    smoothPath(c, pts);
     c.stroke();
     c.restore();
     if (pts.length > 2) {
@@ -405,8 +422,8 @@ export class CandleChart {
       this.hi = hi;
       this.lastPrice = d.tk.price;
     } else {
-      this.lo = Math.min(lo, this.lo + (lo - this.lo) * 0.1);
-      this.hi = Math.max(hi, this.hi + (hi - this.hi) * 0.1);
+      this.lo = Math.min(lo, this.lo + (lo - this.lo) * 0.04);
+      this.hi = Math.max(hi, this.hi + (hi - this.hi) * 0.04);
     }
     const a = this.lo;
     const b = this.hi;

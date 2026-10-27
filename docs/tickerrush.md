@@ -1,7 +1,7 @@
 # Ticker Rush — design notes
 
 Day trading as an arcade game. A whole session, 9:30 to 4:00, runs in about
-three minutes of real time on a make-believe market where every company is
+four minutes of real time on a make-believe market where every company is
 food. You watch five tickers,
 read the news as it hits, and go long or short with a couple of taps. At the
 bell everything closes and the day is booked. Fake companies, fake money: it's
@@ -17,8 +17,8 @@ all about the next ten seconds.
   with at least one wild one and one calm one. A gapper or two opens far from
   yesterday's close on overnight news. Your goal (+3%) and risk limit (−10%)
   for the day are shown.
-- **The session.** 390 market minutes in 3 real minutes (Normal), 2 (Blitz) or
-  5 (Chill). Prices update about twenty times a second, in 5-minute candles.
+- **The session.** 390 market minutes in 4 real minutes (Normal), 2½ (Blitz)
+  or 6 (Chill). Prices update about sixteen times a second.
   The session bar and the goal meter under your P&L show where the day is and
   where you stand.
 - **The bell.** Every position closes at market. The summary grades the day
@@ -55,20 +55,23 @@ The analysts are Goldman Snacks, Merrill Lunch, Bank of Americano and friends.
 A seeded sim, stepped 0.1 market minutes at a time, so the same career and
 day always plays the same session until your own orders push the price.
 
+- **Smooth moves.** Each tick's random nudge carries over 92% of the last
+  one's (scaled so the swing over minutes and hours is the same as a plain
+  random walk), so prices roll and drift instead of jittering tick to tick.
 - **Regimes.** Each stock chops around VWAP (with a pull back to it), then
-  trends up or down for 20-odd minutes. Trends drift at 0.32 sigma a minute:
+  trends up or down for 20-odd minutes. Trends drift at 0.29 sigma a minute:
   enough to ride, not enough to be free. The next regime is picked when the
   current one starts, which is what lets whales tip it off.
 - **The clock.** Busy at the open, quiet at lunch, busy again for power hour
   (from 3:00). Volume follows.
 - **News.** 7–11 headlines a day on today's stocks, plus a macro headline or
   two that moves the whole index (and every stock by its beta). A headline
-  hits the wire, then the price reacts 0.4–1.6 minutes later: half the move
-  at once (the algos), the rest over a few minutes with an overshoot, then
+  hits the wire, then the price reacts 0.4–1.6 minutes later: most of the
+  move in the first minute (the algos), the rest over a few minutes with an overshoot, then
   half of the overshoot back. Some news fizzles (it was priced in); rumors are
   denied 40% of the time; one in four earnings beats gets sold on the call.
   The follow-up headline always explains the reversal.
-- **Halts.** A move past a stock's band (4–8%) inside 5 minutes halts it for
+- **Halts.** A move past a stock's band (3.5–7%) inside 5 minutes halts it for
   10 market minutes. Whatever news hadn't finished moving it lands in the
   reopening gap, plus a jump that keeps going 60% of the time.
 - **Squeezes.** On about a third of days with a meme stock on the list, it
@@ -122,16 +125,17 @@ $10,000 at 2× margin, five random tickers a day:
 
 | Bot | Avg/day | Green days | Notes |
 |---|---|---|---|
-| Random | −2.4% | 37% | Spread and fees eat it |
-| Late trend (3 candles in a row) | −6.7% | 11% | Chasing what already happened |
-| Momentum (one big candle on the right side of VWAP) | +1.7% | 63% | Reading the chart pays a little |
-| Reader, 1 s to react | +4.7% | 81% | The headline-trader, quick |
-| Reader, 2 s to react | −1.2% | 39% | Too slow: you buy the overshoot |
-| Reader + News squawk | +9.9% | 96% | What the $6,000 buys |
-| Whale follower (Level 2) | +4.6% | 76% | Trades the tape on every stock at once |
-| Instant reader (0 s) | +13.4% | 100% | Not a human |
+| Random | −1.9% | 41% | Spread and fees eat it |
+| Late trend (3 candles in a row) | −6.3% | 9% | Chasing what already happened |
+| Momentum (one big candle on the right side of VWAP) | +3.0% | 73% | Reading the chart pays a little (it watches every stock at once) |
+| Reader, 1 s to react | +5.0% | 88% | The headline-trader, quick |
+| Reader, 2 s to react | +0.4% | 53% | Too slow: you buy the overshoot |
+| Reader + News squawk | +9.9% | 100% | What the $6,000 buys |
+| Whale follower (Level 2) | +3.3% | 68% | Trades the tape on every stock at once |
+| Instant reader (0 s) | +10.7% | 99% | Not a human |
 
-About 1.3 halts a day across the watchlist. Speed decides the news edge, which
+The readers' reaction times are on a Normal (4-minute) day. About 0.8 halts a
+day across the watchlist. Speed decides the news edge, which
 is the point: Chill gives you more real time per market minute, Blitz less.
 
 ## Screens and feel
@@ -141,8 +145,9 @@ is the point: Chill gives you more real time per market minute, Blitz less.
   On wide screens the wire and ticket move to a right-hand column.
 - The chart has three modes (tap LIVE, 1M or 5M, or press C):
   - **LIVE** (the default) is every tick as a line that scrolls with the
-    clock: the last 20 market minutes (30 on wide screens), gliding between
-    ticks so it never jumps, with a glowing head that pulses while it trades,
+    clock: the last 30 market minutes (45 on wide screens), drawn as a smooth
+    curve and gliding between ticks so it never jumps. It never zooms in past
+    a stock's usual swing, so a quiet spell looks quiet, with a glowing head that pulses while it trades,
     green or red on the day, and a volume bar per minute. The market keeps
     every tick of the day (`ticks`, `vols` and `vws` on each ticker).
   - **1M** and **5M** are candles built from the same ticks.

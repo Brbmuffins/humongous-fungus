@@ -330,7 +330,7 @@ export class Hud {
       const px = priceText(tk.price);
       if (px !== chip.shown) {
         // A quick flash on each tick, at most a few times a second per chip.
-        if (chip.shown && performance.now() - chip.flashAt > 350) {
+        if (chip.shown && performance.now() - chip.flashAt > 700) {
           chip.flashAt = performance.now();
           chip.px.dataset.tick = tk.price > Number(chip.shown) ? 'up' : 'down';
           chip.px.classList.remove('tick');

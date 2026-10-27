@@ -1,7 +1,7 @@
 # Ticker Rush 1.0.0
 
 The first release. Day trading as an arcade game: a whole session, 9:30 to
-4:00, in about three minutes, on a make-believe market. Read the news, go
+4:00, in about four minutes, on a make-believe market. Read the news, go
 long or short in a tap, and be flat by the bell. Every company is made up,
 and so is the money.
 
@@ -23,7 +23,8 @@ and so is the money.
 - Tools bought with your account cash: bracket orders, a Level 2 tape that
   shows whales before a trend, a news squawk, a scanner, cheaper fees and
   more margin.
-- Session length: Blitz (2 minutes), Normal (3) or Chill (5).
+- Session length: Blitz (2½ minutes), Normal (4) or Chill (6).
+- Prices move smoothly: they roll and trend instead of jittering tick to tick.
 
 ## Play it
 

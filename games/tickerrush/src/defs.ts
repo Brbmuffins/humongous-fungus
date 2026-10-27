@@ -29,18 +29,18 @@ export interface StockDef {
 }
 
 export const STOCKS: readonly StockDef[] = [
-  { id: 'MUFN', name: 'Muffin Top Holdings', sector: 'meme', vol: 0.14, beta: 1.6, price: [18, 40], spreadBps: 10, liquidity: 6e6, band: 0.08, meme: true, newsy: 1.6, blurb: "The internet's favorite bakery stock. Mostly owned by people who post rocket emojis." },
-  { id: 'SPUD', name: 'Spudnik Chips', sector: 'tech', vol: 0.06, beta: 1.4, price: [80, 160], spreadBps: 3, liquidity: 4e7, band: 0.06, meme: false, newsy: 1, blurb: 'Computer chips. They started out making the potato kind. Moves with the whole market, only more.' },
-  { id: 'SYRP', name: 'Maple Syrup Power & Light', sector: 'utility', vol: 0.02, beta: 0.4, price: [40, 70], spreadBps: 2, liquidity: 5e7, band: 0.04, meme: false, newsy: 0.6, blurb: 'Pipes syrup to every home in town. Dividends. Nothing ever happens here. Usually.' },
-  { id: 'PIKL', name: 'Big Dill Pharma', sector: 'bio', vol: 0.09, beta: 0.6, price: [4, 14], spreadBps: 16, liquidity: 3e6, band: 0.08, meme: false, newsy: 1.3, blurb: 'One pickle-based drug in trials. The FDA decides everything.' },
-  { id: 'DOUGH', name: 'Dough Coin Trust', sector: 'crypto', vol: 0.12, beta: 1.2, price: [1.5, 6], spreadBps: 24, liquidity: 2.5e6, band: 0.08, meme: true, newsy: 1.4, blurb: 'A trust holding a coin backed by cookie dough. Do not ask what it does.' },
-  { id: 'BRGR', name: 'Burger Barn', sector: 'consumer', vol: 0.03, beta: 0.8, price: [25, 55], spreadBps: 4, liquidity: 2e7, band: 0.05, meme: false, newsy: 0.9, blurb: 'Burgers. Same-store sales and the price of beef.' },
-  { id: 'FRYR', name: 'Deep Fryer Oil Co', sector: 'energy', vol: 0.04, beta: 0.9, price: [60, 95], spreadBps: 3, liquidity: 3e7, band: 0.05, meme: false, newsy: 1, blurb: 'Fryer oil for the whole planet. Lives and dies by the Fryer Oil Cartel.' },
-  { id: 'OVEN', name: 'Smart Oven Labs', sector: 'tech', vol: 0.07, beta: 1.3, price: [120, 260], spreadBps: 3, liquidity: 3e7, band: 0.06, meme: false, newsy: 1, blurb: 'Wi-Fi ovens that text you when the toast is done. Earnings days are a coin flip.' },
-  { id: 'SNAK', name: 'Snack Attack Games', sector: 'tech', vol: 0.08, beta: 1.2, price: [20, 45], spreadBps: 7, liquidity: 1e7, band: 0.07, meme: false, newsy: 1.1, blurb: 'Video games about snacks. A delay is a disaster; a trailer is a party.' },
-  { id: 'OINK', name: 'Piggy Bank Corp', sector: 'finance', vol: 0.03, beta: 1, price: [35, 60], spreadBps: 2, liquidity: 4e7, band: 0.05, meme: false, newsy: 0.8, blurb: "A bank. It's shaped like a pig. Watch the Fed." },
-  { id: 'CHEF', name: 'Robo Chef', sector: 'meme', vol: 0.11, beta: 1.5, price: [8, 22], spreadBps: 12, liquidity: 5e6, band: 0.08, meme: true, newsy: 1.4, blurb: 'Says "AI" forty times per earnings call. The robot flips one pancake.' },
-  { id: 'FZZY', name: 'Fizzy Pop Co', sector: 'consumer', vol: 0.025, beta: 0.6, price: [50, 80], spreadBps: 3, liquidity: 3e7, band: 0.05, meme: false, newsy: 0.7, blurb: 'Soda. Steady, sweet, a little flat.' },
+  { id: 'MUFN', name: 'Muffin Top Holdings', sector: 'meme', vol: 0.14, beta: 1.6, price: [18, 40], spreadBps: 10, liquidity: 6e6, band: 0.07, meme: true, newsy: 1.6, blurb: "The internet's favorite bakery stock. Mostly owned by people who post rocket emojis." },
+  { id: 'SPUD', name: 'Spudnik Chips', sector: 'tech', vol: 0.06, beta: 1.4, price: [80, 160], spreadBps: 3, liquidity: 4e7, band: 0.055, meme: false, newsy: 1, blurb: 'Computer chips. They started out making the potato kind. Moves with the whole market, only more.' },
+  { id: 'SYRP', name: 'Maple Syrup Power & Light', sector: 'utility', vol: 0.02, beta: 0.4, price: [40, 70], spreadBps: 2, liquidity: 5e7, band: 0.035, meme: false, newsy: 0.6, blurb: 'Pipes syrup to every home in town. Dividends. Nothing ever happens here. Usually.' },
+  { id: 'PIKL', name: 'Big Dill Pharma', sector: 'bio', vol: 0.09, beta: 0.6, price: [4, 14], spreadBps: 16, liquidity: 3e6, band: 0.07, meme: false, newsy: 1.3, blurb: 'One pickle-based drug in trials. The FDA decides everything.' },
+  { id: 'DOUGH', name: 'Dough Coin Trust', sector: 'crypto', vol: 0.12, beta: 1.2, price: [1.5, 6], spreadBps: 24, liquidity: 2.5e6, band: 0.07, meme: true, newsy: 1.4, blurb: 'A trust holding a coin backed by cookie dough. Do not ask what it does.' },
+  { id: 'BRGR', name: 'Burger Barn', sector: 'consumer', vol: 0.03, beta: 0.8, price: [25, 55], spreadBps: 4, liquidity: 2e7, band: 0.045, meme: false, newsy: 0.9, blurb: 'Burgers. Same-store sales and the price of beef.' },
+  { id: 'FRYR', name: 'Deep Fryer Oil Co', sector: 'energy', vol: 0.04, beta: 0.9, price: [60, 95], spreadBps: 3, liquidity: 3e7, band: 0.045, meme: false, newsy: 1, blurb: 'Fryer oil for the whole planet. Lives and dies by the Fryer Oil Cartel.' },
+  { id: 'OVEN', name: 'Smart Oven Labs', sector: 'tech', vol: 0.07, beta: 1.3, price: [120, 260], spreadBps: 3, liquidity: 3e7, band: 0.055, meme: false, newsy: 1, blurb: 'Wi-Fi ovens that text you when the toast is done. Earnings days are a coin flip.' },
+  { id: 'SNAK', name: 'Snack Attack Games', sector: 'tech', vol: 0.08, beta: 1.2, price: [20, 45], spreadBps: 7, liquidity: 1e7, band: 0.06, meme: false, newsy: 1.1, blurb: 'Video games about snacks. A delay is a disaster; a trailer is a party.' },
+  { id: 'OINK', name: 'Piggy Bank Corp', sector: 'finance', vol: 0.03, beta: 1, price: [35, 60], spreadBps: 2, liquidity: 4e7, band: 0.045, meme: false, newsy: 0.8, blurb: "A bank. It's shaped like a pig. Watch the Fed." },
+  { id: 'CHEF', name: 'Robo Chef', sector: 'meme', vol: 0.11, beta: 1.5, price: [8, 22], spreadBps: 12, liquidity: 5e6, band: 0.07, meme: true, newsy: 1.4, blurb: 'Says "AI" forty times per earnings call. The robot flips one pancake.' },
+  { id: 'FZZY', name: 'Fizzy Pop Co', sector: 'consumer', vol: 0.025, beta: 0.6, price: [50, 80], spreadBps: 3, liquidity: 3e7, band: 0.045, meme: false, newsy: 0.7, blurb: 'Soda. Steady, sweet, a little flat.' },
 ];
 
 export const STOCK: Record<StockId, StockDef> = Object.fromEntries(STOCKS.map((s) => [s.id, s])) as Record<StockId, StockDef>;
@@ -64,9 +64,9 @@ export const INDEX_VOL = 0.012;
 export type DayLength = 'blitz' | 'normal' | 'chill';
 /** Real seconds for a whole session. */
 export const DAY_LENGTHS: Record<DayLength, { name: string; seconds: number }> = {
-  blitz: { name: 'Blitz · 2 min', seconds: 120 },
-  normal: { name: 'Normal · 3 min', seconds: 180 },
-  chill: { name: 'Chill · 5 min', seconds: 300 },
+  blitz: { name: 'Blitz · 2½ min', seconds: 150 },
+  normal: { name: 'Normal · 4 min', seconds: 240 },
+  chill: { name: 'Chill · 6 min', seconds: 360 },
 };
 
 // ---------------------------------------------------------------------------
@@ -167,7 +167,7 @@ export interface NewsTemplate {
 }
 
 /** The size of a move, as a share of the stock's daily vol. */
-export const NEWS_MOVE: Record<NewsSize, number> = { small: 0.18, medium: 0.35, big: 0.65 };
+export const NEWS_MOVE: Record<NewsSize, number> = { small: 0.15, medium: 0.29, big: 0.54 };
 /** Chance a rumor gets denied, and an earnings beat gets sold anyway. */
 export const DENY_CHANCE = 0.4;
 export const SELL_THE_NEWS = 0.25;

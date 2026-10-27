@@ -78,8 +78,8 @@ export type Regime = 'chop' | 'up' | 'down' | 'squeeze' | 'fade';
 /** Drift (in sigmas per minute), vol multiplier and typical length in minutes. */
 export const REGIMES: Record<Regime, { drift: number; vol: number; mean: number }> = {
   chop: { drift: 0, vol: 0.8, mean: 30 },
-  up: { drift: 0.32, vol: 1, mean: 24 },
-  down: { drift: -0.32, vol: 1, mean: 24 },
+  up: { drift: 0.29, vol: 1, mean: 24 },
+  down: { drift: -0.29, vol: 1, mean: 24 },
   squeeze: { drift: 1, vol: 1.7, mean: 16 },
   fade: { drift: -0.6, vol: 1.4, mean: 20 },
 };
@@ -97,9 +97,19 @@ const MIN_PRICE = 0.1;
 /** Chance per step of a whale print in the 4 minutes before a trend, and of a decoy any time. */
 const WHALE_TELL = 0.03;
 const WHALE_DECOY = 0.003;
-/** Share of a news move the algos price in the moment it hits, and how often news fizzles. */
-const INSTANT = 0.5;
+/** Share of a news move the algos price in first (over INSTANT_MINUTES), and how often news fizzles. */
+const INSTANT = 0.58;
+const INSTANT_MINUTES = 0.8;
 const FIZZLE = 0.3;
+/**
+ * Prices wander smoothly: each tick's noise carries over this much of the
+ * last one, so the line rolls instead of zig-zagging. NOISE_SCALE keeps the
+ * long-run swing the same as a plain random walk's, so minutes and hours
+ * move just as much as before; only the jitter between ticks is gone.
+ */
+const NOISE_CARRY = 0.92;
+const NOISE_SCALE = Math.sqrt((1 - NOISE_CARRY) / (1 + NOISE_CARRY));
+const NOISE_FRESH = Math.sqrt(1 - NOISE_CARRY * NOISE_CARRY);
 
 interface Pulse {
   start: number;
@@ -137,6 +147,8 @@ export interface Ticker {
   gap: number;
   /** Log vol per square-root minute. */
   sigma: number;
+  /** The smooth noise, carried from tick to tick (unit variance). */
+  wiggle: number;
   /** Every tick of the day: the price, shares traded and VWAP after each step (index 0 is the open). */
   ticks: Float32Array;
   vols: Float32Array;
@@ -195,6 +207,7 @@ export class Market {
   private spare: number | null = null;
   private plans: Plan[] = [];
   private indexPulses: Pulse[] = [];
+  private indexWiggle = 0;
   private byId = new Map<StockId, Ticker>();
   private powerSaid = false;
   private closed = false;
@@ -230,6 +243,7 @@ export class Market {
         ring: [],
         gap: 0,
         sigma: def.vol / Math.sqrt(DAY_MINUTES),
+        wiggle: 0,
         ticks: new Float32Array(STEPS_PER_DAY + 1),
         vols: new Float32Array(STEPS_PER_DAY + 1),
         vws: new Float32Array(STEPS_PER_DAY + 1),
@@ -305,7 +319,8 @@ export class Market {
 
     // The index: a gentle walk plus macro news.
     const busy = busyness(t1);
-    const dIdx = INDEX_VOL / Math.sqrt(DAY_MINUTES) * Math.sqrt(STEP) * busy * this.gauss() + pulseStep(this.indexPulses, t0, t1);
+    this.indexWiggle = NOISE_CARRY * this.indexWiggle + NOISE_FRESH * this.gauss();
+    const dIdx = (INDEX_VOL / Math.sqrt(DAY_MINUTES)) * Math.sqrt(STEP) * busy * NOISE_SCALE * this.indexWiggle + pulseStep(this.indexPulses, t0, t1);
     this.index.level *= Math.exp(dIdx);
 
     const candleStart = this.n % STEPS_PER_CANDLE === 0 && this.n < STEPS_PER_DAY;
@@ -347,15 +362,15 @@ export class Market {
     }
     const reg = REGIMES[tk.regime];
     const sig = tk.sigma * busy * reg.vol * tk.boost;
-    const z = this.gauss();
-    let d = tk.def.beta * dIdx + reg.drift * tk.sigma * STEP + sig * Math.sqrt(STEP) * z + pulseStep(tk.pulses, t0, t1);
+    tk.wiggle = NOISE_CARRY * tk.wiggle + NOISE_FRESH * this.gauss();
+    let d = tk.def.beta * dIdx + reg.drift * tk.sigma * STEP + sig * Math.sqrt(STEP) * NOISE_SCALE * tk.wiggle + pulseStep(tk.pulses, t0, t1);
     if (tk.regime === 'chop') d += CHOP_REVERT * Math.log(this.vwap(tk) / tk.price) * STEP;
     const before = tk.price;
     tk.price = Math.max(MIN_PRICE, tk.price * Math.exp(d));
 
     // Volume and prints: busier when it moves.
     const r = this.rnd;
-    const move = Math.abs(Math.log(tk.price / before)) / Math.max(1e-9, tk.sigma * Math.sqrt(STEP));
+    const move = Math.abs(Math.log(tk.price / before)) / Math.max(1e-9, tk.sigma * Math.sqrt(STEP) * NOISE_SCALE * 2);
     const dollars = tk.def.liquidity * TURNOVER * STEP * busy * tk.boost * (0.6 + 0.8 * r()) * (1 + 0.5 * move);
     const shares = Math.max(1, Math.round(dollars / tk.price));
     tk.volume += shares;
@@ -478,9 +493,9 @@ export class Market {
     const r = this.rnd;
     const dur = 2 + r() * 5;
     // The algos jump first, then the crowd piles in and overshoots, then it settles.
-    tk.pulses.push({ start: at, dur: 0.6, move: move * INSTANT });
-    tk.pulses.push({ start: at + 0.3, dur, move: move * (1.4 - INSTANT) });
-    tk.pulses.push({ start: at + 0.3 + dur, dur: dur * 2, move: -move * 0.5 });
+    tk.pulses.push({ start: at, dur: INSTANT_MINUTES, move: move * INSTANT });
+    tk.pulses.push({ start: at + 0.5, dur, move: move * (1.4 - INSTANT) });
+    tk.pulses.push({ start: at + 0.5 + dur, dur: dur * 2, move: -move * 0.5 });
     tk.boost = Math.max(tk.boost, 1.6 + Math.abs(move) / tk.def.vol);
     if (follow && r() < 0.45) this.setRegime(tk, move > 0 ? 'up' : 'down', 10 + r() * 15);
   }

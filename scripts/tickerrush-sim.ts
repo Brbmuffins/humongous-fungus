@@ -3,7 +3,7 @@
 // lose (spread and fees), riding trends and news should win, and the paid
 // tools should each be worth something.
 //   npx tsx scripts/tickerrush-sim.ts [days]
-import { STEP, STOCKS, type StockId } from '../games/tickerrush/src/defs';
+import { DAY_LENGTHS, DAY_MINUTES, STEP, STOCKS, type StockId } from '../games/tickerrush/src/defs';
 import { Desk } from '../games/tickerrush/src/desk';
 import { Market, type DayEvent } from '../games/tickerrush/src/market';
 import { mulberry32 } from '../shared/rng';
@@ -88,9 +88,11 @@ const reader = (lag: number, hold: number): Bot => {
     for (const [id, at] of ctx.exitAt) if (m.t >= at && d.positions.has(id)) d.close(m, id, 'manual');
   };
 };
-bots['reader 1s'] = { bot: reader(2.2, 10) };
-bots['reader 2s'] = { bot: reader(4.3, 10) };
-bots['reader+squawk'] = { bot: reader(2.2, 11), lead: 1 };
+/** Market minutes in a real second, on a Normal day. */
+const perSecond = DAY_MINUTES / DAY_LENGTHS.normal.seconds;
+bots['reader 1s'] = { bot: reader(perSecond, 10) };
+bots['reader 2s'] = { bot: reader(perSecond * 2, 10) };
+bots['reader+squawk'] = { bot: reader(perSecond, 11), lead: 1 };
 bots.momentum = {
   bot: (m, d, ev, ctx) => {
     if (!ev.some((e) => e.kind === 'candle')) return;
