@@ -1,11 +1,12 @@
 # Fungus games
 
-Two mobile games that share one codebase.
+Three mobile games that share one codebase.
 
 | Game | What it is | Folder |
 |---|---|---|
 | **Humongous Fungus** | Idle game: you are a mycelium network growing a terrarium in real time, even while the game is closed | `games/fungus` |
 | **Sporemonger** | Trading game: buy and sell goods on a live market in a mushroom town, before they rot | `games/sporemonger` |
+| **Hammygotchi** | Virtual pet: keep Hammy fed, clean and called in his tank, or he rots into mushrooms | `games/hammygotchi` |
 
 ## Run it
 
@@ -13,7 +14,8 @@ Two mobile games that share one codebase.
 npm install
 npm run dev              # Humongous Fungus on a local server; open the URL on your phone (same Wi-Fi)
 npm run dev:sporemonger  # Sporemonger
-npm test                 # unit tests for both games and the shared code
+npm run dev:hammygotchi  # Hammygotchi
+npm test                 # unit tests for every game and the shared code
 npm run build            # type-check, then build each game into one self-contained dist/<game>/index.html
 npm run build:artifact   # also writes dist/<game>/artifact.html for sharing as claude.ai pages
 npm run sim              # Humongous Fungus pacing simulator: npm run sim -- [taps/s] [hours] [gap min] [session min]
@@ -21,13 +23,15 @@ npm run sim              # Humongous Fungus pacing simulator: npm run sim -- [ta
 
 ## Phone apps
 
-Both games are packaged for iOS and Android with [Capacitor](https://capacitorjs.com):
+Humongous Fungus and Sporemonger are packaged for iOS and Android with [Capacitor](https://capacitorjs.com):
 each game folder has its native projects in `ios/` and `android/`, and its
 `src/native.ts` adds the phone-only features (durable saves, reminder
 notifications, haptics). Builds run on GitHub Actions: iPhone builds upload to
 TestFlight (`ios-humongous-fungus.yml`, `ios-sporemonger.yml`), and Android
 builds produce a signed bundle for Google Play (`android-humongous-fungus.yml`,
 `android-sporemonger.yml`).
+Hammygotchi has its Capacitor config and `src/native.ts`, but its native
+projects aren't generated yet (see [docs/hammygotchi.md](docs/hammygotchi.md#on-phones)).
 
 - **Getting them on the App Store and Google Play:** [docs/app-store-checklist.md](docs/app-store-checklist.md)
 - **Store text and screenshots:** `games/<game>/store/` (Apple) and `games/<game>/store/play/` (Google)
@@ -48,6 +52,7 @@ After changing a game, copy it into its native projects with
 | `games/*/tools/` | Renders each game's app icon, launch screen and Play feature graphic |
 | `games/sporemonger/src/` | Sporemonger rules (`game.ts`), content (`defs.ts`), banner art (`scene.ts`), screens (`ui.ts`) and phone features with price-move reminders (`native.ts`) |
 | `games/sporemonger/ios`, `android` | Native app projects (Capacitor) |
+| `games/hammygotchi/src/` | Hammygotchi rules (`game.ts`), content and every line he says (`defs.ts`), the tank and its physics (`scene.ts`), Hammy and his fits (`hammy.ts`), synthesized sounds (`sound.ts`), screens (`ui.ts`) and phone features (`native.ts`) |
 | `shared/market.ts` | Live market engine: seeded price walk, moods, trades, rot |
 | `shared/chart.ts` | Live price chart with crosshair readout |
 | `shared/storage.ts` | Local save, plus an optional per-player cloud copy when hosted as an artifact |

@@ -1,0 +1,32 @@
+{
+  "appId": "com.muffindevelopment.hammygotchi",
+  "appName": "Hammygotchi",
+  "webDir": "../../dist/hammygotchi",
+  "backgroundColor": "#1a1026",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#1a1026"
+  },
+  "android": {
+    "backgroundColor": "#1a1026"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "launchAutoHide": true,
+      "backgroundColor": "#1a1026",
+      "showSpinner": false
+    },
+    "LocalNotifications": {
+      "iconColor": "#ff9a2e"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}
