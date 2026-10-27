@@ -2,7 +2,7 @@
 // wire and the tape, and the order ticket. Lists refresh a few times a
 // second; the account bar and chart every frame.
 import { h, setDisabled, setText } from '@shared/dom';
-import { CandleChart, clockAt, priceText, type Mark } from './chart';
+import { CHART_MODES, CandleChart, clockAt, priceText, type ChartMode, type Mark } from './chart';
 import { DAY_MINUTES, GOAL, LOSS_LIMIT, SIZES, SIZE_ORDER, type SizeId, type StockId } from './defs';
 import type { Desk } from './desk';
 import type { Market, News } from './market';
@@ -16,8 +16,17 @@ export const signed = (n: number, cents = true): string => (n >= 0 ? '+' : '−'
 export const pctText = (x: number): string => `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(2)}%`;
 const tone = (x: number): string => (x > 1e-9 ? 'up' : x < -1e-9 ? 'down' : 'flat');
 
+/** Shares on the bid or ask, in lots of 100: made up, but it changes with every tick like the real thing. */
+function depth(count: number, id: StockId, side: number): number {
+  let x = (count * 2654435761 + side * 40503 + id.charCodeAt(0) * 97 + id.charCodeAt(1)) >>> 0;
+  x ^= x >>> 13;
+  x = Math.imul(x, 0x5bd1e995) >>> 0;
+  return 1 + ((x >>> 8) % 24);
+}
+
 export interface HudActions {
   select(id: StockId): void;
+  chart(mode: ChartMode): void;
   order(side: 1 | -1): void;
   size(id: SizeId): void;
   flattenAll(): void;
@@ -34,11 +43,17 @@ export interface HudState {
   fills: readonly Mark[];
   /** Market minutes per real second, for countdowns. */
   pace: number;
+  /** How far the clock is toward the next tick, 0–1. */
+  frac: number;
+  chart: ChartMode;
 }
 
 interface Chip {
   el: HTMLButtonElement;
   px: HTMLElement;
+  /** The price it last showed, and when it last flashed. */
+  shown: string;
+  flashAt: number;
   chg: HTMLElement;
   badge: HTMLElement;
   spark: SVGPolylineElement;
@@ -51,6 +66,9 @@ export class Hud {
   readonly chart: CandleChart;
   private chips = new Map<StockId, Chip>();
   private sizeBtns = new Map<SizeId, HTMLButtonElement>();
+  private modeBtns = new Map<ChartMode, HTMLButtonElement>();
+  private crawl: { id: StockId | null; px: HTMLElement[]; chg: HTMLElement[]; items: HTMLElement[] }[] = [];
+  private lastShown = '';
   private el = {
     pnl: $('pnl'),
     equity: $('equity'),
@@ -82,6 +100,8 @@ export class Hud {
     sellSub: $('sell-sub'),
     flatAll: $<HTMLButtonElement>('flat-all'),
     toast: $('toast'),
+    crawl: $('crawl'),
+    modes: $('modes'),
   };
   private listsAt = 0;
   private chipShown: StockId | null = null;
@@ -99,6 +119,11 @@ export class Hud {
       const b = h('button', { class: 'size', type: 'button', role: 'radio', 'aria-checked': 'false', onclick: () => act.size(id) }, SIZES[id].name);
       this.sizeBtns.set(id, b);
       this.el.sizes.append(b);
+    }
+    for (const mode of CHART_MODES) {
+      const b = h('button', { class: 'mode', type: 'button', role: 'radio', 'aria-checked': 'false', onclick: () => act.chart(mode) }, mode === 'live' ? 'LIVE' : mode.toUpperCase());
+      this.modeBtns.set(mode, b);
+      this.el.modes.append(b);
     }
     this.el.buy.addEventListener('click', () => act.order(1));
     this.el.sell.addEventListener('click', () => act.order(-1));
@@ -136,8 +161,24 @@ export class Hud {
       const el = h('button', { class: 'chip', type: 'button', 'data-id': id, onclick: () => this.act.select(id) }, h('span', { class: 'chip-id' }, id), badge, px, chg);
       el.append(svg);
       this.el.watch.append(el);
-      this.chips.set(id, { el, px, chg, badge, spark, candles: -1 });
+      this.chips.set(id, { el, px, chg, badge, spark, candles: -1, shown: '', flashAt: 0 });
     }
+    // The crawl: every ticker and the index, twice over so it loops without a seam.
+    this.crawl = [...m.tickers.map((tk) => tk.def.id), null].map((id) => ({ id, px: [], chg: [], items: [] }));
+    const track: HTMLElement[] = [];
+    for (let copy = 0; copy < 2; copy++) {
+      for (const c of this.crawl) {
+        const px = h('span', { class: 'cr-px' });
+        const chg = h('span', { class: 'cr-chg' });
+        const item = h('span', { class: 'cr-item' }, h('b', null, c.id ?? 'RUSH 500'), px, chg);
+        c.px.push(px);
+        c.chg.push(chg);
+        c.items.push(item);
+        track.push(item);
+      }
+    }
+    this.el.crawl.replaceChildren(...track);
+    this.el.crawl.style.animationDuration = `${this.crawl.length * 4.5}s`;
   }
 
   update(s: HudState, now: number): void {
@@ -171,7 +212,9 @@ export class Hud {
     this.chart.draw(
       {
         tk,
-        vwap: m.vwap(tk),
+        count: m.count,
+        frac: s.frac,
+        mode: s.chart,
         pos,
         pnl: desk ? desk.open(m, tk.def.id) : 0,
         fills: s.fills,
@@ -183,7 +226,21 @@ export class Hud {
     const chg = tk.price / tk.prev - 1;
     setText(this.el.sym, tk.def.id);
     setText(this.el.co, tk.def.name);
-    setText(this.el.last, priceText(tk.price));
+    const last = priceText(tk.price);
+    if (last !== this.lastShown) {
+      const up = tk.price >= Number(this.lastShown || last);
+      this.lastShown = last;
+      this.el.last.dataset.tick = up ? 'up' : 'down';
+      this.el.last.classList.remove('tick');
+      void this.el.last.offsetWidth;
+      this.el.last.classList.add('tick');
+    }
+    setText(this.el.last, last);
+    for (const [mode, b] of this.modeBtns) {
+      const on = mode === s.chart;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', String(on));
+    }
     setText(this.el.chg, `${chg >= 0 ? '▲' : '▼'} ${pctText(chg)}`);
     this.el.chg.dataset.tone = tone(chg);
     const halted = tk.haltUntil !== null;
@@ -242,7 +299,7 @@ export class Hud {
     const est = Math.floor((want * 0.995) / q.ask);
     const entry = est > 0 ? `≈${est.toLocaleString('en-US')} sh · ${money(est * q.ask, false)}` : 'No buying power';
     if (!pos) {
-      setText(this.el.pos, desk.locked ? 'The risk desk has your keys for today.' : q.halted ? `${id} is halted.` : `Flat on ${id}. Bid ${priceText(q.bid)} · Ask ${priceText(q.ask)}`);
+      setText(this.el.pos, desk.locked ? 'The risk desk has your keys for today.' : q.halted ? `${id} is halted.` : `Flat · Bid ${priceText(q.bid)} × ${depth(m.count, id, 0)} · Ask ${priceText(q.ask)} × ${depth(m.count, id, 1)}`);
       this.el.pos.dataset.tone = 'flat';
       setText(this.el.buyAct, 'BUY');
       setText(this.el.sellAct, 'SHORT');
@@ -270,7 +327,19 @@ export class Hud {
       const chip = this.chips.get(tk.def.id);
       if (!chip) continue;
       const chg = tk.price / tk.prev - 1;
-      setText(chip.px, priceText(tk.price));
+      const px = priceText(tk.price);
+      if (px !== chip.shown) {
+        // A quick flash on each tick, at most a few times a second per chip.
+        if (chip.shown && performance.now() - chip.flashAt > 350) {
+          chip.flashAt = performance.now();
+          chip.px.dataset.tick = tk.price > Number(chip.shown) ? 'up' : 'down';
+          chip.px.classList.remove('tick');
+          void chip.px.offsetWidth;
+          chip.px.classList.add('tick');
+        }
+        chip.shown = px;
+      }
+      setText(chip.px, px);
       setText(chip.chg, pctText(chg));
       chip.el.dataset.tone = tone(chg);
       chip.el.classList.toggle('on', tk.def.id === s.selected);
@@ -290,6 +359,20 @@ export class Hud {
         const span = Math.max(hi - lo, tk.price * 0.004);
         const n = Math.max(2, cs.length);
         chip.spark.setAttribute('points', cs.map((k, i) => `${((i / (n - 1)) * 60).toFixed(1)},${(18 - ((k.c - lo) / span) * 16).toFixed(1)}`).join(' '));
+      }
+    }
+
+    // The crawl.
+    for (const c of this.crawl) {
+      const price = c.id ? m.get(c.id).price : m.index.level;
+      const base = c.id ? m.get(c.id).prev : m.index.open;
+      const ch = price / base - 1;
+      const pText = c.id ? priceText(price) : price.toFixed(1);
+      const cText = `${ch >= 0 ? '▲' : '▼'}${Math.abs(ch * 100).toFixed(2)}%`;
+      for (let i = 0; i < 2; i++) {
+        setText(c.px[i], pText);
+        setText(c.chg[i], cText);
+        c.items[i].dataset.tone = tone(ch);
       }
     }
 

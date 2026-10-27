@@ -7,8 +7,11 @@ and so is the money.
 
 ## What's in it
 
-- Five tickers a day from twelve made-up companies, from a sleepy utility to
-  a meme car maker, with live 5-minute candles, VWAP and volume.
+- Five tickers a day from twelve made-up food companies, from Maple Syrup
+  Power & Light (nothing ever happens) to Muffin Top Holdings (the meme stock)
+  and Dough Coin.
+- A live chart that scrolls tick by tick, with 1- and 5-minute candles a tap
+  away, a ticker crawl across the top, and prices that flash as they tick.
 - Breaking news that moves prices a moment after it hits. Rumors get denied,
   good earnings sometimes get sold, and some news was already priced in.
 - Trends to ride, volatility halts that reopen with a jump, opening gappers,

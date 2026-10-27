@@ -1,7 +1,8 @@
 # Ticker Rush — design notes
 
 Day trading as an arcade game. A whole session, 9:30 to 4:00, runs in about
-three minutes of real time on a make-believe market. You watch five tickers,
+three minutes of real time on a make-believe market where every company is
+food. You watch five tickers,
 read the news as it hits, and go long or short with a couple of taps. At the
 bell everything closes and the day is booked. Fake companies, fake money: it's
 a game, not a simulator, and nothing in it is advice.
@@ -27,6 +28,27 @@ all about the next ten seconds.
 A day in progress is checkpointed every candle. Close the app mid-session
 and, when you come back, the desk has closed you out at the last checkpoint
 (no replaying a bad day).
+
+## The companies (`STOCKS` in `src/defs.ts`)
+
+Twelve, all made up and all food, each with its own personality:
+
+| Ticker | Company | Feels like |
+|---|---|---|
+| MUFN | Muffin Top Holdings | The meme stock: wild, squeezes |
+| CHEF | Robo Chef | Meme AI hype: wild, squeezes |
+| DOUGH | Dough Coin Trust | Crypto: wild, cheap, wide spread, squeezes |
+| PIKL | Big Dill Pharma | Biotech: lives and dies by the FDA |
+| SNAK | Snack Attack Games | Video games: launches and delays |
+| OVEN | Smart Oven Labs | Tech: big earnings days |
+| SPUD | Spudnik Chips | Chips (the computer kind): follows the market, only more |
+| FRYR | Deep Fryer Oil Co | Energy: the Fryer Oil Cartel's headlines |
+| BRGR | Burger Barn | Restaurants: steady |
+| OINK | Piggy Bank Corp | A bank: watch the Fed |
+| FZZY | Fizzy Pop Co | Soda: sweet and a little flat |
+| SYRP | Maple Syrup Power & Light | The utility: nothing ever happens. Usually |
+
+The analysts are Goldman Snacks, Merrill Lunch, Bank of Americano and friends.
 
 ## The market (`src/market.ts`)
 
@@ -114,12 +136,22 @@ is the point: Chill gives you more real time per market minute, Blitz less.
 
 ## Screens and feel
 
-- Phone first: account bar, watchlist chips (price, change, sparkline,
-  position badge), the candle chart, the wire and tape, the order ticket. On
-  wide screens the wire and ticket move to a right-hand column.
-- The chart: candles, volume, VWAP, yesterday's close, your position line with
-  live P&L, bracket lines, triangles where you filled, news dots on the
-  timeline, stripes while halted, and a price tag that flashes on each tick.
+- Phone first: the ticker crawl, account bar, watchlist chips (price, change,
+  sparkline, position badge), the chart, the wire and tape, the order ticket.
+  On wide screens the wire and ticket move to a right-hand column.
+- The chart has three modes (tap LIVE, 1M or 5M, or press C):
+  - **LIVE** (the default) is every tick as a line that scrolls with the
+    clock: the last 20 market minutes (30 on wide screens), gliding between
+    ticks so it never jumps, with a glowing head that pulses while it trades,
+    green or red on the day, and a volume bar per minute. The market keeps
+    every tick of the day (`ticks`, `vols` and `vws` on each ticker).
+  - **1M** and **5M** are candles built from the same ticks.
+  - All three show VWAP, yesterday's close, your position line with live P&L,
+    bracket lines, triangles where you filled, news dots, stripes while
+    halted, and a price tag that flashes when it ticks a cent.
+- Prices flash green or red as they tick, on the chips and the chart header.
+  The crawl across the top scrolls every ticker and the RUSH 500 index. The
+  ticket shows the bid and ask with their size, changing with every tick.
 - Breaking news slides over the chart; tap it to jump to that stock. Closed
   trades float their P&L up the chart; big wins (over 1% of the account)
   throw confetti. Banners for the opening bell, power hour, the goal, the

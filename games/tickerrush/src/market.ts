@@ -137,6 +137,10 @@ export interface Ticker {
   gap: number;
   /** Log vol per square-root minute. */
   sigma: number;
+  /** Every tick of the day: the price, shares traded and VWAP after each step (index 0 is the open). */
+  ticks: Float32Array;
+  vols: Float32Array;
+  vws: Float32Array;
 }
 
 export type DayEvent =
@@ -226,6 +230,9 @@ export class Market {
         ring: [],
         gap: 0,
         sigma: def.vol / Math.sqrt(DAY_MINUTES),
+        ticks: new Float32Array(STEPS_PER_DAY + 1),
+        vols: new Float32Array(STEPS_PER_DAY + 1),
+        vws: new Float32Array(STEPS_PER_DAY + 1),
       };
       this.setRegime(tk, this.pickNext('chop'), this.length('chop'));
       this.byId.set(id, tk);
@@ -235,6 +242,17 @@ export class Market {
     this.planNews();
     this.planSqueeze();
     this.plans.sort((a, b) => a.at - b.at);
+    for (const tk of this.tickers) this.record(tk);
+  }
+
+  /** Ticks recorded so far (the open counts as one). */
+  get count(): number {
+    return this.n + 1;
+  }
+
+  private record(tk: Ticker): void {
+    tk.ticks[this.n] = tk.price;
+    tk.vws[this.n] = this.vwap(tk);
   }
 
   get(id: StockId): Ticker {
@@ -266,6 +284,7 @@ export class Market {
     if (tk.haltUntil !== null) return;
     tk.price = Math.max(MIN_PRICE, tk.price * (1 + frac));
     this.touch(tk);
+    this.record(tk);
   }
 
   /** Advance one step. */
@@ -291,6 +310,7 @@ export class Market {
 
     const candleStart = this.n % STEPS_PER_CANDLE === 0 && this.n < STEPS_PER_DAY;
     for (const tk of this.tickers) this.stepTicker(tk, t0, t1, dIdx, busy, out);
+    for (const tk of this.tickers) this.record(tk);
     if (candleStart) {
       for (const tk of this.tickers) tk.candles.push({ t: t1, o: tk.price, h: tk.price, l: tk.price, c: tk.price, v: 0, w: this.vwap(tk) });
       out.push({ kind: 'candle' });
@@ -307,6 +327,7 @@ export class Market {
         tk.haltUntil = null;
         tk.price = Math.max(MIN_PRICE, tk.price * Math.exp(tk.haltGap));
         this.touch(tk);
+        this.record(tk);
       }
       out.push({ kind: 'close' });
     }
@@ -340,6 +361,7 @@ export class Market {
     tk.volume += shares;
     tk.pv += shares * tk.price;
     live.v += shares;
+    tk.vols[this.n] = shares;
     const dir: 1 | -1 = tk.price >= before ? 1 : -1;
     const prints = 1 + Math.floor(r() * 3);
     for (let i = 0; i < prints; i++) {

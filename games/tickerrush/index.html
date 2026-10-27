@@ -9,6 +9,7 @@
   </head>
   <body>
     <div id="app">
+      <div class="crawl" aria-hidden="true"><div class="crawl-track" id="crawl"></div></div>
       <header class="top">
         <div class="acct">
           <span class="pnl" id="pnl" aria-live="off">$0.00</span>
@@ -28,6 +29,7 @@
           <span class="co" id="co"></span>
           <span class="last" id="last"></span>
           <span class="chg" id="chg"></span>
+          <span class="modes" id="modes" role="radiogroup" aria-label="Chart"></span>
         </div>
         <canvas id="chart" role="img" aria-label="Price chart"></canvas>
         <div class="halt" id="halt" hidden><b>HALTED</b><small id="halt-sub">Volatility pause</small></div>

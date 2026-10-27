@@ -14,8 +14,8 @@ import {
   watchlist,
 } from '../../games/tickerrush/src/meta';
 
-const trade = (pnl: number): Trade => ({ id: 'CHIP', side: 'long', qty: 10, entry: 100, exit: 100 + pnl / 10, pnl, t0: 0, t1: 5, why: 'manual' });
-const day = (equity: number, trades: Trade[] = []) => ({ equity, trades, fees: 4, closes: { CHIP: 101 }, halts: 1, locked: false });
+const trade = (pnl: number): Trade => ({ id: 'SPUD', side: 'long', qty: 10, entry: 100, exit: 100 + pnl / 10, pnl, t0: 0, t1: 5, why: 'manual' });
+const day = (equity: number, trades: Trade[] = []) => ({ equity, trades, fees: 4, closes: { SPUD: 101 }, halts: 1, locked: false });
 
 describe('the career', () => {
   it('starts with $10,000 and no tools', () => {
@@ -30,7 +30,7 @@ describe('the career', () => {
     const c = newCareer(7);
     c.cash = 12_345;
     c.tools = ['level2', 'brackets'];
-    c.closes = { MOON: 31.2 };
+    c.closes = { MUFN: 31.2 };
     c.settings.length = 'blitz';
     const back = loadCareer(JSON.stringify(c));
     expect(back).toEqual(c);
@@ -40,11 +40,11 @@ describe('the career', () => {
     expect(loadCareer(null)).toBeNull();
     expect(loadCareer('nope')).toBeNull();
     expect(loadCareer(JSON.stringify({ version: 2 }))).toBeNull();
-    const c = loadCareer(JSON.stringify({ version: 1, seed: 3, cash: -50, day: 0, tools: ['level2', 'laser'], closes: { MOON: 'x', CHIP: 90, NOPE: 1 }, settings: { length: 'forever', stop: 0.5 } }))!;
+    const c = loadCareer(JSON.stringify({ version: 1, seed: 3, cash: -50, day: 0, tools: ['level2', 'laser'], closes: { MUFN: 'x', SPUD: 90, NOPE: 1 }, settings: { length: 'forever', stop: 0.5 } }))!;
     expect(c.cash).toBe(0);
     expect(c.day).toBe(1);
     expect(c.tools).toEqual(['level2']);
-    expect(c.closes).toEqual({ CHIP: 90 });
+    expect(c.closes).toEqual({ SPUD: 90 });
     expect(c.settings.length).toBe('normal');
     expect(c.settings.stop).toBe(0.02);
   });
@@ -99,7 +99,7 @@ describe('the career', () => {
     expect(c.cash).toBe(10_400);
     expect(c.day).toBe(2);
     expect(c.streak).toBe(1);
-    expect(c.closes.CHIP).toBe(101);
+    expect(c.closes.SPUD).toBe(101);
     expect(c.history).toHaveLength(1);
     expect(c.stats.green).toBe(1);
     expect(c.stats.bestTrade).toBe(300);

@@ -1,8 +1,8 @@
 // Ticker Rush: the content. Every company, headline, tool and rank lives
 // here; the market (market.ts) and your trading desk (desk.ts) read from it.
-// All companies are made up.
+// All companies are made up, and all of them are food.
 
-export type StockId = 'MOON' | 'CHIP' | 'BORE' | 'SHRM' | 'WOOF' | 'BRGR' | 'OILY' | 'CLWD' | 'PIXL' | 'VALT' | 'ROBO' | 'FIZZ';
+export type StockId = 'MUFN' | 'SPUD' | 'SYRP' | 'PIKL' | 'DOUGH' | 'BRGR' | 'FRYR' | 'OVEN' | 'SNAK' | 'OINK' | 'CHEF' | 'FZZY';
 export type Sector = 'tech' | 'meme' | 'bio' | 'crypto' | 'consumer' | 'energy' | 'finance' | 'utility';
 
 export interface StockDef {
@@ -29,18 +29,18 @@ export interface StockDef {
 }
 
 export const STOCKS: readonly StockDef[] = [
-  { id: 'MOON', name: 'Moonshot Motors', sector: 'meme', vol: 0.14, beta: 1.6, price: [18, 40], spreadBps: 10, liquidity: 6e6, band: 0.08, meme: true, newsy: 1.6, blurb: 'An electric car company that has shipped eleven cars and a lot of tweets.' },
-  { id: 'CHIP', name: 'Chiplet Semi', sector: 'tech', vol: 0.06, beta: 1.4, price: [80, 160], spreadBps: 3, liquidity: 4e7, band: 0.06, meme: false, newsy: 1, blurb: 'Makes the chips in everything. Moves with the whole market, only more.' },
-  { id: 'BORE', name: 'Boring Power & Light', sector: 'utility', vol: 0.02, beta: 0.4, price: [40, 70], spreadBps: 2, liquidity: 5e7, band: 0.04, meme: false, newsy: 0.6, blurb: 'Electricity. Dividends. Nothing ever happens here. Usually.' },
-  { id: 'SHRM', name: 'Shroom Therapeutics', sector: 'bio', vol: 0.09, beta: 0.6, price: [4, 14], spreadBps: 16, liquidity: 3e6, band: 0.08, meme: false, newsy: 1.3, blurb: 'One mushroom-based drug in trials. The FDA decides everything.' },
-  { id: 'WOOF', name: 'Woof Coin Trust', sector: 'crypto', vol: 0.12, beta: 1.2, price: [1.5, 6], spreadBps: 24, liquidity: 2.5e6, band: 0.08, meme: true, newsy: 1.4, blurb: 'A trust holding a coin with a dog on it. Do not ask what it does.' },
+  { id: 'MUFN', name: 'Muffin Top Holdings', sector: 'meme', vol: 0.14, beta: 1.6, price: [18, 40], spreadBps: 10, liquidity: 6e6, band: 0.08, meme: true, newsy: 1.6, blurb: "The internet's favorite bakery stock. Mostly owned by people who post rocket emojis." },
+  { id: 'SPUD', name: 'Spudnik Chips', sector: 'tech', vol: 0.06, beta: 1.4, price: [80, 160], spreadBps: 3, liquidity: 4e7, band: 0.06, meme: false, newsy: 1, blurb: 'Computer chips. They started out making the potato kind. Moves with the whole market, only more.' },
+  { id: 'SYRP', name: 'Maple Syrup Power & Light', sector: 'utility', vol: 0.02, beta: 0.4, price: [40, 70], spreadBps: 2, liquidity: 5e7, band: 0.04, meme: false, newsy: 0.6, blurb: 'Pipes syrup to every home in town. Dividends. Nothing ever happens here. Usually.' },
+  { id: 'PIKL', name: 'Big Dill Pharma', sector: 'bio', vol: 0.09, beta: 0.6, price: [4, 14], spreadBps: 16, liquidity: 3e6, band: 0.08, meme: false, newsy: 1.3, blurb: 'One pickle-based drug in trials. The FDA decides everything.' },
+  { id: 'DOUGH', name: 'Dough Coin Trust', sector: 'crypto', vol: 0.12, beta: 1.2, price: [1.5, 6], spreadBps: 24, liquidity: 2.5e6, band: 0.08, meme: true, newsy: 1.4, blurb: 'A trust holding a coin backed by cookie dough. Do not ask what it does.' },
   { id: 'BRGR', name: 'Burger Barn', sector: 'consumer', vol: 0.03, beta: 0.8, price: [25, 55], spreadBps: 4, liquidity: 2e7, band: 0.05, meme: false, newsy: 0.9, blurb: 'Burgers. Same-store sales and the price of beef.' },
-  { id: 'OILY', name: 'Slick Petroleum', sector: 'energy', vol: 0.04, beta: 0.9, price: [60, 95], spreadBps: 3, liquidity: 3e7, band: 0.05, meme: false, newsy: 1, blurb: 'Pumps oil. Lives and dies by OPEC headlines.' },
-  { id: 'CLWD', name: 'Cloudward', sector: 'tech', vol: 0.07, beta: 1.3, price: [120, 260], spreadBps: 3, liquidity: 3e7, band: 0.06, meme: false, newsy: 1, blurb: 'Software in the cloud. Earnings days are a coin flip with a rocket on one side.' },
-  { id: 'PIXL', name: 'Pixel Pushers', sector: 'tech', vol: 0.08, beta: 1.2, price: [20, 45], spreadBps: 7, liquidity: 1e7, band: 0.07, meme: false, newsy: 1.1, blurb: 'Video games. A delay is a disaster; a trailer is a party.' },
-  { id: 'VALT', name: 'Big Vault Bank', sector: 'finance', vol: 0.03, beta: 1, price: [35, 60], spreadBps: 2, liquidity: 4e7, band: 0.05, meme: false, newsy: 0.8, blurb: 'A bank. Watch the Fed.' },
-  { id: 'ROBO', name: 'Robo Butler', sector: 'meme', vol: 0.11, beta: 1.5, price: [8, 22], spreadBps: 12, liquidity: 5e6, band: 0.08, meme: true, newsy: 1.4, blurb: 'Says "AI" forty times per earnings call. The robot folds one shirt.' },
-  { id: 'FIZZ', name: 'Fizz Co', sector: 'consumer', vol: 0.025, beta: 0.6, price: [50, 80], spreadBps: 3, liquidity: 3e7, band: 0.05, meme: false, newsy: 0.7, blurb: 'Soda. Steady, sweet, a little flat.' },
+  { id: 'FRYR', name: 'Deep Fryer Oil Co', sector: 'energy', vol: 0.04, beta: 0.9, price: [60, 95], spreadBps: 3, liquidity: 3e7, band: 0.05, meme: false, newsy: 1, blurb: 'Fryer oil for the whole planet. Lives and dies by the Fryer Oil Cartel.' },
+  { id: 'OVEN', name: 'Smart Oven Labs', sector: 'tech', vol: 0.07, beta: 1.3, price: [120, 260], spreadBps: 3, liquidity: 3e7, band: 0.06, meme: false, newsy: 1, blurb: 'Wi-Fi ovens that text you when the toast is done. Earnings days are a coin flip.' },
+  { id: 'SNAK', name: 'Snack Attack Games', sector: 'tech', vol: 0.08, beta: 1.2, price: [20, 45], spreadBps: 7, liquidity: 1e7, band: 0.07, meme: false, newsy: 1.1, blurb: 'Video games about snacks. A delay is a disaster; a trailer is a party.' },
+  { id: 'OINK', name: 'Piggy Bank Corp', sector: 'finance', vol: 0.03, beta: 1, price: [35, 60], spreadBps: 2, liquidity: 4e7, band: 0.05, meme: false, newsy: 0.8, blurb: "A bank. It's shaped like a pig. Watch the Fed." },
+  { id: 'CHEF', name: 'Robo Chef', sector: 'meme', vol: 0.11, beta: 1.5, price: [8, 22], spreadBps: 12, liquidity: 5e6, band: 0.08, meme: true, newsy: 1.4, blurb: 'Says "AI" forty times per earnings call. The robot flips one pancake.' },
+  { id: 'FZZY', name: 'Fizzy Pop Co', sector: 'consumer', vol: 0.025, beta: 0.6, price: [50, 80], spreadBps: 3, liquidity: 3e7, band: 0.05, meme: false, newsy: 0.7, blurb: 'Soda. Steady, sweet, a little flat.' },
 ];
 
 export const STOCK: Record<StockId, StockDef> = Object.fromEntries(STOCKS.map((s) => [s.id, s])) as Record<StockId, StockDef>;
@@ -172,7 +172,7 @@ export const NEWS_MOVE: Record<NewsSize, number> = { small: 0.18, medium: 0.35, 
 export const DENY_CHANCE = 0.4;
 export const SELL_THE_NEWS = 0.25;
 
-export const BANKS = ['Goldbag Sacks', 'Morgan Stanly', 'J.P. Morkin', 'Bank of Amerigo', 'Citrus Group', 'Deutsch Bonk', 'Wells Fargone'];
+export const BANKS = ['Goldman Snacks', 'Merrill Lunch', 'Bank of Americano', 'Crumb Suisse', 'J.P. Muffin', 'Morgan Scone-ly', 'Wells Fargo-nzola'];
 
 export const NEWS: readonly NewsTemplate[] = [
   { kind: 'analyst', sign: 1, size: 'medium', text: '{bank} upgrades {id} to Buy, price target ${pt}' },
@@ -183,28 +183,32 @@ export const NEWS: readonly NewsTemplate[] = [
   { kind: 'earnings', sign: -1, size: 'big', text: '{name} misses on revenue and cuts guidance' },
   { kind: 'product', sign: 1, size: 'medium', text: '{name} lands a $2 billion government contract', sectors: ['tech', 'energy', 'meme', 'finance'] },
   { kind: 'product', sign: 1, size: 'medium', text: '{name} unveils its new flagship. Pre-orders crash the website', sectors: ['tech', 'meme', 'consumer'] },
+  { kind: 'product', sign: 1, size: 'medium', text: "{name}'s new flavor sells out in an hour", sectors: ['consumer', 'meme'] },
+  { kind: 'product', sign: -1, size: 'medium', text: "{name}'s new flavor is mayo crunch. Nobody asked", sectors: ['consumer', 'meme'] },
+  { kind: 'product', sign: -1, size: 'small', text: 'The health inspector visited {name}. It did not go well', sectors: ['consumer', 'meme'] },
   { kind: 'product', sign: -1, size: 'medium', text: '{name} recalls 40,000 units over "a smell"', sectors: ['tech', 'meme', 'consumer'] },
   { kind: 'product', sign: -1, size: 'big', text: '{name} delays its big launch to next year', sectors: ['tech', 'meme'] },
   { kind: 'ceo', sign: 1, size: 'small', text: '{name} CEO tweets a rocket emoji', sectors: ['meme', 'crypto', 'tech'] },
   { kind: 'ceo', sign: 1, size: 'medium', text: '{name} CEO buys $5 million of stock', },
   { kind: 'ceo', sign: -1, size: 'medium', text: '{name} CEO quits "to spend more time with my yacht"' },
   { kind: 'ceo', sign: -1, size: 'small', text: 'Filing: {name} CEO sold shares last week' },
-  { kind: 'fda', sign: 1, size: 'big', text: 'FDA approves {name}\'s mushroom-based drug', sectors: ['bio'] },
-  { kind: 'fda', sign: -1, size: 'big', text: 'FDA rejects {name}\'s trial data', sectors: ['bio'] },
+  { kind: 'fda', sign: 1, size: 'big', text: "FDA approves {name}'s pickle-based drug", sectors: ['bio'] },
+  { kind: 'fda', sign: -1, size: 'big', text: "FDA rejects {name}'s trial data. Too briny", sectors: ['bio'] },
   { kind: 'fda', sign: 1, size: 'medium', text: '{name} trial hits its main goal early', sectors: ['bio'] },
-  { kind: 'crypto', sign: 1, size: 'big', text: 'A big payment app now takes Woof Coin', sectors: ['crypto'] },
+  { kind: 'crypto', sign: 1, size: 'big', text: 'A big payment app now takes Dough Coin', sectors: ['crypto'] },
   { kind: 'crypto', sign: -1, size: 'big', text: 'Exchange hack spooks crypto traders', sectors: ['crypto'] },
-  { kind: 'crypto', sign: 1, size: 'medium', text: 'Woof Coin flips the cat coin in market cap', sectors: ['crypto'] },
-  { kind: 'oil', sign: 1, size: 'medium', text: 'OPEC surprises with an output cut', sectors: ['energy'] },
-  { kind: 'oil', sign: -1, size: 'medium', text: 'Oil stockpiles balloon. Crude slides', sectors: ['energy'] },
-  { kind: 'oil', sign: 1, size: 'small', text: '{name} strikes oil off the coast', sectors: ['energy'] },
+  { kind: 'crypto', sign: 1, size: 'medium', text: 'Dough Coin passes Bagel Coin in market cap', sectors: ['crypto'] },
+  { kind: 'crypto', sign: -1, size: 'medium', text: 'Someone sold 40 billion Dough Coins at once', sectors: ['crypto'] },
+  { kind: 'oil', sign: 1, size: 'medium', text: 'The Fryer Oil Cartel surprises with an output cut', sectors: ['energy'] },
+  { kind: 'oil', sign: -1, size: 'medium', text: 'Fryer oil stockpiles balloon. Prices slide', sectors: ['energy'] },
+  { kind: 'oil', sign: 1, size: 'small', text: '{name} finds a giant olive grove', sectors: ['energy'] },
   { kind: 'legal', sign: -1, size: 'medium', text: '{name} hit with an antitrust probe' },
   { kind: 'legal', sign: 1, size: 'medium', text: '{name} wins its patent case' },
   { kind: 'legal', sign: -1, size: 'small', text: 'Regulators fine {name} $40 million' },
   { kind: 'rumor', sign: 1, size: 'big', text: 'RUMOR: {name} in buyout talks', rumor: true },
   { kind: 'rumor', sign: -1, size: 'medium', text: 'RUMOR: short seller report coming on {id}', rumor: true },
   { kind: 'rumor', sign: 1, size: 'medium', text: 'RUMOR: {name} joining the big index', rumor: true },
-  { kind: 'meme', sign: 1, size: 'medium', text: '{id} is the #1 ticker on r/wallstreetbots', sectors: ['meme', 'crypto'] },
+  { kind: 'meme', sign: 1, size: 'medium', text: '{id} is the #1 ticker on r/wallstreetbakes', sectors: ['meme', 'crypto'] },
   { kind: 'meme', sign: -1, size: 'medium', text: 'Big meme account says it sold all its {id}', sectors: ['meme', 'crypto'] },
 ];
 
@@ -215,6 +219,8 @@ export const MACRO: readonly NewsTemplate[] = [
   { kind: 'macro', sign: -1, size: 'small', text: 'Bond yields jump to a 16-year high' },
   { kind: 'macro', sign: 1, size: 'small', text: 'Trade deal reached, says the White House' },
   { kind: 'macro', sign: -1, size: 'medium', text: 'Recession warning from the big banks' },
+  { kind: 'macro', sign: -1, size: 'small', text: 'Butter hits a record high. Bakers panic' },
+  { kind: 'macro', sign: 1, size: 'small', text: 'Sugar tariffs scrapped overnight' },
 ];
 
 /** A macro headline moves the index by this much (log). */

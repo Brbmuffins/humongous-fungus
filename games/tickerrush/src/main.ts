@@ -7,7 +7,7 @@ import '@fontsource/ibm-plex-mono/latin-700.css';
 import './styles.css';
 
 import { CloudSave, localSave as makeLocalSave } from '@shared/storage';
-import type { Mark } from './chart';
+import { CHART_MODES, type ChartMode, type Mark } from './chart';
 import { DAY_LENGTHS, DAY_MINUTES, GOAL, SIZES, SIZE_ORDER, STEP, STOCKS, type SizeId, type StockId, type ToolId } from './defs';
 import { Desk, type Fill, type Reject } from './desk';
 import { Hud, money, signed, type HudActions } from './hud';
@@ -113,6 +113,8 @@ class Game implements Controller, HudActions {
         level2: has(this.career, 'level2'),
         fills: this.fills.get(this.selected) ?? [],
         pace: this.pace(),
+        frac: running && !this.market.done ? this.acc : 1,
+        chart: this.career.settings.chart,
       },
       now,
     );
@@ -318,6 +320,12 @@ class Game implements Controller, HudActions {
     this.onFill(r);
   }
 
+  chart(mode: ChartMode): void {
+    this.career.settings.chart = mode;
+    sfx.click();
+    this.save();
+  }
+
   size(id: SizeId): void {
     this.career.settings.size = id;
     sfx.click();
@@ -434,6 +442,7 @@ class Game implements Controller, HudActions {
       else if (k === 's') this.order(-1);
       else if (k === 'x') this.closeSelected();
       else if (k === 'f') this.flattenAll();
+      else if (k === 'c') this.chart(CHART_MODES[(CHART_MODES.indexOf(this.career.settings.chart) + 1) % CHART_MODES.length]);
       else if (k >= '1' && k <= '4') this.size(SIZE_ORDER[Number(k) - 1]);
       else if (k === 'arrowright' || k === 'arrowdown') this.select(ids[(i + 1) % ids.length]);
       else if (k === 'arrowleft' || k === 'arrowup') this.select(ids[(i - 1 + ids.length) % ids.length]);

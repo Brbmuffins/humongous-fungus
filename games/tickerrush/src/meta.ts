@@ -23,6 +23,7 @@ import {
   type StockId,
   type ToolId,
 } from './defs';
+import { CHART_MODES, type ChartMode } from './chart';
 import type { DeskOptions, Trade } from './desk';
 import type { DaySetup } from './market';
 
@@ -33,6 +34,8 @@ export interface Settings {
   size: SizeId;
   stop: number;
   target: number;
+  /** LIVE tick line, or 1- or 5-minute candles. */
+  chart: ChartMode;
 }
 
 export interface DayRecord {
@@ -97,7 +100,7 @@ export function newCareer(seed: number): Career {
     cash: START_CASH,
     tools: [],
     closes: {},
-    settings: { sound: true, haptics: true, length: 'normal', size: 'quarter', stop: 0.02, target: 0.04 },
+    settings: { sound: true, haptics: true, length: 'normal', size: 'quarter', stop: 0.02, target: 0.04, chart: 'live' },
     history: [],
     streak: 0,
     stats: newStats(),
@@ -137,6 +140,7 @@ export function loadCareer(raw: string | null): Career | null {
     size: s.size && s.size in SIZES ? s.size : 'quarter',
     stop: (STOP_CHOICES as readonly number[]).includes(s.stop as number) ? (s.stop as number) : 0.02,
     target: (TARGET_CHOICES as readonly number[]).includes(s.target as number) ? (s.target as number) : 0.04,
+    chart: CHART_MODES.includes(s.chart as ChartMode) ? (s.chart as ChartMode) : 'live',
   };
   if (Array.isArray(o.history)) {
     c.history = o.history

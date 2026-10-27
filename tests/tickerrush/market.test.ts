@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CANDLE, DAY_MINUTES, HALT_MINUTES, STEP, STOCKS, type StockId } from '../../games/tickerrush/src/defs';
+import { candlesFromTicks } from '../../games/tickerrush/src/chart';
 import { Market, busyness, spreadOf, type DayEvent, type DaySetup } from '../../games/tickerrush/src/market';
 
-const IDS: StockId[] = ['MOON', 'CHIP', 'BORE', 'SHRM', 'WOOF'];
+const IDS: StockId[] = ['MUFN', 'SPUD', 'SYRP', 'PIKL', 'DOUGH'];
 const setup = (over: Partial<DaySetup> = {}): DaySetup => ({ seed: 42, day: 3, ids: IDS, closes: {}, lead: 0, ...over });
 
 function run(m: Market): DayEvent[] {
@@ -162,6 +163,43 @@ describe('a trading day', () => {
       }
     }
     expect(whales).toBeGreaterThan(10);
+  });
+
+  it('keeps every tick of the day for the live chart', () => {
+    const m = new Market(setup({ day: 5 }));
+    const tk = m.tickers[0];
+    expect(m.count).toBe(1);
+    expect(tk.ticks[0]).toBeCloseTo(tk.open, 3);
+    let steps = 0;
+    while (!m.done) {
+      m.step();
+      steps++;
+      if (steps % 97 === 0) expect(tk.ticks[m.count - 1]).toBeCloseTo(tk.price, 3);
+    }
+    expect(m.count).toBe(Math.round(DAY_MINUTES / STEP) + 1);
+    expect(tk.ticks[m.count - 1]).toBeCloseTo(tk.price, 3);
+    let shares = 0;
+    for (let i = 0; i < m.count; i++) shares += tk.vols[i];
+    expect(shares / tk.volume).toBeCloseTo(1, 4);
+    expect(tk.vws[m.count - 1]).toBeCloseTo(m.vwap(tk), 2);
+  });
+
+  it('builds the same candles from ticks as the 5-minute chart', () => {
+    const m = new Market(setup({ day: 6 }));
+    for (let i = 0; i < 1234; i++) m.step();
+    for (const tk of m.tickers) {
+      const { candles, first } = candlesFromTicks(tk, m.count, CANDLE, 1000);
+      expect(first).toBe(0);
+      expect(candles).toHaveLength(tk.candles.length);
+      candles.forEach((k, i) => {
+        const real = tk.candles[i];
+        for (const key of ['o', 'h', 'l', 'c'] as const) expect(k[key] / real[key]).toBeCloseTo(1, 4);
+      });
+      // And one-minute candles: five for every five-minute one.
+      const ones = candlesFromTicks(tk, m.count, 1, 1000).candles;
+      expect(ones.length).toBe(Math.ceil((m.count - 2) / 10));
+      expect(Math.max(...ones.slice(0, 5).map((k) => k.h)) / tk.candles[0].h).toBeCloseTo(1, 4);
+    }
   });
 
   it('is busy at the open and the close, quiet at lunch', () => {
