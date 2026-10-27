@@ -4,12 +4,11 @@
 // crossingview.ts and plinkoview.ts.
 import { h, setDisabled, setText } from '@shared/dom';
 import { fmt } from '@shared/format';
-import { ARCADE_BY_ID, MIN_BET, type ArcadeGame } from './arcade';
+import { ARCADE_BY_ID, MIN_BET, type ArcadeGame, type ArcadeSeat } from './arcade';
 import type { FormId } from './defs';
-import type { HammyState } from './state';
 
 export interface ArcadeHost {
-  readonly state: HammyState;
+  readonly state: ArcadeSeat;
   /** What he is today. */
   readonly form: FormId;
   /** Put coins on him: false if you can't. */

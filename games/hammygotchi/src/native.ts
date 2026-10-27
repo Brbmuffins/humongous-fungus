@@ -6,14 +6,13 @@
 // schedules two notifications: his next text, and the moment he starts
 // falling apart.
 import { App } from '@capacitor/app';
-import { Capacitor } from '@capacitor/core';
-import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Preferences } from '@capacitor/preferences';
+import { buzz, isNative } from './haptics';
 import { isAlive, step } from './game';
 import type { HammyState } from './state';
 
-export const isNative = Capacitor.isNativePlatform();
+export { buzz, isNative };
 
 const SAVE_KEY = 'hammygotchi.save.v1';
 
@@ -31,30 +30,6 @@ export const nativeSave = {
   },
   clear(): void {
     if (isNative) void Preferences.remove({ key: SAVE_KEY }).catch(() => {});
-  },
-};
-
-// ---------------------------------------------------------------------------
-// Haptics
-
-let lastTick = 0;
-
-export const buzz = {
-  tap(): void {
-    if (!isNative) return;
-    const now = performance.now();
-    if (now - lastTick < 50) return;
-    lastTick = now;
-    void Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-  },
-  fart(size: number): void {
-    if (isNative) void Haptics.impact({ style: size > 0.9 ? ImpactStyle.Heavy : ImpactStyle.Medium }).catch(() => {});
-  },
-  success(): void {
-    if (isNative) void Haptics.notification({ type: NotificationType.Success }).catch(() => {});
-  },
-  bad(): void {
-    if (isNative) void Haptics.notification({ type: NotificationType.Error }).catch(() => {});
   },
 };
 

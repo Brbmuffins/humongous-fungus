@@ -1,0 +1,177 @@
+/* The look Hammygotchi gives its games (the same colours, fonts, buttons and
+   cards), so the arcade's screens, which are Hammygotchi's, look the same here.
+   One deliberate look: a dark gamer bedroom with cheese-dust orange and stink
+   green, so no light theme. */
+:root {
+  color-scheme: dark;
+  --room: #1a1026;
+  --panel: #241835;
+  --panel-2: #31224a;
+  --line: #3f2f5a;
+  --text: #fbf3e6;
+  --muted: #b9a9cc;
+  --cheese: #ff9a2e;
+  --cheese-ink: #2b1400;
+  --stink: #b5e33b;
+  --stink-ink: #1d2a00;
+  --love: #ff6fa8;
+  --mint: #5ee0b0;
+  --blue: #3d8bff;
+  --danger: #ff5c5c;
+
+  --font-display: 'Bagel Fat One', 'Cooper Black', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --font-ui: 'Rubik', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --gutter: 16px;
+}
+
+html {
+  min-height: 100%;
+  box-sizing: border-box;
+  background: var(--room);
+}
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+[hidden] {
+  display: none !important;
+}
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  background:
+    radial-gradient(120% 60% at 50% 0%, #2a1a3e 0%, rgba(26, 16, 38, 0) 70%),
+    var(--room);
+  background-repeat: no-repeat;
+  color: var(--text);
+  font: 400 15px/1.45 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+body.playing {
+  overflow: hidden;
+}
+p,
+h1,
+h2,
+ol,
+ul,
+dl,
+dd {
+  margin: 0;
+}
+ol,
+ul {
+  padding: 0;
+  list-style: none;
+}
+button {
+  font: inherit;
+  color: inherit;
+}
+:focus-visible {
+  outline: 2px solid var(--cheese);
+  outline-offset: 2px;
+}
+
+.note {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 62ch;
+}
+.coin {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe28a, #f2b51f 60%, #b07a08);
+  color: #6b4500;
+  font: 400 13px/1 var(--font-display);
+  box-shadow: 0 0 0 1.5px #6b4500 inset;
+}
+.coins {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 5px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font: 700 17px/1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.btn-cheese {
+  background: var(--cheese);
+  color: var(--cheese-ink);
+}
+
+/* The cards the games sit in (the games add their own look on top). */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 24px var(--gutter);
+  background: rgba(10, 5, 18, 0.72);
+  backdrop-filter: blur(3px);
+}
+.modal-card {
+  width: min(380px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px;
+  border-radius: 20px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  animation: rise 0.3s ease-out;
+}
+.modal-card h2 {
+  font: 400 25px/1.15 var(--font-display);
+  text-wrap: balance;
+}
+.modal-card p {
+  font-size: 14px;
+  color: var(--muted);
+}
+.modal-card .btn {
+  margin-top: 8px;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -18,9 +18,9 @@ import {
   type ArcadeScreen,
   type ArcadeSession,
 } from './arcadeview';
-import { isAlive } from './game';
+import { isAlive } from './alive';
 import { EXTENTS, defaultLook, drawHammy, type Face } from './hammy';
-import { buzz } from './native';
+import { buzz } from './haptics';
 import {
   FLIGHT_LINES,
   MILESTONES,

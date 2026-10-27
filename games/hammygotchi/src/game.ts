@@ -114,6 +114,7 @@ import {
   type UpgradeId,
 } from './defs';
 import { rngStep } from '@shared/rng';
+import { isAlive } from './alive';
 import { newHammy, type HammyState, type Message } from './state';
 
 type Roll = () => number;
@@ -121,7 +122,7 @@ type Roll = () => number;
 const clamp = (v: number): number => Math.min(100, Math.max(0, v));
 const pick = <T>(list: readonly T[], roll: Roll): T => list[Math.min(list.length - 1, Math.floor(roll() * list.length))];
 
-export const isAlive = (s: HammyState): boolean => s.diedAt === null;
+export { isAlive };
 export const NEEDS: readonly Need[] = ['belly', 'fresh', 'mood'];
 
 /** A word for how full a meter is: "Snacky", "Rancid", "Crying". */

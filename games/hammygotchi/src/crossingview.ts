@@ -6,9 +6,9 @@ import { fmt } from '@shared/format';
 import { BetPicker, Choice, Ledger, UI_FONT, arcadeCard, bubble, emoji, fairRoll, fitCanvas, loud, pick, x2, type ArcadeHost, type ArcadeScreen, type ArcadeSession } from './arcadeview';
 import { asphalt, carLength, drawCar } from './cars';
 import { CROSS_DONE, CROSS_SAFE, CROSS_START, DIFFICULTIES, DIFFICULTY_BY_ID, VEHICLES, crossLane, laneMultiplier, type Difficulty, type VehicleDef } from './crossing';
-import { isAlive } from './game';
+import { isAlive } from './alive';
 import { EXTENTS, defaultLook, drawHammy } from './hammy';
-import { buzz } from './native';
+import { buzz } from './haptics';
 import { sfx } from './sound';
 
 /** Kept between sittings while the page is open (not saved). */

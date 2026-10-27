@@ -5,9 +5,9 @@
 import { h, setDisabled, setText } from '@shared/dom';
 import { fmt } from '@shared/format';
 import { BetPicker, Choice, Ledger, UI_FONT, arcadeCard, bubble, fairRoll, fitCanvas, loud, pick, x2, type ArcadeHost, type ArcadeScreen, type ArcadeSession } from './arcadeview';
-import { isAlive } from './game';
+import { isAlive } from './alive';
 import { defaultLook, drawHammy } from './hammy';
-import { buzz } from './native';
+import { buzz } from './haptics';
 import { PLINKO_BIG, PLINKO_GRUNT, PLINKO_MEH, PLINKO_RISKS, PLINKO_ROWS, binOf, dropPath, plinkoTable, type PlinkoRisk, type PlinkoRows } from './plinko';
 import { sfx } from './sound';
 

@@ -1,12 +1,13 @@
 # Fungus games
 
-Three mobile games that share one codebase.
+Four games that share one codebase.
 
 | Game | What it is | Folder |
 |---|---|---|
 | **Humongous Fungus** | Idle game: you are a mycelium network growing a terrarium in real time, even while the game is closed | `games/fungus` |
 | **Sporemonger** | Trading game: buy and sell goods on a live market in a mushroom town, before they rot | `games/sporemonger` |
 | **Hammygotchi** | Virtual pet: Cube Hammy lives like a Sim in his containment unit, badly. He never flushes and leaves his trash everywhere; keep him fed, showered, cleaned up after and called, and furnish the unit, or he rots into mushrooms. Comes with a toy box and a kitchen; some days he's a meatball sub | `games/hammygotchi` |
+| **Hammy's Arcade** | Hammygotchi's four betting games (Fart Rocket, Hammy Mines, Hammy Crossing, Poop Plinko) as a page of their own, on play-money coins. Played at [hammyxchange.com/arcade](https://hammyxchange.com/arcade/); not in the phone apps | `games/hammys-arcade` |
 
 ## Run it
 
@@ -15,6 +16,7 @@ npm install
 npm run dev              # Humongous Fungus on a local server; open the URL on your phone (same Wi-Fi)
 npm run dev:sporemonger  # Sporemonger
 npm run dev:hammygotchi  # Hammygotchi
+npm run dev:hammys-arcade # Hammy's Arcade
 npm test                 # unit tests for every game and the shared code
 npm run build            # type-check, then build each game into one self-contained dist/<game>/index.html
 npm run build:artifact   # also writes dist/<game>/artifact.html for sharing as claude.ai pages
@@ -23,7 +25,7 @@ npm run sim              # Humongous Fungus pacing simulator: npm run sim -- [ta
 
 ## Phone apps
 
-All three games are packaged for iOS and Android with [Capacitor](https://capacitorjs.com):
+Humongous Fungus, Sporemonger and Hammygotchi are packaged for iOS and Android with [Capacitor](https://capacitorjs.com):
 each game folder has its native projects in `ios/` and `android/`, and its
 `src/native.ts` adds the phone-only features (durable saves, reminder
 notifications, haptics). Builds run on GitHub Actions: iPhone builds upload to
@@ -54,6 +56,7 @@ After changing a game, copy it into its native projects with
 | `games/hammygotchi/src/` | Hammygotchi rules (`game.ts`), content and every line he says (`defs.ts`), the containment unit, its physics and the toys in it (`scene.ts`), its furniture (`room.ts`), Hammy in his four forms and his fits (`hammy.ts`), his recorded voice lines (`voice.ts`), the toys' drawings (`toys.ts`), synthesized sounds (`sound.ts`), screens (`ui.ts`), the betting games in Hammy's Arcade on his phone (`arcade.ts`; `rocket.ts`, `mines.ts`, `crossing.ts`, `plinko.ts`, each with a `…view.ts`, and the road's traffic in `cars.ts`) and phone features (`native.ts`) |
 | `games/hammygotchi/assets/face`, `assets/voice` | Drop-in photos of the real Hammy's eyes and mouth, and his recorded voice lines (see the README in each) |
 | `games/hammygotchi/ios`, `android` | Native app projects (Capacitor) |
+| `games/hammys-arcade/src/` | Hammy's Arcade: the front page and games (`main.ts`), the play-money wallet and its save (`wallet.ts`), and the page's styles. The games' rules and screens are Hammygotchi's, imported through the `@hammygotchi` alias (see [docs/hammys-arcade.md](docs/hammys-arcade.md)) |
 | `shared/market.ts` | Live market engine: seeded price walk, moods, trades, rot |
 | `shared/chart.ts` | Live price chart with crosshair readout |
 | `shared/storage.ts` | Local save, plus an optional per-player cloud copy when hosted as an artifact |

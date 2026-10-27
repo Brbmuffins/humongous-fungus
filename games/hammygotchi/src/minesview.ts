@@ -4,10 +4,10 @@
 import { h, setDisabled, setText } from '@shared/dom';
 import { fmt } from '@shared/format';
 import { BetPicker, Choice, Ledger, arcadeCard, fairRoll, pick, x2, type ArcadeHost, type ArcadeScreen, type ArcadeSession } from './arcadeview';
-import { isAlive } from './game';
+import { isAlive } from './alive';
 import { paintPortrait, type Face } from './hammy';
 import { MINES_BOOM, MINES_CLEARED, MINES_DEFAULT, MINES_GRIDS, MINES_SAFE, clampMines, layMines, minesMultiplier, tilesOf, type MinesGrid } from './mines';
-import { buzz } from './native';
+import { buzz } from './haptics';
 import { sfx } from './sound';
 
 /** Kept between sittings while the page is open (not saved). */

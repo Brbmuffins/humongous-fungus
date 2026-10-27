@@ -4,6 +4,7 @@ import '@fontsource/rubik/latin-500.css';
 import '@fontsource/rubik/latin-600.css';
 import '@fontsource/rubik/latin-700.css';
 import './styles.css';
+import './arcade.css';
 
 import { fmt } from '@shared/format';
 import { CloudSave, localSave as makeLocalSave } from '@shared/storage';

@@ -2,7 +2,21 @@
 // Hammy Crossing and Poop Plinko all bet Hammy coins through here, so the
 // coins, the stats and what he says afterwards work the same in each. Every
 // game pays back about 99 of every 100 coins bet, over many rounds.
-import type { HammyState } from './state';
+import type { FitId } from './defs';
+
+/**
+ * What the arcade needs of whoever is betting: their coins, outfit, how fresh
+ * they are (he goes green when he isn't), whether they're still around and the
+ * game-by-game stats. Hammy's state is one; so is the standalone Hammy's
+ * Arcade's own (games/hammys-arcade).
+ */
+export interface ArcadeSeat {
+  coins: number;
+  fit: FitId;
+  fresh: number;
+  diedAt: number | null;
+  stats: { arcade: Record<ArcadeGame, BetStats> };
+}
 
 export type ArcadeGame = 'rocket' | 'mines' | 'crossing' | 'plinko';
 
@@ -49,7 +63,7 @@ export const noBets = (): Record<ArcadeGame, BetStats> =>
   Object.fromEntries(ARCADE.map((g) => [g.id, { rounds: 0, net: 0, best: 0 }])) as Record<ArcadeGame, BetStats>;
 
 /** Put coins on him. False if you don't have them (or he's dead). */
-export function placeBet(s: HammyState, game: ArcadeGame, amount: number): boolean {
+export function placeBet(s: ArcadeSeat, game: ArcadeGame, amount: number): boolean {
   const bet = Math.floor(amount);
   if (s.diedAt !== null || !Number.isFinite(bet) || bet < MIN_BET || bet > s.coins) return false;
   s.coins -= bet;
@@ -60,7 +74,7 @@ export function placeBet(s: HammyState, game: ArcadeGame, amount: number): boole
 }
 
 /** A bet comes back times `mult`, rounded down. Returns what came back. */
-export function payOut(s: HammyState, game: ArcadeGame, bet: number, mult: number): number {
+export function payOut(s: ArcadeSeat, game: ArcadeGame, bet: number, mult: number): number {
   const won = Math.floor(bet * Math.max(0, mult));
   s.coins += won;
   const st = s.stats.arcade[game];
@@ -70,7 +84,7 @@ export function payOut(s: HammyState, game: ArcadeGame, bet: number, mult: numbe
 }
 
 /** A bet that never got going comes back, as if it was never placed. */
-export function refundBet(s: HammyState, game: ArcadeGame, bet: number): void {
+export function refundBet(s: ArcadeSeat, game: ArcadeGame, bet: number): void {
   s.coins += bet;
   const st = s.stats.arcade[game];
   st.rounds = Math.max(0, st.rounds - 1);

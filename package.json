@@ -2,14 +2,15 @@
   "name": "fungus-games",
   "private": true,
   "version": "0.1.0",
-  "description": "Three mobile games: Humongous Fungus (idle terrarium), Sporemonger (mushroom market trading) and Hammygotchi (a virtual pet who is a lot).",
+  "description": "Mobile games: Humongous Fungus (idle terrarium), Sporemonger (mushroom market trading), Hammygotchi (a virtual pet who is a lot) and Hammy's Arcade (his betting games, on their own page).",
   "type": "module",
   "scripts": {
     "dev": "GAME=fungus vite --host",
     "dev:sporemonger": "GAME=sporemonger vite --host",
     "dev:hammygotchi": "GAME=hammygotchi vite --host",
-    "build": "tsc --noEmit && GAME=fungus vite build && GAME=sporemonger vite build && GAME=hammygotchi vite build",
-    "build:artifact": "npm run build && node scripts/make-artifact.mjs fungus && node scripts/make-artifact.mjs sporemonger && node scripts/make-artifact.mjs hammygotchi",
+    "dev:hammys-arcade": "GAME=hammys-arcade vite --host",
+    "build": "tsc --noEmit && GAME=fungus vite build && GAME=sporemonger vite build && GAME=hammygotchi vite build && GAME=hammys-arcade vite build",
+    "build:artifact": "npm run build && node scripts/make-artifact.mjs fungus && node scripts/make-artifact.mjs sporemonger && node scripts/make-artifact.mjs hammygotchi && node scripts/make-artifact.mjs hammys-arcade",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "sim": "tsx scripts/simulate.ts"
@@ -33,6 +34,7 @@
   "workspaces": [
     "games/fungus",
     "games/sporemonger",
-    "games/hammygotchi"
+    "games/hammygotchi",
+    "games/hammys-arcade"
   ]
 }

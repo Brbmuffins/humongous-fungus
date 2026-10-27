@@ -1,0 +1,6 @@
+{
+  "name": "hammys-arcade",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Hammy's Arcade as its own page: Fart Rocket, Hammy Mines, Hammy Crossing and Poop Plinko on play-money coins. Code lives in src/; the games themselves are Hammygotchi's."
+}

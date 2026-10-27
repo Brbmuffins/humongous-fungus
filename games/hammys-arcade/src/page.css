@@ -1,0 +1,320 @@
+/* Hammy's Arcade's own page: the front page, and the small changes that make
+   Hammygotchi's game cards sit well on a page of their own. Comes after
+   arcade.css, which holds the games' look. */
+
+/* --- The front page ------------------------------------------------------- */
+
+.a-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(var(--gutter), env(safe-area-inset-right, 0px)) calc(110px + env(safe-area-inset-bottom, 0px)) max(var(--gutter), env(safe-area-inset-left, 0px));
+}
+.a-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 14px;
+  padding-block: 10px 6px;
+}
+.a-portrait {
+  width: 84px;
+  height: 84px;
+}
+.a-title h1 {
+  font: 400 clamp(30px, 9vw, 52px) / 1.02 var(--font-display);
+  color: var(--cheese);
+  text-shadow: 0 3px 0 #6b2a00;
+  text-wrap: balance;
+}
+.a-title p {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.a-top .coins {
+  grid-column: 1 / -1;
+  justify-self: start;
+  font-size: 20px;
+  padding: 6px 16px 6px 7px;
+}
+.a-top .coin {
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+}
+.a-pick {
+  margin: 14px 0 10px;
+  font: 400 20px/1.1 var(--font-display);
+  color: var(--text);
+}
+
+.a-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.a-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 250px;
+  padding: 14px;
+  border: 2px solid color-mix(in srgb, var(--c) 55%, var(--line));
+  border-radius: 22px;
+  background:
+    radial-gradient(130% 80% at 50% 0%, color-mix(in srgb, var(--c) 30%, transparent), transparent 72%),
+    linear-gradient(180deg, var(--panel-2), var(--panel));
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.15s ease-out,
+    border-color 0.15s;
+}
+.a-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--c);
+}
+.a-card:active {
+  transform: scale(0.98);
+}
+.a-icon {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  margin-bottom: 4px;
+  border-radius: 18px;
+  background: var(--c);
+  font-size: 34px;
+  box-shadow:
+    inset 0 -4px 0 rgba(0, 0, 0, 0.2),
+    0 4px 14px color-mix(in srgb, var(--c) 40%, transparent);
+}
+.a-name {
+  font: 400 clamp(19px, 5.4vw, 24px) / 1.1 var(--font-display);
+  text-wrap: balance;
+}
+.a-blurb {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.a-stats {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 8px;
+}
+.a-stat dt {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.a-stat dd {
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.a-stat.up dd {
+  color: var(--mint);
+}
+.a-stat.down dd {
+  color: #ff8a7a;
+}
+.a-new {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.a-play {
+  align-self: stretch;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--c);
+  color: #1b1000;
+  font-weight: 700;
+  font-size: 15px;
+  text-align: center;
+}
+
+.a-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 22px;
+}
+.a-foot-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+.a-link {
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.a-link:hover {
+  color: var(--text);
+}
+
+/* A line from Hammy, and the free top-up when you're out. */
+.a-toast,
+.a-topup {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  width: min(560px, calc(100% - 24px));
+  margin-inline: auto;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+.a-toast {
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  padding: 12px 16px;
+  background: #fffaf0;
+  color: #2b1400;
+  font-weight: 600;
+  text-align: center;
+  animation: rise 0.25s ease-out;
+}
+.a-topup {
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  padding: 12px 14px 12px 16px;
+  background: var(--panel-2);
+  border: 2px solid var(--cheese);
+  animation: rise 0.25s ease-out;
+}
+.a-topup-text {
+  flex: 1 1 200px;
+  font-weight: 500;
+}
+.a-topup .btn {
+  flex: none;
+}
+.a-toast:not([hidden]) ~ .a-topup {
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+}
+
+/* --- The games, on a page of their own ------------------------------------ */
+
+.modal {
+  padding: 12px 8px;
+}
+.modal .arcade-card {
+  width: min(600px, 100%);
+}
+.a-back {
+  flex: none;
+  min-height: 36px;
+  padding: 6px 12px 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.a-back:hover {
+  border-color: var(--cheese);
+}
+.a-back span {
+  font-size: 18px;
+  line-height: 1;
+}
+/* The back button does the ✕'s job (Escape still works). */
+.arcade-close {
+  display: none;
+}
+.arcade-top h2 {
+  min-width: 0;
+  font-size: clamp(16px, 4.8vw, 22px);
+}
+
+/* Narrow phones: four risk buttons and their label have to fit one row. */
+@media (max-width: 420px) {
+  .arcade-choice-label {
+    min-width: 40px;
+  }
+  .arcade-opt {
+    min-width: 0;
+    padding-inline: 2px;
+    font-size: 12px;
+  }
+}
+/* A big screen is short, not narrow: keep the whole mine field in view. */
+@media (min-width: 640px) and (min-height: 560px) {
+  .mines-grid {
+    width: min(100%, calc(100dvh - 400px));
+    min-width: 300px;
+    margin-inline: auto;
+  }
+}
+
+@media (min-width: 640px) {
+  .a-page {
+    padding-top: 28px;
+  }
+  .a-top {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 18px;
+  }
+  .a-portrait {
+    width: 120px;
+    height: 120px;
+  }
+  .a-top .coins {
+    grid-column: auto;
+    justify-self: end;
+  }
+  .a-card {
+    min-height: 280px;
+    padding: 18px;
+  }
+  .a-icon {
+    width: 72px;
+    height: 72px;
+    font-size: 40px;
+  }
+  .a-blurb {
+    font-size: 14px;
+  }
+  .modal {
+    padding: 24px var(--gutter);
+  }
+}
+@media (min-width: 1000px) {
+  .a-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .a-card {
+    min-height: 330px;
+  }
+  .a-pick {
+    font-size: 24px;
+  }
+}
