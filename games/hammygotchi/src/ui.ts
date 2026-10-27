@@ -5,16 +5,22 @@ import {
   CALL_MAX_MOOD,
   FITS,
   FOODS,
+  FORM_BY_ID,
   HOSE_FRESH,
   MAX_TEXTS,
   RING_SECONDS,
   ROT_SECONDS,
   SCOOP_COINS,
   START_COINS,
+  TOYS,
+  TOY_BY_ID,
   type FitId,
   type FoodDef,
   type FoodId,
+  type FormId,
   type Need,
+  type ToyDef,
+  type ToyId,
 } from './defs';
 import {
   callMood,
@@ -33,13 +39,16 @@ import {
   type AwayReport,
 } from './game';
 import { paintPortrait, type Face } from './hammy';
+import { paintToyIcon } from './toys';
 import { sfx } from './sound';
 import type { HammyState } from './state';
 
-export type Tab = 'care' | 'phone' | 'fits' | 'life';
+export type Tab = 'care' | 'phone' | 'shop' | 'life';
 
 export interface Controller {
   readonly state: HammyState;
+  /** What he is today. */
+  readonly form: FormId;
   order(id: FoodId): void;
   scoopAll(): void;
   hose(): void;
@@ -47,6 +56,8 @@ export interface Controller {
   call(): void;
   buyFit(id: FitId): void;
   wearFit(id: FitId): void;
+  buyToy(id: ToyId): void;
+  pickToy(id: ToyId): void;
   adopt(): void;
   toggleSound(): void;
   eraseSave(): void;
@@ -110,7 +121,7 @@ class CarePanel implements Panel {
           h('p', null, `Lived ${age(s, Date.now())}. Farted ${fmt(s.stats.farts)} ${s.stats.farts === 1 ? 'time' : 'times'}. Ate ${fmt(s.stats.meals)} meals.`),
           h('p', { class: 'cause' }, causeText(s.causes)),
           this.adoptBtn,
-          h('p', { class: 'note' }, `Your fits stay yours. Coins start over at ${START_COINS}.`),
+          h('p', { class: 'note' }, `Your fits and toys stay yours. Coins start over at ${START_COINS}.`),
         ),
       );
       return;
@@ -271,7 +282,7 @@ class PhonePanel implements Panel {
       ),
       h('p', { class: 'note' }, 'Text him and call him, or he gets sad. He calls you too. Missed calls and unread texts make it worse.'),
     );
-    paintPortrait(this.portrait, s.fit, alive ? 'happy' : 'dead');
+    paintPortrait(this.portrait, s.fit, alive ? 'happy' : 'dead', 0, this.c.form);
     this.thread.scrollTop = this.thread.scrollHeight;
   }
 
@@ -297,21 +308,78 @@ class PhonePanel implements Panel {
 
 // ---------------------------------------------------------------------------
 
-class FitsPanel implements Panel {
-  private cards: { id: FitId; btn: HTMLButtonElement; price: number }[] = [];
-  private canvases: { canvas: HTMLCanvasElement; fit: FitId }[] = [];
+/** "Water balloon" fits the toy bar as "Balloon". */
+function shortName(t: ToyDef): string {
+  const word = t.name.split(' ').pop()!;
+  return word[0].toUpperCase() + word.slice(1);
+}
+
+function toyEffects(t: ToyDef): string {
+  if (t.id === 'hand') return 'Throwing him: + mood';
+  const parts = [`${t.mood > 0 ? '+' : ''}${t.mood} mood`];
+  if (t.fresh) parts.push(`+${t.fresh} fresh`);
+  if (t.belly) parts.push(`+${t.belly} belly`);
+  parts.push(`+${t.coins} ${t.coins === 1 ? 'coin' : 'coins'}`);
+  return `${parts.join(' · ')} a hit`;
+}
+
+class ShopPanel implements Panel {
+  private cards: { btn: HTMLButtonElement; price: number }[] = [];
+  private portraits: { canvas: HTMLCanvasElement; fit: FitId }[] = [];
+  private icons: { canvas: HTMLCanvasElement; toy: ToyId }[] = [];
 
   constructor(private c: Controller) {}
 
   key(): string {
     const s = this.c.state;
-    return `${s.fit}|${s.owned.join()}|${isAlive(s)}`;
+    return `${s.fit}|${s.owned.join()}|${s.toy}|${s.toys.join()}|${isAlive(s)}|${this.c.form}`;
+  }
+
+  private price(price: number): HTMLElement {
+    return h('span', null, h('span', { class: 'coin coin-small', 'aria-hidden': 'true' }, 'H'), fmt(price));
   }
 
   build(root: HTMLElement): void {
     const s = this.c.state;
     this.cards = [];
-    this.canvases = [];
+    this.portraits = [];
+    this.icons = [];
+
+    const toys = h('div', { class: 'toys' });
+    for (const t of TOYS) {
+      const owned = s.toys.includes(t.id);
+      const inHand = s.toy === t.id;
+      const icon = h('canvas', { class: 'toy-pic', 'aria-hidden': 'true' });
+      const btn = h(
+        'button',
+        {
+          class: `fit-btn${inHand ? ' wearing' : ''}${owned ? '' : ' buy'}`,
+          type: 'button',
+          onclick: () => (owned ? this.c.pickToy(t.id) : this.c.buyToy(t.id)),
+        },
+        inHand ? 'In hand' : owned ? 'Use' : this.price(t.price),
+      );
+      if (inHand) btn.disabled = true;
+      toys.append(
+        h(
+          'div',
+          { class: `toy${inHand ? ' fit-on' : ''}` },
+          icon,
+          h(
+            'span',
+            { class: 'toy-main' },
+            h('span', { class: 'fit-name' }, t.name),
+            h('span', { class: 'fit-blurb' }, `${t.blurb} ${t.how}`),
+            h('span', { class: `toy-fx${t.mood < 0 ? ' mean' : ''}` }, toyEffects(t)),
+          ),
+          btn,
+        ),
+      );
+      this.cards.push({ btn, price: owned ? 0 : t.price });
+      this.icons.push({ canvas: icon, toy: t.id });
+    }
+
+    const form = this.c.form;
     const grid = h('div', { class: 'fits' });
     for (const f of FITS) {
       const owned = s.owned.includes(f.id);
@@ -324,16 +392,31 @@ class FitsPanel implements Panel {
           type: 'button',
           onclick: () => (owned ? this.c.wearFit(f.id) : this.c.buyFit(f.id)),
         },
-        wearing ? 'Wearing' : owned ? 'Wear' : h('span', null, h('span', { class: 'coin coin-small', 'aria-hidden': 'true' }, 'H'), fmt(f.price)),
+        wearing ? 'Wearing' : owned ? 'Wear' : this.price(f.price),
       );
       if (wearing) btn.disabled = true;
       grid.append(h('div', { class: `fit${wearing ? ' fit-on' : ''}` }, canvas, h('span', { class: 'fit-name' }, f.name), h('span', { class: 'fit-blurb' }, f.blurb), btn));
-      this.cards.push({ id: f.id, btn, price: owned ? 0 : f.price });
-      this.canvases.push({ canvas, fit: f.id });
+      this.cards.push({ btn, price: owned ? 0 : f.price });
+      this.portraits.push({ canvas, fit: f.id });
     }
-    root.append(h('p', { class: 'note' }, 'Spend Hammy coins on new looks. You earn them by scooping poop, texting, calling, and keeping him happy. Fits stay yours even if he dies.'), grid);
+
+    root.append(
+      h('h2', { class: 'sub' }, 'Toys'),
+      h('p', { class: 'note' }, 'Pick a toy in the bar under the tank and use it on him. Nice toys lift his mood. Mean ones pay more coins and cost you his mood. Each one counts every couple of seconds.'),
+      toys,
+      h('h2', { class: 'sub' }, 'Fits'),
+      h(
+        'p',
+        { class: 'note' },
+        form === 'hamster'
+          ? 'New looks for Hammy. Fits stay yours even if he dies.'
+          : `Today he's ${FORM_BY_ID[form].today} Hats and glasses still go on; shirts and costumes wait for hamster days. Fits stay yours even if he dies.`,
+      ),
+      grid,
+    );
     requestAnimationFrame(() => {
-      for (const x of this.canvases) paintPortrait(x.canvas, x.fit, 'happy', 400);
+      for (const x of this.portraits) paintPortrait(x.canvas, x.fit, 'happy', 400, form);
+      for (const x of this.icons) paintToyIcon(x.canvas, x.toy);
     });
   }
 
@@ -460,6 +543,9 @@ export class GameUI {
   private coins = document.getElementById('coins')!;
   private who = document.getElementById('who')!;
   private ageEl = document.getElementById('age')!;
+  private today = document.getElementById('today')!;
+  private toybar = document.getElementById('toybar')!;
+  private toyKey = '';
   private hint = document.getElementById('hint')!;
   private panel = document.getElementById('panel')!;
   private toastEl = document.getElementById('toast')!;
@@ -473,7 +559,7 @@ export class GameUI {
   }));
 
   constructor(private c: Controller) {
-    this.panels = { care: new CarePanel(c), phone: new PhonePanel(c), fits: new FitsPanel(c), life: new LifePanel(c) };
+    this.panels = { care: new CarePanel(c), phone: new PhonePanel(c), shop: new ShopPanel(c), life: new LifePanel(c) };
     for (const t of this.tabs) t.addEventListener('click', () => this.setTab(t.dataset.tab as Tab));
     this.tabs[0].parentElement!.addEventListener('keydown', (e) => {
       if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
@@ -516,6 +602,48 @@ export class GameUI {
     p.shown?.();
     p.sync();
     this.syncBadges();
+    this.syncToybar();
+  }
+
+  /** The toy bar under the tank: every toy you own, and a way to get more. */
+  private syncToybar(): void {
+    const s = this.c.state;
+    const key = `${s.toys.join()}|${s.toy}|${isAlive(s)}`;
+    if (key === this.toyKey) return;
+    this.toyKey = key;
+    const icons: { canvas: HTMLCanvasElement; toy: ToyId }[] = [];
+    const buttons = TOYS.filter((t) => s.toys.includes(t.id)).map((t) => {
+      const canvas = h('canvas', { class: 'toy-icon', 'aria-hidden': 'true' });
+      icons.push({ canvas, toy: t.id });
+      return h(
+        'button',
+        {
+          class: 'toy-btn',
+          type: 'button',
+          'aria-pressed': String(s.toy === t.id),
+          'aria-label': t.name,
+          title: `${t.name}: ${t.how}`,
+          disabled: !isAlive(s),
+          onclick: () => this.c.pickToy(t.id),
+        },
+        canvas,
+        h('span', { class: 'toy-label' }, shortName(t)),
+      );
+    });
+    const more =
+      s.toys.length < TOYS.length
+        ? h('button', { class: 'toy-btn toy-more', type: 'button', 'aria-label': 'Get more toys', onclick: () => this.setTab('shop') }, h('span', { class: 'toy-plus', 'aria-hidden': 'true' }, '+'), h('span', { class: 'toy-label' }, 'More'))
+        : null;
+    this.toybar.replaceChildren(...buttons, ...(more ? [more] : []));
+    requestAnimationFrame(() => {
+      for (const x of icons) paintToyIcon(x.canvas, x.toy);
+    });
+  }
+
+  /** Explain a toy the moment you pick it up. */
+  toyPicked(id: ToyId): void {
+    const t = TOY_BY_ID[id];
+    this.toast(`${t.name}: ${t.how}`, 3500);
   }
 
   private syncBadges(): void {
@@ -523,11 +651,12 @@ export class GameUI {
     const now = Date.now();
     const alive = isAlive(s);
     const texts = unread(s, now);
-    const fits = FITS.filter((f) => !s.owned.includes(f.id) && s.coins >= f.price).length;
+    const shop =
+      FITS.filter((f) => !s.owned.includes(f.id) && s.coins >= f.price).length + TOYS.filter((t) => !s.toys.includes(t.id) && s.coins >= t.price).length;
     const badges: Record<Tab, string> = {
       care: alive && s.poops.length ? String(s.poops.length) : '',
       phone: this.tab === 'phone' || !texts || !alive ? '' : String(texts),
-      fits: fits ? String(fits) : '',
+      shop: shop ? String(shop) : '',
       life: '',
     };
     for (const t of this.tabs) {
@@ -544,6 +673,7 @@ export class GameUI {
     setText(this.coins, fmt(s.coins));
     setText(this.who, `Hammy #${s.n}`);
     setText(this.ageEl, isAlive(s) ? `${age(s, now)} old` : 'deceased');
+    setText(this.today, `Today: ${FORM_BY_ID[this.c.form].name.toLowerCase()}`);
     for (const m of this.meters) {
       const value = s[m.need];
       setBar(m.fill, value / 100);
@@ -555,7 +685,7 @@ export class GameUI {
         m.el.setAttribute('aria-valuetext', `${now} of 100, ${needWord(m.need, value)}`);
       }
     }
-    this.hint.hidden = s.stats.flings >= 2 || !this.toastEl.hidden || !isAlive(s) || this.modalOpen;
+    this.hint.hidden = s.stats.flings >= 2 || s.toy !== 'hand' || !this.toastEl.hidden || !isAlive(s) || this.modalOpen;
   }
 
   toast(message: string, ms = 3000): void {
@@ -611,11 +741,12 @@ export class GameUI {
         h('h2', { id: 'modal-title' }, 'This is Hammy. He’s a lot.'),
         h('p', null, 'He lives in your tank now. He only eats DoorDosh, mostly Dorkitos. He poops, he farts, and he stinks. The neighbors hate him.'),
         h('p', null, 'Feed him, scoop his poop, and text and call him on his phone, or he gets sad. Ignore him long enough and he dies, rots, and turns into mushrooms. Then you lose.'),
+        h('p', null, 'The toys under the tank are for him. Some days he wakes up as something else. Just go with it.'),
         h('p', { class: 'stink' }, 'He keeps living while the game is closed.'),
       ],
       'Fine.',
     );
-    requestAnimationFrame(() => paintPortrait(pic, this.c.state.fit, 'joy'));
+    requestAnimationFrame(() => paintPortrait(pic, this.c.state.fit, 'joy', 0, this.c.form));
   }
 
   showWelcome(r: AwayReport): void {
@@ -664,7 +795,7 @@ export class GameUI {
       h('div', { class: 'call-row' }, h('span', { class: 'call-opt' }, decline, 'Decline'), h('span', { class: 'call-opt' }, accept, 'Answer')),
     );
     this.open(card, undefined, accept);
-    paintPortrait(pic, this.c.state.fit, 'joy');
+    paintPortrait(pic, this.c.state.fit, 'joy', 0, this.c.form);
     const started = Date.now();
     sfx.ring();
     this.callTimer = window.setInterval(() => {
@@ -708,7 +839,7 @@ export class GameUI {
         lastLine = now;
         setText(caption, `“${lines[line++ % lines.length]}”`);
       }
-      paintPortrait(pic, this.c.state.fit, faces[Math.floor(secs / 2.6) % faces.length], now);
+      paintPortrait(pic, this.c.state.fit, faces[Math.floor(secs / 2.6) % faces.length], now, this.c.form);
     };
     tick();
     this.callTimer = window.setInterval(tick, 250);

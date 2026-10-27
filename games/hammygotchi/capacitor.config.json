@@ -18,6 +18,7 @@
       "showSpinner": false
     },
     "LocalNotifications": {
+      "smallIcon": "ic_stat_hammygotchi",
       "iconColor": "#ff9a2e"
     },
     "StatusBar": {

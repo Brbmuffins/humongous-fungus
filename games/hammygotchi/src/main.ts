@@ -7,18 +7,22 @@ import './styles.css';
 
 import { fmt } from '@shared/format';
 import { CloudSave, localSave as makeLocalSave } from '@shared/storage';
-import { FIT_BY_ID, FOOD_BY_ID, VOICEMAIL, type FitId, type FoodId } from './defs';
+import { FIT_BY_ID, FOOD_BY_ID, FORM_BY_ID, VOICEMAIL, type FitId, type FoodId, type FormId, type ToyId } from './defs';
 import {
   adopt,
   buyFit,
+  buyToy,
   canCall,
   declineCall,
   endCall,
   fling,
+  formFor,
   hose,
   isAlive,
   order,
   pet,
+  pickToy,
+  play,
   scoop,
   scoopAll,
   deadFor,
@@ -68,6 +72,8 @@ class Game implements Controller {
   private hadSave: boolean;
   /** Messages already on screen, so a new one from him dings once. */
   private shownMessages = 0;
+  /** Today's form, worked out once a minute rather than every frame. */
+  private formCache = { at: 0, form: 'hamster' as FormId };
 
   constructor(hot: HotData) {
     const saves = [hot.save, hot.native, localSave.load()]
@@ -81,13 +87,16 @@ class Game implements Controller {
       pet: () => this.pet(),
       fling: (speed) => this.fling(speed),
       scoop: (i) => this.scoopOne(i),
+      play: (toy) => this.played(toy),
     });
     this.ui = new GameUI(this);
     const { away } = step(this.state, Date.now());
     wake(this.state, Date.now());
     this.shownMessages = this.visibleMessages();
-    if (!loaded) this.ui.showIntro();
-    else if (away) this.welcome(away);
+    if (!loaded) {
+      this.state.seenForm = this.form;
+      this.ui.showIntro();
+    } else if (away) this.welcome(away);
     this.bind();
     void clearReminders();
     if (!isNative) void this.connectCloud();
@@ -114,9 +123,12 @@ class Game implements Controller {
       this.shownMessages = shown;
     }
     const s = this.state;
+    this.checkForm();
     this.scene.setView({
       now,
+      form: this.form,
       fit: s.fit,
+      toy: s.toy,
       belly: s.belly,
       fresh: s.fresh,
       mood: s.mood,
@@ -176,6 +188,22 @@ class Game implements Controller {
       default:
         break;
     }
+  }
+
+  get form(): FormId {
+    const now = Date.now();
+    if (now - this.formCache.at > 60_000) this.formCache = { at: now, form: formFor(this.state, now) };
+    return this.formCache.form;
+  }
+
+  /** A new day, a new Hammy shape: show it happen once. */
+  private checkForm(): void {
+    const form = this.form;
+    if (form === this.state.seenForm || this.ui.modalOpen || !isAlive(this.state)) return;
+    this.state.seenForm = form;
+    this.scene.morph(form);
+    this.ui.toast(`Today Hammy is ${FORM_BY_ID[form].today}`, 4000);
+    this.changed();
   }
 
   private welcome(r: AwayReport): void {
@@ -240,6 +268,15 @@ class Game implements Controller {
     buzz.tap();
     this.scene.popup(`+${got}`);
     this.changed();
+  }
+
+  private played(toy: ToyId): void {
+    const got = play(this.state, toy, Date.now());
+    if (!got) return;
+    if (got.coins) this.scene.popup(`+${got.coins}`);
+    if (got.mood < 0) buzz.fart(0.6);
+    else buzz.tap();
+    this.cloudDirty = true;
   }
 
   private ring(): void {
@@ -321,6 +358,23 @@ class Game implements Controller {
     this.changed(true);
   }
 
+  buyToy(id: ToyId): void {
+    if (!buyToy(this.state, id)) return;
+    sfx.buy();
+    buzz.success();
+    this.scene.setToy();
+    this.ui.toyPicked(id);
+    this.changed(true);
+  }
+
+  pickToy(id: ToyId): void {
+    if (!pickToy(this.state, id)) return;
+    this.scene.setToy();
+    buzz.tap();
+    if (id !== 'hand' || this.state.stats.toys === 0) this.ui.toyPicked(id);
+    this.changed();
+  }
+
   wearFit(id: FitId): void {
     if (!wearFit(this.state, id)) return;
     buzz.tap();
@@ -347,6 +401,8 @@ class Game implements Controller {
     localSave.clear();
     nativeSave.clear();
     setSound(true);
+    this.formCache.at = 0;
+    this.scene.setToy();
     this.scene.spawn();
     this.ui.setTab('care');
     this.changed(true);

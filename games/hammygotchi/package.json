@@ -2,7 +2,7 @@
   "name": "hammygotchi",
   "private": true,
   "version": "1.0.0",
-  "description": "Hammygotchi app shell (Capacitor). Code lives in src/; add the native projects with npx cap add ios / android.",
+  "description": "Hammygotchi app shell (Capacitor). Code lives in src/, native projects in ios/ and android/.",
   "scripts": {
     "sync": "npm run build:web && cap sync",
     "build:web": "cd ../.. && GAME=hammygotchi vite build",

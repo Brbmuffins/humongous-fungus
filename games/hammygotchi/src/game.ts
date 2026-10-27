@@ -32,6 +32,7 @@ import {
   FLING_MOOD,
   FOODS,
   FOOD_BY_ID,
+  FORMS,
   FREE_UNREAD,
   FRESH_PER_HOUR,
   FUSS_COOLDOWN,
@@ -56,6 +57,7 @@ import {
   NEED_WORDS,
   PET_MOOD,
   PINCH_BELOW,
+  PLAY_COOLDOWN,
   POOP_STINK_PER_HOUR,
   REPLY_DELAY_MIN,
   REPLY_DELAY_RANGE,
@@ -73,13 +75,17 @@ import {
   TEXT_MOOD,
   TEXT_OPTIONS,
   TEXT_REFILL_SECONDS,
+  TOY_BY_ID,
   WELCOME_SECONDS,
   type Cause,
   type FitId,
   type FoodId,
+  type FormId,
   type Need,
   type TextOption,
+  type ToyId,
 } from './defs';
+import { rngStep } from '@shared/rng';
 import { newHammy, type HammyState, type Message } from './state';
 
 type Roll = () => number;
@@ -528,6 +534,69 @@ export function wearFit(s: HammyState, id: FitId): boolean {
   if (!s.owned.includes(id)) return false;
   s.fit = id;
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Toys
+
+export function buyToy(s: HammyState, id: ToyId): boolean {
+  const t = TOY_BY_ID[id];
+  if (!t || s.toys.includes(id) || s.coins < t.price) return false;
+  s.coins -= t.price;
+  s.toys.push(id);
+  s.toy = id;
+  return true;
+}
+
+export function pickToy(s: HammyState, id: ToyId): boolean {
+  if (!s.toys.includes(id)) return false;
+  s.toy = id;
+  return true;
+}
+
+/**
+ * A toy landed on him. Every use is a show, but it only changes his mood and
+ * pays coins every couple of seconds. Returns what it was worth, or null.
+ */
+export function play(s: HammyState, id: ToyId, now: number): { mood: number; coins: number } | null {
+  const t = TOY_BY_ID[id];
+  if (!t || !isAlive(s) || !s.toys.includes(id) || now < s.playReadyAt) return null;
+  s.playReadyAt = now + PLAY_COOLDOWN * 1000;
+  s.mood = clamp(s.mood + t.mood);
+  if (t.fresh) s.fresh = clamp(s.fresh + t.fresh);
+  if (t.belly) s.belly = clamp(s.belly + t.belly);
+  s.coins += t.coins;
+  s.stats.toys += 1;
+  return { mood: t.mood, coins: t.coins };
+}
+
+// ---------------------------------------------------------------------------
+// Forms
+
+const DAY_MS = 86_400_000;
+
+/** Days since 1970 on the player's own calendar, so forms change at local midnight. */
+export function localDay(now: number): number {
+  return Math.floor((now - new Date(now).getTimezoneOffset() * 60_000) / DAY_MS);
+}
+
+/**
+ * What he is on a given day. His first day he's a hamster; after that each
+ * day picks another form at random, never the same two days running.
+ */
+export function formOnDay(day: number, firstDay: number, seed: number): FormId {
+  if (day <= firstDay) return FORMS[0].id;
+  let i = 0;
+  // Walked from his first day, so no two days in a row ever match.
+  for (let d = firstDay + 1; d <= day; d++) {
+    const [, roll] = rngStep((seed ^ Math.imul(d, 0x9e3779b1)) >>> 0);
+    i = (i + 1 + Math.floor(roll * (FORMS.length - 1))) % FORMS.length;
+  }
+  return FORMS[i].id;
+}
+
+export function formFor(s: HammyState, now: number): FormId {
+  return formOnDay(localDay(now), localDay(s.createdAt), s.createdAt % 2 ** 31);
 }
 
 // ---------------------------------------------------------------------------

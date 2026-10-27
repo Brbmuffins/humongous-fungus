@@ -6,9 +6,13 @@ import {
   MAX_POOPS,
   MAX_TEXTS,
   START_COINS,
+  START_TOYS,
+  TOYS,
   type Cause,
   type FitId,
   type FoodId,
+  type FormId,
+  type ToyId,
 } from './defs';
 
 export interface Message {
@@ -46,6 +50,8 @@ export interface LifeStats {
   selfOrders: number;
   /** Coins he spent on his own orders. */
   selfSpent: number;
+  /** Times a toy was used on him (and counted). */
+  toys: number;
 }
 
 export interface HammyState {
@@ -83,6 +89,12 @@ export interface HammyState {
   nextCallAt: number;
   fit: FitId;
   owned: FitId[];
+  toy: ToyId;
+  toys: ToyId[];
+  /** Toys only count every couple of seconds. */
+  playReadyAt: number;
+  /** The form the player last saw him in, to announce a new one. */
+  seenForm: FormId;
   diedAt: number | null;
   causes: Cause[];
   graves: Grave[];
@@ -90,7 +102,7 @@ export interface HammyState {
   stats: LifeStats;
 }
 
-export const noStats = (): LifeStats => ({ farts: 0, meals: 0, scooped: 0, calls: 0, texts: 0, hoses: 0, flings: 0, selfOrders: 0, selfSpent: 0 });
+export const noStats = (): LifeStats => ({ farts: 0, meals: 0, scooped: 0, calls: 0, texts: 0, hoses: 0, flings: 0, selfOrders: 0, selfSpent: 0, toys: 0 });
 
 /** A fresh Hammy, a little hungry so the first thing you do is feed him. */
 export function newHammy(now: number, n: number): Pick<
@@ -136,6 +148,10 @@ export function newGame(now: number): HammyState {
     coins: START_COINS,
     fit: 'classic',
     owned: ['classic'],
+    toy: 'hand',
+    toys: [...START_TOYS],
+    playReadyAt: 0,
+    seenForm: 'hamster',
     graves: [],
     sound: true,
   };
@@ -151,6 +167,8 @@ const pct = (v: unknown, fallback: number): number => Math.min(100, pos(v, fallb
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {});
 const FIT_SET = new Set<string>(FITS.map((f) => f.id));
 const FOOD_SET = new Set<string>(FOODS.map((f) => f.id));
+const TOY_SET = new Set<string>(TOYS.map((t) => t.id));
+const FORM_SET = new Set<string>(['hamster', 'sub', 'train']);
 const CAUSES = new Set<string>(['belly', 'fresh', 'mood', 'sushi']);
 const isCause = (c: unknown): c is Cause => typeof c === 'string' && CAUSES.has(c);
 
@@ -172,6 +190,8 @@ export function deserialize(raw: string): HammyState | null {
   const owned = Array.isArray(d.owned) ? [...new Set(d.owned.filter((f): f is FitId => typeof f === 'string' && FIT_SET.has(f)))] : [];
   if (!owned.includes('classic')) owned.unshift('classic');
   const fit = typeof d.fit === 'string' && owned.includes(d.fit as FitId) ? (d.fit as FitId) : 'classic';
+  const toys = [...new Set([...START_TOYS, ...(Array.isArray(d.toys) ? d.toys.filter((t): t is ToyId => typeof t === 'string' && TOY_SET.has(t)) : [])])];
+  const toy = typeof d.toy === 'string' && toys.includes(d.toy as ToyId) ? (d.toy as ToyId) : 'hand';
 
   const messages = Array.isArray(d.messages)
     ? d.messages
@@ -239,6 +259,10 @@ export function deserialize(raw: string): HammyState | null {
     nextCallAt: pos(d.nextCallAt, base.nextCallAt),
     fit,
     owned,
+    toy,
+    toys,
+    playReadyAt: pos(d.playReadyAt, 0),
+    seenForm: typeof d.seenForm === 'string' && FORM_SET.has(d.seenForm) ? (d.seenForm as FormId) : 'hamster',
     diedAt,
     causes: diedAt !== null && Array.isArray(d.causes) ? d.causes.filter(isCause) : [],
     graves,
@@ -253,6 +277,7 @@ export function deserialize(raw: string): HammyState | null {
       flings: Math.floor(stat('flings')),
       selfOrders: Math.floor(stat('selfOrders')),
       selfSpent: stat('selfSpent'),
+      toys: Math.floor(stat('toys')),
     },
   };
 }

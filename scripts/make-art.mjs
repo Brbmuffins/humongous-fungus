@@ -3,6 +3,7 @@
 // games/<game>/store/play/. Needs that game's dev server running:
 //   npm run dev               (then)   node scripts/make-art.mjs fungus
 //   npm run dev:sporemonger   (then)   node scripts/make-art.mjs sporemonger
+//   npm run dev:hammygotchi   (then)   node scripts/make-art.mjs hammygotchi
 // A second argument overrides the server URL (default http://localhost:5173).
 // Uses Playwright from the environment; pass CHROMIUM=/path/to/chrome if needed.
 import { mkdirSync, writeFileSync } from 'node:fs';

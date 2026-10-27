@@ -1,14 +1,15 @@
 # Getting the games onto the App Store and Google Play
 
-Everything in the code is ready for both games: the iPhone and Android
+Everything in the code is ready for all three games: the iPhone and Android
 projects, icons, launch screens, store text and screenshots. These are the
 steps only the account owner can do. Most are five-minute forms; the waits are
 Apple's and Google's.
 
 Part 1 is Apple, part 2 is Google, both written for Humongous Fungus. They
 don't depend on each other, so you can do both at once. Start Google early:
-new accounts must run a 14-day test before they can publish. Part 3 adds
-Sporemonger, which reuses the accounts, keys and secrets from parts 1 and 2.
+new accounts must run a 14-day test before they can publish. Parts 3 and 4
+add Sporemonger and Hammygotchi, which reuse the accounts, keys and secrets
+from parts 1 and 2.
 
 # Part 1: Apple App Store
 
@@ -242,13 +243,53 @@ up in GitHub.
 - **Store page** (step F): everything to paste is in
   `games/sporemonger/store/play/listing.md`.
 
+# Part 4: Hammygotchi
+
+Same as Sporemonger: its own app on each store, its own workflows
+(**iOS · Hammygotchi** and **Android · Hammygotchi**), and the same accounts,
+keys and GitHub secrets. Nothing new to set up in GitHub.
+
+## Apple
+
+- **Register the app's ID** (step 2): Description `Hammygotchi`, Bundle ID
+  `com.muffindevelopment.hammygotchi`.
+- **Create the app** (step 3): Name `Hammygotchi`, SKU `hammygotchi-ios`. The
+  name nods to a famous toy; if it's taken or Apple pushes back, use
+  `Hammy: A Pet Who Is A Lot` (and tell Claude, so `appName` in
+  `games/hammygotchi/capacitor.config.json` matches).
+- **Build** (step 6): Actions → **iOS · Hammygotchi** → Run workflow, then
+  install it from TestFlight. On the phone, check that ordering food asks to
+  allow notifications, that leaving the app brings Hammy's next text as a
+  notification, that farts give a heavy buzz, and that the toy bar scrolls.
+- **Pages** (step 7): `site/hammygotchi/privacy.html` and `support.html`,
+  hosted along with the rest of `site/`.
+- **Store page** (step 8): everything to paste is in
+  `games/hammygotchi/store/listing.md`, screenshots in
+  `games/hammygotchi/store/screenshots/`. App Privacy and pricing get the same
+  answers as the other games. **Age rating is different:** answer
+  Infrequent/Mild for cartoon violence and for crude humor (see `listing.md`).
+
+## Google
+
+- **Create the app** (step B): Name `Hammygotchi`, Game, Free. The package name
+  is `com.muffindevelopment.hammygotchi`.
+- **Build** (step D): Actions → **Android · Hammygotchi** → Run workflow, and
+  download `hammygotchi-<number>.aab`. Same upload key as the other games.
+- **Closed test** (step E): its own 14 days with 12 testers; the same testers
+  can join all three tests.
+- **Store page** (step F): everything to paste is in
+  `games/hammygotchi/store/play/listing.md`. The content rating questionnaire
+  gets cartoon violence and crude humor (see that file).
+
 ## Regenerating the art
 
 - Icon and launch screen: start the game's dev server (`npm run dev` for
-  Humongous Fungus, `npm run dev:sporemonger` for Sporemonger), then
-  `node scripts/make-art.mjs fungus` or `node scripts/make-art.mjs sporemonger`
+  Humongous Fungus, `npm run dev:sporemonger` for Sporemonger,
+  `npm run dev:hammygotchi` for Hammygotchi), then
+  `node scripts/make-art.mjs <fungus|sporemonger|hammygotchi>`
   (needs Playwright). Then in the game's folder, with its background colour
-  (`#16110d` for Humongous Fungus, `#0d1120` for Sporemonger):
+  (`#16110d` for Humongous Fungus, `#0d1120` for Sporemonger, `#1a1026` for
+  Hammygotchi):
   `npx capacitor-assets generate --ios --android --iconBackgroundColor '<colour>' --iconBackgroundColorDark '<colour>' --splashBackgroundColor '<colour>' --splashBackgroundColorDark '<colour>'`
 - Screenshots: 440×956 browser window at 3× scale for Apple (1320×2868), and
   360×640 at 3× for Google Play (1080×1920), saved as RGB PNGs.

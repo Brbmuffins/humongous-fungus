@@ -178,4 +178,41 @@ export const sfx = {
     tone('square', 220, 110, 0, 0.35, 0.16);
     tone('square', 165, 82, 0.35, 0.6, 0.16);
   },
+  /** A train's fart: two whistle notes with steam. */
+  toot(size: number): void {
+    const dur = 0.2 + size * 0.35;
+    tone('triangle', 587, 587, 0, dur, 0.16);
+    tone('triangle', 740, 740, 0, dur, 0.12);
+    tone('triangle', 880, 880, 0, dur, 0.08);
+    hiss(0, dur, 2500, 0.08);
+    if (size > 0.9) {
+      tone('triangle', 587, 587, dur + 0.08, dur * 1.4, 0.16);
+      tone('triangle', 740, 740, dur + 0.08, dur * 1.4, 0.12);
+    }
+  },
+  pow(): void {
+    hiss(0, 0.12, 900, 0.5, 'lowpass');
+    tone('sine', 140, 50, 0, 0.18, 0.5);
+  },
+  splat(): void {
+    hiss(0, 0.25, 700, 0.35, 'lowpass');
+    tone('sine', 260, 90, 0, 0.15, 0.25);
+  },
+  fuse(): void {
+    hiss(0, 1.6, 5000, 0.06, 'highpass');
+  },
+  bang(): void {
+    hiss(0, 0.9, 400, 0.7, 'lowpass');
+    hiss(0, 0.2, 3000, 0.4);
+    tone('sine', 90, 30, 0, 0.5, 0.6);
+  },
+  giggle(): void {
+    const base = 900 + Math.random() * 300;
+    tone('sine', base, base * 1.3, 0, 0.06, 0.08);
+    tone('sine', base * 1.1, base * 1.4, 0.08, 0.06, 0.08);
+  },
+  poof(): void {
+    hiss(0, 0.5, 1500, 0.25);
+    tone('sine', 300, 900, 0, 0.3, 0.1);
+  },
 };

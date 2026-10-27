@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { FOOD_BY_ID, FIT_BY_ID, MAX_ORDERS, MAX_TEXTS, ROT_SECONDS, SCOOP_COINS, SELF_ORDER_TIP, START_COINS } from '../../games/hammygotchi/src/defs';
+import { FOOD_BY_ID, FIT_BY_ID, MAX_ORDERS, MAX_TEXTS, PLAY_COOLDOWN, ROT_SECONDS, SCOOP_COINS, SELF_ORDER_TIP, START_COINS, TOY_BY_ID } from '../../games/hammygotchi/src/defs';
 import {
   adopt,
   buyFit,
+  buyToy,
   canCall,
   declineCall,
   endCall,
+  formFor,
+  formOnDay,
   hose,
   isAlive,
   needWord,
   order,
+  pickToy,
+  play,
   rotDone,
   scoop,
   sendText,
@@ -304,5 +309,79 @@ describe('saves', () => {
     expect(s.messages).toHaveLength(1);
     // Causes only mean something once he's dead.
     expect(s.causes).toEqual([]);
+  });
+});
+
+describe('forms', () => {
+  it('a new Hammy starts out as a hamster', () => {
+    const s = newGame(T0);
+    expect(formFor(s, T0)).toBe('hamster');
+  });
+  it('after that he changes every day, never the same twice in a row', () => {
+    const first = 20_000;
+    const days = Array.from({ length: 200 }, (_, i) => formOnDay(first + i, first, 12345));
+    expect(days[0]).toBe('hamster');
+    for (let i = 1; i < days.length; i++) expect(days[i]).not.toBe(days[i - 1]);
+    for (const f of ['hamster', 'sub', 'train']) expect(days.filter((d) => d === f).length).toBeGreaterThan(40);
+  });
+  it('the same day is the same form every time you ask', () => {
+    expect(formOnDay(20_031, 20_000, 7)).toBe(formOnDay(20_031, 20_000, 7));
+  });
+});
+
+describe('toys', () => {
+  it('start with a hand, a feather and a ball; the rest cost coins', () => {
+    const s = newGame(T0);
+    expect(s.toys).toEqual(['hand', 'feather', 'ball']);
+    expect(pickToy(s, 'glove')).toBe(false);
+    s.coins = TOY_BY_ID.glove.price;
+    expect(buyToy(s, 'glove')).toBe(true);
+    expect(s.coins).toBe(0);
+    expect(s.toy).toBe('glove');
+    expect(buyToy(s, 'glove')).toBe(false);
+  });
+  it('nice toys lift his mood, mean ones pay more and cost mood', () => {
+    const s = newGame(T0);
+    s.toys.push('glove');
+    s.mood = 50;
+    expect(play(s, 'feather', T0)).toEqual({ mood: TOY_BY_ID.feather.mood, coins: TOY_BY_ID.feather.coins });
+    expect(s.mood).toBe(50 + TOY_BY_ID.feather.mood);
+    const later = T0 + sec(PLAY_COOLDOWN);
+    const before = s.coins;
+    play(s, 'glove', later);
+    expect(s.mood).toBe(50 + TOY_BY_ID.feather.mood + TOY_BY_ID.glove.mood);
+    expect(s.coins).toBe(before + TOY_BY_ID.glove.coins);
+    expect(TOY_BY_ID.glove.coins).toBeGreaterThan(TOY_BY_ID.feather.coins);
+  });
+  it('only count every couple of seconds', () => {
+    const s = newGame(T0);
+    expect(play(s, 'ball', T0)).not.toBeNull();
+    expect(play(s, 'ball', T0 + 100)).toBeNull();
+    expect(s.stats.toys).toBe(1);
+  });
+  it('do nothing with toys you do not own, or once he is dead', () => {
+    const s = newGame(T0);
+    expect(play(s, 'firecracker', T0)).toBeNull();
+    s.diedAt = T0;
+    expect(play(s, 'ball', T0 + sec(10))).toBeNull();
+  });
+  it('are kept, with what you had in hand, across saves and a new Hammy', () => {
+    const s = newGame(T0);
+    s.coins = 1000;
+    buyToy(s, 'magnet');
+    const d = deserialize(serialize(s))!;
+    expect(d.toys).toContain('magnet');
+    expect(d.toy).toBe('magnet');
+    d.diedAt = T0 + 1;
+    adopt(d, T0 + 2);
+    expect(d.toys).toContain('magnet');
+  });
+  it('a damaged save gets the starting toys back', () => {
+    const raw = JSON.parse(serialize(newGame(T0)));
+    raw.toys = ['laser', 'pie'];
+    raw.toy = 'laser';
+    const d = deserialize(JSON.stringify(raw))!;
+    expect(d.toys).toEqual(['hand', 'feather', 'ball', 'pie']);
+    expect(d.toy).toBe('hand');
   });
 });

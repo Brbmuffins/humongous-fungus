@@ -1,10 +1,13 @@
 // Hammy himself, drawn on a canvas: a round, sweaty little guy with buck
-// teeth, in whatever fit he has on. Also his skeleton, for afterwards.
-import type { FitId } from './defs';
+// teeth, in whatever fit he has on. Some days he's a meatball sub or a train
+// instead, but he keeps his ears, his teeth and his face. Also his skeleton,
+// for afterwards.
+import type { FitId, FormId } from './defs';
 
 export type Face = 'happy' | 'joy' | 'meh' | 'sad' | 'sick' | 'shock' | 'smug' | 'eat' | 'dead' | 'sleep';
 
 export interface Look {
+  form: FormId;
   fit: FitId;
   face: Face;
   /** 0..1: how green he's turned (stink, sickness, rot). */
@@ -23,9 +26,12 @@ export interface Look {
   armsUp: boolean;
   /** 0..1 how badly the astronaut helmet has fogged up. */
   fog: number;
+  /** How far the train's wheels have turned, radians. */
+  roll: number;
 }
 
-export const defaultLook = (fit: FitId): Look => ({
+export const defaultLook = (fit: FitId, form: FormId = 'hamster'): Look => ({
+  form,
   fit,
   face: 'happy',
   green: 0,
@@ -37,7 +43,25 @@ export const defaultLook = (fit: FitId): Look => ({
   mouth: 0,
   armsUp: false,
   fog: 0,
+  roll: 0,
 });
+
+/** Half width and half height of each form, in multiples of r. */
+export const EXTENTS: Record<FormId, { w: number; h: number }> = {
+  hamster: { w: 1, h: 0.92 },
+  sub: { w: 1.55, h: 0.62 },
+  train: { w: 1.45, h: 0.95 },
+};
+
+/**
+ * Where his face sits on each form (from the body's center, facing right, in
+ * multiples of r), how big it is, and where a hat goes above it.
+ */
+export const HEADS: Record<FormId, { x: number; y: number; s: number; hat: number }> = {
+  hamster: { x: 0, y: 0, s: 1, hat: -0.92 * 0.92 },
+  sub: { x: 0.78, y: -0.12, s: 0.6, hat: -0.41 },
+  train: { x: -0.8, y: -0.18, s: 0.5, hat: -0.56 },
+};
 
 const TAU = Math.PI * 2;
 const INK = '#2b1a10';
@@ -46,7 +70,7 @@ function mix(a: string, b: string, t: number): string {
   const pa = parseInt(a.slice(1), 16);
   const pb = parseInt(b.slice(1), 16);
   const ch = (shift: number) => Math.round(((pa >> shift) & 255) * (1 - t) + ((pb >> shift) & 255) * t);
-  return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
+  return `#${[ch(16), ch(8), ch(0)].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
 function ellipse(c: CanvasRenderingContext2D, x: number, y: number, rx: number, ry: number, rot = 0): void {
@@ -63,20 +87,54 @@ function furColors(fit: FitId, green: number): { fur: string; belly: string; dar
   return { fur: mix(fur, sick, green * 0.8), belly: mix(belly, '#c9d68a', green * 0.7), dark: mix(dark, '#4f6420', green * 0.8) };
 }
 
-/** Draw Hammy with his body centered on (x, y), r wide either side. */
+/** A color on one of his other forms: gold if he's golden, green if he's going off. */
+function tone(color: string, look: Look, gold = '#f2bf2a'): string {
+  return mix(look.fit === 'golden' ? gold : color, '#7f9a3c', look.green * 0.7);
+}
+
+/** Draw Hammy with his body centered on (x, y), r wide either side (wider as a sub or a train). */
 export function drawHammy(c: CanvasRenderingContext2D, x: number, y: number, r: number, look: Look, t: number): void {
-  const ry = r * 0.92;
-  const lw = Math.max(1.2, r * 0.06);
-  const { fur, belly, dark } = furColors(look.fit, look.green);
+  const ry = r * EXTENTS[look.form].h;
   c.save();
   c.translate(x, y + ry);
   c.rotate(look.lean);
   c.scale(look.sx * (look.flip ? -1 : 1), look.sy);
   c.translate(0, -ry);
-  c.lineWidth = lw;
+  c.lineWidth = Math.max(1.2, r * 0.06);
   c.lineJoin = 'round';
   c.lineCap = 'round';
   c.strokeStyle = INK;
+  if (look.form === 'sub') drawSub(c, r, look, t);
+  else if (look.form === 'train') drawTrain(c, r, look, t);
+  else drawHamster(c, r, ry, look, t);
+  c.restore();
+}
+
+function drawEars(c: CanvasRenderingContext2D, spots: readonly (readonly [number, number])[], er: number, fur: string): void {
+  for (const [ex, ey] of spots) {
+    c.fillStyle = fur;
+    ellipse(c, ex, ey, er, er * 0.9);
+    c.fill();
+    c.stroke();
+    c.fillStyle = '#f2a0a6';
+    ellipse(c, ex, ey + er * 0.1, er * 0.55, er * 0.45);
+    c.fill();
+  }
+}
+
+/** His face, hat and glasses, on whatever he is today. */
+function drawHead(c: CanvasRenderingContext2D, r: number, look: Look, t: number, skin: string): void {
+  const head = HEADS[look.form];
+  const hr = r * head.s;
+  c.save();
+  c.translate(head.x * r, head.y * r);
+  drawFace(c, hr, hr * 0.92, look, t, skin);
+  drawHeadFit(c, hr, hr * 0.92, look, t, head.hat * r);
+  c.restore();
+}
+
+function drawHamster(c: CanvasRenderingContext2D, r: number, ry: number, look: Look, t: number): void {
+  const { fur, belly, dark } = furColors(look.fit, look.green);
 
   // Tail, feet and ears sit behind the body.
   c.fillStyle = fur;
@@ -89,18 +147,15 @@ export function drawHammy(c: CanvasRenderingContext2D, x: number, y: number, r: 
     c.fill();
     c.stroke();
   }
-  for (const [ex, ey] of [
-    [-0.42, -0.78],
-    [0.5, -0.8],
-  ] as const) {
-    c.fillStyle = fur;
-    ellipse(c, ex * r, ey * ry, r * 0.22, r * 0.2);
-    c.fill();
-    c.stroke();
-    c.fillStyle = '#f2a0a6';
-    ellipse(c, ex * r, ey * ry + r * 0.02, r * 0.12, r * 0.1);
-    c.fill();
-  }
+  drawEars(
+    c,
+    [
+      [-0.42 * r, -0.78 * ry],
+      [0.5 * r, -0.8 * ry],
+    ],
+    r * 0.22,
+    fur,
+  );
 
   // Body.
   c.fillStyle = fur;
@@ -139,9 +194,267 @@ export function drawHammy(c: CanvasRenderingContext2D, x: number, y: number, r: 
   c.stroke();
   if (look.fit === 'hotdog') drawBun(c, r, ry);
 
-  drawFace(c, r, ry, look, t, fur);
-  drawHeadFit(c, r, ry, look, t);
+  drawHead(c, r, look, t, fur);
+}
+
+/** Little stick arms that only come out when he's held or flying. */
+function stickArms(c: CanvasRenderingContext2D, from: readonly (readonly [number, number])[], r: number, up: boolean, color: string): void {
+  if (!up) return;
+  c.save();
+  c.strokeStyle = color;
+  c.lineWidth = Math.max(1.5, r * 0.07);
+  for (const [i, [x, y]] of from.entries()) {
+    const side = i === 0 ? -1 : 1;
+    c.beginPath();
+    c.moveTo(x, y);
+    c.lineTo(x + side * r * 0.28, y - r * 0.35);
+    c.stroke();
+  }
   c.restore();
+}
+
+function drawSub(c: CanvasRenderingContext2D, r: number, look: Look, t: number): void {
+  const W = r * EXTENTS.sub.w;
+  const H = r * EXTENTS.sub.h;
+  const bread = tone('#d99a52', look);
+  const crust = tone('#b8773a', look, '#d9a520');
+  const top = tone('#e8b46a', look, '#ffd34d');
+  const sauce = tone('#c8372b', look, '#e0a020');
+  const meat = tone('#7a3b1f', look, '#b8860b');
+  const { fur } = furColors(look.fit, look.green);
+
+  // Pink hamster feet and a tail: still Hammy under there.
+  for (const fx of [-0.7, 0.5]) {
+    c.fillStyle = '#f09aa0';
+    ellipse(c, fx * r, H * 0.98, r * 0.2, r * 0.1);
+    c.fill();
+    c.stroke();
+  }
+  c.fillStyle = fur;
+  ellipse(c, -W * 0.98, H * 0.15, r * 0.12, r * 0.08, -0.4);
+  c.fill();
+  c.stroke();
+  stickArms(
+    c,
+    [
+      [-W * 0.75, H * 0.15],
+      [W * 0.75, H * 0.15],
+    ],
+    r,
+    look.armsUp,
+    INK,
+  );
+
+  // Bottom of the roll.
+  c.fillStyle = bread;
+  c.beginPath();
+  c.ellipse(0, H * 0.05, W, H * 0.92, 0, 0, Math.PI);
+  c.closePath();
+  c.fill();
+  c.stroke();
+  c.fillStyle = crust;
+  c.globalAlpha = 0.4;
+  c.beginPath();
+  c.ellipse(0, H * 0.05, W * 0.96, H * 0.82, 0, Math.PI * 0.15, Math.PI * 0.85);
+  c.lineTo(0, H * 0.5);
+  c.fill();
+  c.globalAlpha = 1;
+
+  // Sauce, dripping, and the meatballs.
+  c.fillStyle = sauce;
+  c.beginPath();
+  c.moveTo(-W * 0.92, H * 0.02);
+  for (let i = 0; i <= 12; i++) {
+    const x = -W * 0.92 + (i / 12) * W * 1.84;
+    c.lineTo(x, H * 0.1 + Math.sin(i * 1.7) * H * 0.08);
+  }
+  c.lineTo(W * 0.92, -H * 0.05);
+  c.closePath();
+  c.fill();
+  for (const [dx, k] of [
+    [-0.45, 0],
+    [0.1, 1.3],
+    [0.55, 2.1],
+  ]) {
+    const drip = (Math.sin(t * 0.002 + k) + 1) * 0.5;
+    ellipse(c, dx * W, H * (0.22 + drip * 0.18), r * 0.05, r * (0.07 + drip * 0.05));
+    c.fill();
+  }
+  for (let i = 0; i < 5; i++) {
+    const mx = -W * 0.7 + i * W * 0.35;
+    c.fillStyle = meat;
+    ellipse(c, mx, -H * 0.02, r * 0.27, r * 0.24);
+    c.fill();
+    c.stroke();
+    c.fillStyle = 'rgba(255,255,255,0.22)';
+    ellipse(c, mx - r * 0.08, -H * 0.12, r * 0.08, r * 0.05);
+    c.fill();
+  }
+  // Melted cheese.
+  c.fillStyle = look.fit === 'golden' ? '#fff0a8' : '#ffd45c';
+  c.beginPath();
+  c.moveTo(-W * 0.85, -H * 0.12);
+  for (let i = 0; i <= 10; i++) {
+    const x = -W * 0.85 + (i / 10) * W * 1.7;
+    c.lineTo(x, -H * 0.12 + (i % 2 ? H * 0.18 : 0));
+  }
+  c.lineTo(W * 0.85, -H * 0.2);
+  c.lineTo(-W * 0.85, -H * 0.2);
+  c.closePath();
+  c.fill();
+
+  // Ears on the top of the roll, then the roll itself.
+  const head = HEADS.sub;
+  drawEars(
+    c,
+    [
+      [(head.x - 0.32) * r, -H * 0.88],
+      [(head.x + 0.3) * r, -H * 0.8],
+    ],
+    r * 0.14,
+    fur,
+  );
+  c.fillStyle = top;
+  c.beginPath();
+  c.ellipse(0, -H * 0.12, W * 0.97, H * 0.85, 0, Math.PI, TAU);
+  c.quadraticCurveTo(0, -H * 0.02, -W * 0.97, -H * 0.12);
+  c.fill();
+  c.stroke();
+  // Score marks on the crust.
+  c.strokeStyle = 'rgba(120,70,25,0.55)';
+  for (const sx of [-0.6, -0.25, 0.1]) {
+    c.beginPath();
+    c.moveTo(sx * W, -H * 0.72);
+    c.quadraticCurveTo((sx + 0.08) * W, -H * 0.82, (sx + 0.16) * W, -H * 0.7);
+    c.stroke();
+  }
+  c.strokeStyle = INK;
+  c.fillStyle = 'rgba(255,255,255,0.25)';
+  ellipse(c, -W * 0.4, -H * 0.62, W * 0.18, H * 0.08, -0.1);
+  c.fill();
+
+  drawHead(c, r, look, t, top);
+}
+
+function drawTrain(c: CanvasRenderingContext2D, r: number, look: Look, t: number): void {
+  const red = tone('#d6332b', look);
+  const blue = tone('#2f6fd6', look, '#e0a820');
+  const roof = tone('#1f4c9e', look, '#b8860b');
+  const brass = look.fit === 'golden' ? '#fff0a8' : '#f2c14e';
+  const plate = tone('#f4e6c8', look, '#fff0a8');
+  const { fur } = furColors(look.fit, look.green);
+
+  // Smokestack, dome and cab roof sit above; ears peek over the roof.
+  drawEars(
+    c,
+    [
+      [-1.1 * r, -0.8 * r],
+      [-0.5 * r, -0.82 * r],
+    ],
+    r * 0.14,
+    fur,
+  );
+  c.fillStyle = '#25202b';
+  c.beginPath();
+  c.moveTo(0.86 * r, -0.28 * r);
+  c.lineTo(0.8 * r, -0.86 * r);
+  c.lineTo(1.18 * r, -0.86 * r);
+  c.lineTo(1.12 * r, -0.28 * r);
+  c.closePath();
+  c.fill();
+  c.stroke();
+  c.fillRect(0.76 * r, -0.94 * r, 0.46 * r, 0.1 * r);
+  c.strokeRect(0.76 * r, -0.94 * r, 0.46 * r, 0.1 * r);
+  c.fillStyle = brass;
+  c.beginPath();
+  c.arc(0.35 * r, -0.28 * r, 0.17 * r, Math.PI, TAU);
+  c.fill();
+  c.stroke();
+
+  // Boiler, with brass bands and a headlamp.
+  c.fillStyle = red;
+  c.beginPath();
+  c.roundRect(-0.3 * r, -0.3 * r, 1.58 * r, 0.66 * r, [0, 0.3 * r, 0.3 * r, 0]);
+  c.fill();
+  c.stroke();
+  c.fillStyle = brass;
+  for (const bx of [0.15, 0.68]) c.fillRect(bx * r, -0.3 * r, 0.08 * r, 0.66 * r);
+  c.fillStyle = '#ffe58a';
+  ellipse(c, 1.24 * r, -0.12 * r, 0.1 * r, 0.1 * r);
+  c.fill();
+  c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.2)';
+  c.fillRect(-0.25 * r, -0.24 * r, 1.4 * r, 0.1 * r);
+
+  // Cab: this is the face end.
+  c.fillStyle = blue;
+  c.fillRect(-1.38 * r, -0.62 * r, 1.12 * r, 0.98 * r);
+  c.strokeRect(-1.38 * r, -0.62 * r, 1.12 * r, 0.98 * r);
+  c.fillStyle = roof;
+  c.fillRect(-1.48 * r, -0.76 * r, 1.32 * r, 0.16 * r);
+  c.strokeRect(-1.48 * r, -0.76 * r, 1.32 * r, 0.16 * r);
+  c.fillStyle = plate;
+  c.beginPath();
+  c.roundRect(-1.26 * r, -0.54 * r, 0.9 * r, 0.7 * r, 0.12 * r);
+  c.fill();
+  c.stroke();
+
+  // Frame, cowcatcher and wheels.
+  c.fillStyle = '#25202b';
+  c.fillRect(-1.42 * r, 0.34 * r, 2.72 * r, 0.14 * r);
+  c.beginPath();
+  c.moveTo(1.22 * r, 0.34 * r);
+  c.lineTo(1.45 * r, 0.82 * r);
+  c.lineTo(1.0 * r, 0.82 * r);
+  c.lineTo(1.0 * r, 0.48 * r);
+  c.closePath();
+  c.fill();
+  c.stroke();
+  const wr = 0.26 * r;
+  for (const wx of [-1.0, -0.45, 0.35]) {
+    c.fillStyle = '#1b1720';
+    ellipse(c, wx * r, 0.95 * r - wr, wr, wr);
+    c.fill();
+    c.stroke();
+    c.strokeStyle = brass;
+    c.lineWidth = Math.max(1, r * 0.04);
+    for (let k = 0; k < 3; k++) {
+      const a = look.roll + (k * Math.PI) / 3;
+      c.beginPath();
+      c.moveTo(wx * r - Math.cos(a) * wr * 0.75, 0.95 * r - wr - Math.sin(a) * wr * 0.75);
+      c.lineTo(wx * r + Math.cos(a) * wr * 0.75, 0.95 * r - wr + Math.sin(a) * wr * 0.75);
+      c.stroke();
+    }
+    c.strokeStyle = INK;
+    c.lineWidth = Math.max(1.2, r * 0.06);
+  }
+  // The rod that joins the wheels, going round with them.
+  const rod = 0.95 * r - wr + Math.sin(look.roll) * wr * 0.5;
+  c.strokeStyle = '#c9ccd6';
+  c.lineWidth = Math.max(1.5, r * 0.06);
+  c.beginPath();
+  c.moveTo(-1.0 * r + Math.cos(look.roll) * wr * 0.5, rod);
+  c.lineTo(0.35 * r + Math.cos(look.roll) * wr * 0.5, rod);
+  c.stroke();
+  c.strokeStyle = INK;
+  c.lineWidth = Math.max(1.2, r * 0.06);
+  stickArms(
+    c,
+    [
+      [-1.38 * r, -0.1 * r],
+      [-0.26 * r, -0.1 * r],
+    ],
+    r,
+    look.armsUp,
+    INK,
+  );
+  // A tiny hamster tail off the back.
+  c.fillStyle = fur;
+  ellipse(c, -1.5 * r, 0.1 * r, r * 0.1, r * 0.07, -0.4);
+  c.fill();
+  c.stroke();
+
+  drawHead(c, r, look, t, plate);
 }
 
 function drawFace(c: CanvasRenderingContext2D, r: number, ry: number, look: Look, t: number, fur: string): void {
@@ -406,8 +719,7 @@ function drawBun(c: CanvasRenderingContext2D, r: number, ry: number): void {
   }
 }
 
-function drawHeadFit(c: CanvasRenderingContext2D, r: number, ry: number, look: Look, t: number): void {
-  const top = -ry * 0.92;
+function drawHeadFit(c: CanvasRenderingContext2D, r: number, ry: number, look: Look, t: number, top: number): void {
   switch (look.fit) {
     case 'roadtrip': {
       // Trucker cap: foam front, mesh back, brim forward.
@@ -661,7 +973,7 @@ export function drawSkeleton(c: CanvasRenderingContext2D, x: number, y: number, 
 }
 
 /** Hammy as a small picture on its own canvas, for the shop and the phone. */
-export function paintPortrait(canvas: HTMLCanvasElement, fit: FitId, face: Face = 'happy', t = 0): void {
+export function paintPortrait(canvas: HTMLCanvasElement, fit: FitId, face: Face = 'happy', t = 0, form: FormId = 'hamster'): void {
   const rect = canvas.getBoundingClientRect();
   const w = rect.width || canvas.width;
   const h = rect.height || canvas.height;
@@ -672,6 +984,8 @@ export function paintPortrait(canvas: HTMLCanvasElement, fit: FitId, face: Face 
   const c = canvas.getContext('2d')!;
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   c.clearRect(0, 0, w, h);
-  const r = Math.min(w, h) * 0.3;
-  drawHammy(c, w / 2, h * 0.58, r, { ...defaultLook(fit), face }, t);
+  // Sized so a hat still fits on top, whatever he is today.
+  const ext = EXTENTS[form];
+  const r = Math.min((w * 0.4) / ext.w, (h * 0.3) / Math.max(0.92, ext.h));
+  drawHammy(c, w / 2, h * 0.58 + (0.92 - ext.h) * r * 0.5, r, { ...defaultLook(fit, form), face }, t);
 }

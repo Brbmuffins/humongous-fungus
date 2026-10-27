@@ -19,10 +19,12 @@
         </div>
       </header>
       <section class="stage" aria-label="The tank">
-        <canvas id="tank" tabindex="0" aria-label="Hammy's tank. Drag Hammy to throw him, tap him to pet him, tap poop to scoop it. Press Space to pet him."></canvas>
+        <canvas id="tank" tabindex="0" aria-label="Hammy's tank. With the hand, drag Hammy to throw him, tap him to pet him, tap poop to scoop it. Pick other toys in the bar below. Press Space to pet him."></canvas>
         <p class="hint" id="hint">Grab Hammy and throw him. Tap poop to scoop it.</p>
         <p class="toast" id="toast" role="status" hidden></p>
+        <p class="today" id="today">Today: hamster</p>
       </section>
+      <div class="toybar" id="toybar" role="toolbar" aria-label="Toys"></div>
       <section class="meters" aria-label="How Hammy is doing">
         <div class="meter" data-need="belly" role="meter" aria-label="Belly" aria-valuemin="0" aria-valuemax="100"><span class="meter-top"><span class="meter-name">Belly</span><span class="meter-word"></span></span><span class="bar"><span class="bar-fill"></span></span></div>
         <div class="meter" data-need="fresh" role="meter" aria-label="Fresh" aria-valuemin="0" aria-valuemax="100"><span class="meter-top"><span class="meter-name">Fresh</span><span class="meter-word"></span></span><span class="bar"><span class="bar-fill"></span></span></div>
@@ -32,7 +34,7 @@
       <nav class="tabs" role="tablist" aria-label="Sections">
         <button type="button" id="tab-care" role="tab" data-tab="care"><span class="tab-label">Care<span class="badge" hidden></span></span></button>
         <button type="button" id="tab-phone" role="tab" data-tab="phone"><span class="tab-label">Phone<span class="badge" hidden></span></span></button>
-        <button type="button" id="tab-fits" role="tab" data-tab="fits"><span class="tab-label">Fits<span class="badge" hidden></span></span></button>
+        <button type="button" id="tab-shop" role="tab" data-tab="shop"><span class="tab-label">Shop<span class="badge" hidden></span></span></button>
         <button type="button" id="tab-life" role="tab" data-tab="life"><span class="tab-label">Life<span class="badge" hidden></span></span></button>
       </nav>
       <main class="panel" id="panel" role="tabpanel"></main>

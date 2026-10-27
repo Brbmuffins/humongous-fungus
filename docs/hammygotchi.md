@@ -54,10 +54,48 @@ sad but alive.
   worth extra, declining hurts more than missing it. While you're away he
   calls every 1–3 hours, and you miss every one.
 
+## Some days he's a meatball sub
+
+Hammy is an avatar. His first day he's a hamster; after that, every day at
+local midnight, he wakes up as something else: a hamster, a meatball sub or
+a train, never the same two days running (`formOnDay` in `src/game.ts`, walked
+from his first day so it's the same on every device). The first time you open
+the game on a new day he changes in a puff of smoke and says so.
+
+Every form keeps his face, buck teeth, ears and pink feet, so he's still
+recognizably Hammy. Hats and glasses go on whatever he is (a cowboy hat sits
+on the train's cab roof); shirts and costumes only show on hamster days. Each
+form has its own size and physics box, its own lines ("Choo choo.", "I'm a
+sandwich today. Don't ask.") and its own fart: a train toots its whistle. A
+dead hamster keels over; a dead sub or train goes belly-up, and either way
+the skeleton underneath is a hamster's.
+
+## The toy box
+
+Like the item bar in the old Flash pet games: a row of toys under the tank.
+Pick one, then use it in the tank.
+
+| Toy | Price | How | Per hit |
+|---|---|---|---|
+| Hand | free | Drag to throw him, tap to pet, tap poop to scoop | mood from throws and pets |
+| Feather | free | Rub it on him: he giggles | +3 mood, +1 coin |
+| Bouncy ball | free | Drag and let go to throw; he kicks resting balls back | +2 mood, +1 coin |
+| Boxing glove | 30 | Tap him: a glove on a spring punches out of the nearest wall | −5 mood, +3 coins |
+| Water balloon | 40 | Tap above him: it drops and splashes | −3 mood, +10 fresh, +2 coins |
+| Cream pie | 60 | Tap anywhere: it always finds his face | −1 mood, +4 belly, +3 coins |
+| Whoopee cushion | 80 | Tap the floor to put it down; he walks over to sit on it | +4 mood, +2 coins |
+| Magnet | 120 | Hold to pull him around the tank | +1 mood, +1 coin |
+| Firecracker | 200 | Tap to light; after the fuse it blows him across the tank, with soot | −7 mood, +6 coins |
+
+Nice toys lift his mood; mean ones pay more and cost mood, so farming coins
+with the glove has a price. A toy only counts once every 1.5 seconds
+(`PLAY_COOLDOWN`), though every use still plays out in the tank. Toys are kept
+when he dies.
+
 ## Hammy coins and fits
 
-Coins come from scooping poop, texting, calls, and 12 an hour while he's in a
-good mood (he won't say how). They buy fits: Road trip (40), Gamer (90),
+Coins come from scooping poop, texting, calls, toys, and 12 an hour while he's
+in a good mood (he won't say how). They buy fits: Road trip (40), Gamer (90),
 Cowboy (150), Shroom hat (220), Hot dog (320), Astronaut (480, the stink
 fogs up the helmet), Wizard (650) and Golden Hammy (1000). Fits are kept
 when he dies; coins start over at 50.
@@ -92,9 +130,13 @@ long each one lasted, how many times he farted, and what got him.
 one for big farts), and reminders. When the app goes to the background it
 plays a copy of Hammy forward a day and schedules his next text as a
 notification, plus one for the moment he gets into trouble (starving,
-lonely, biohazard, or dying). The native iOS and Android projects aren't
-generated yet: `cd games/hammygotchi && npx cap add ios && npx cap add android`,
-then the same store steps as the other games.
+lonely, biohazard, or dying).
+
+The iPhone and Android projects are in `ios/` and `android/`, set up like the
+other games (portrait only, signed from GitHub secrets, notification icon,
+privacy manifest). Builds run on GitHub Actions (`ios-hammygotchi.yml`,
+`android-hammygotchi.yml`); the store steps are Part 4 of
+`docs/app-store-checklist.md`, and store text and screenshots are in `store/`.
 
 ## Ideas for later
 

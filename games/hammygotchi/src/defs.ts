@@ -177,6 +177,86 @@ export const FITS: readonly FitDef[] = [
 export const FIT_BY_ID = Object.fromEntries(FITS.map((f) => [f.id, f])) as Record<FitId, FitDef>;
 
 // ---------------------------------------------------------------------------
+// Forms: Hammy is an avatar. Some days he's a hamster, some days a meatball
+// sub, some days a train. Hats and glasses go on whatever he is.
+
+export type FormId = 'hamster' | 'sub' | 'train';
+
+export interface FormDef {
+  id: FormId;
+  name: string;
+  /** "Today Hammy is …" */
+  today: string;
+  /** Things only this form says. */
+  lines: readonly string[];
+  /** What a fart sounds like, small to big. */
+  fart: readonly [string, string, string];
+}
+
+export const FORMS: readonly FormDef[] = [
+  {
+    id: 'hamster',
+    name: 'Hamster',
+    today: 'a hamster. Probably.',
+    lines: ['I feel like myself today.', 'Normal day. Normal guy.', 'Back to hamster. Nice.'],
+    fart: ['pft', 'pfffrt', 'PFFFRRRT'],
+  },
+  {
+    id: 'sub',
+    name: 'Meatball sub',
+    today: 'a meatball sub.',
+    lines: ["I'm a sandwich today. Don't ask.", 'Extra sauce.', "Don't eat me.", 'Is it hot in here or is that the marinara?', 'Footlong. Thank you.', 'I am leaking sauce.'],
+    fart: ['plip', 'splorp', 'SPLORRRT'],
+  },
+  {
+    id: 'train',
+    name: 'Train',
+    today: 'a train.',
+    lines: ['Choo choo.', 'All aboard!', 'Next stop: the snack bar.', 'I am a locomotive now.', 'Tickets, please.', "I'm off the rails!"],
+    fart: ['toot', 'TOOT TOOT', 'TOOOOOOOT'],
+  },
+];
+
+export const FORM_BY_ID = Object.fromEntries(FORMS.map((f) => [f.id, f])) as Record<FormId, FormDef>;
+
+// ---------------------------------------------------------------------------
+// Toys, like the item bar in an old Flash pet game: pick one under the tank
+// and use it on him. Nice ones lift his mood. Mean ones pay more coins.
+
+export type ToyId = 'hand' | 'feather' | 'ball' | 'glove' | 'balloon' | 'pie' | 'cushion' | 'magnet' | 'firecracker';
+
+export interface ToyDef {
+  id: ToyId;
+  name: string;
+  /** How to use it. */
+  how: string;
+  blurb: string;
+  price: number;
+  /** What a use does to him, at most once every PLAY_COOLDOWN seconds. */
+  mood: number;
+  coins: number;
+  fresh?: number;
+  belly?: number;
+}
+
+export const TOYS: readonly ToyDef[] = [
+  { id: 'hand', name: 'Hand', how: 'Drag him to throw him. Tap him to pet him. Tap poop to scoop it.', blurb: 'Your hand. He loves being thrown.', price: 0, mood: 0, coins: 0 },
+  { id: 'feather', name: 'Feather', how: 'Rub it on him.', blurb: 'He is extremely ticklish.', price: 0, mood: 3, coins: 1 },
+  { id: 'ball', name: 'Bouncy ball', how: 'Drag and let go to throw one. He kicks them back.', blurb: 'He loves ball. Even when it hits him.', price: 0, mood: 2, coins: 1 },
+  { id: 'glove', name: 'Boxing glove', how: 'Tap him.', blurb: 'On a spring, out of the wall. He hates it. Pays well.', price: 30, mood: -5, coins: 3 },
+  { id: 'balloon', name: 'Water balloon', how: 'Tap above him.', blurb: 'Cleans him a little. He does not see it that way.', price: 40, mood: -3, coins: 2, fresh: 10 },
+  { id: 'pie', name: 'Cream pie', how: 'Tap to throw one at him.', blurb: 'Right in the face. He eats it anyway.', price: 60, mood: -1, coins: 3, belly: 4 },
+  { id: 'cushion', name: 'Whoopee cushion', how: 'Tap the floor to put it down, then wait.', blurb: 'The funniest thing ever made, according to him.', price: 80, mood: 4, coins: 2 },
+  { id: 'magnet', name: 'Magnet', how: 'Hold anywhere to pull him around.', blurb: 'He has a lot of iron in him, apparently.', price: 120, mood: 1, coins: 1 },
+  { id: 'firecracker', name: 'Firecracker', how: 'Tap to light one. Stand back.', blurb: 'The cartoon kind: soot, smoke, no harm done. Mostly.', price: 200, mood: -7, coins: 6 },
+];
+
+export const TOY_BY_ID = Object.fromEntries(TOYS.map((t) => [t.id, t])) as Record<ToyId, ToyDef>;
+export const START_TOYS: readonly ToyId[] = ['hand', 'feather', 'ball'];
+/** Toys only count (mood and coins) every this many seconds. */
+export const PLAY_COOLDOWN = 1.5;
+
+// ---------------------------------------------------------------------------
 // Words
 
 /** What each meter says, from full to empty. */
@@ -242,6 +322,14 @@ export const SAYS = {
   sad: ['Nobody ever calls me.', 'Do you even like me?', 'I’m fine. Totally fine.', 'Call me maybe?'],
   stinky: ['Smells like victory.', 'What smell?', 'That’s my natural musk.', 'I can’t smell anything.'],
   glitch: ['Uh oh.', 'Physics is broken.', 'Who turned off gravity?', 'This is fine.'],
+  tickle: ['HEHEHE', 'STOP. HEHE.', 'Not the armpits!', "I'm not ticklish. HEHEHE"],
+  ow: ['OW.', 'Hey!', "I'm telling.", 'Why.', 'Rude.', 'My face!'],
+  ball: ['Ball!', 'Goal!', 'Mine!', 'Ow. Ball.', 'Again!'],
+  splash: ['I’M WET.', 'Who did that?', 'Was that the frog?', 'Cold!'],
+  pie: ['…', 'Tastes good though.', 'Banana cream?', 'Worth it.'],
+  cushion: ['IT WASN’T ME.', 'HAHAHA', 'Classic.', 'Do it again.'],
+  magnet: ['I’m flying!', 'Whoa.', 'Put me down. Actually, don’t.'],
+  bang: ['My eyebrows!', '…what?', 'I can’t hear anything.', 'Cool.'],
 } as const;
 
 export interface NeighborDef {
