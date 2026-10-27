@@ -1,7 +1,7 @@
-// Hammy himself, drawn on a canvas: a round, sweaty little guy with buck
-// teeth, in whatever fit he has on. Some days he's a meatball sub or a train
-// instead, but he keeps his ears, his teeth and his face. Also his skeleton,
-// for afterwards.
+// Hammy himself, drawn on a canvas. Usually he's Cube Hammy: a box with War's
+// eyes and lips. Some days he's a round, sweaty hamster with buck teeth, a
+// meatball sub or a train instead, in whatever fit he has on. Also his
+// skeleton, for afterwards.
 import type { FitId, FormId } from './defs';
 
 export type Face = 'happy' | 'joy' | 'meh' | 'sad' | 'sick' | 'shock' | 'smug' | 'eat' | 'dead' | 'sleep';
@@ -30,7 +30,7 @@ export interface Look {
   roll: number;
 }
 
-export const defaultLook = (fit: FitId, form: FormId = 'hamster'): Look => ({
+export const defaultLook = (fit: FitId, form: FormId = 'cube'): Look => ({
   form,
   fit,
   face: 'happy',
@@ -48,6 +48,7 @@ export const defaultLook = (fit: FitId, form: FormId = 'hamster'): Look => ({
 
 /** Half width and half height of each form, in multiples of r. */
 export const EXTENTS: Record<FormId, { w: number; h: number }> = {
+  cube: { w: 1, h: 0.95 },
   hamster: { w: 1, h: 0.92 },
   sub: { w: 1.55, h: 0.62 },
   train: { w: 1.45, h: 0.95 },
@@ -58,6 +59,7 @@ export const EXTENTS: Record<FormId, { w: number; h: number }> = {
  * multiples of r), how big it is, and where a hat goes above it.
  */
 export const HEADS: Record<FormId, { x: number; y: number; s: number; hat: number }> = {
+  cube: { x: 0, y: 0, s: 1, hat: -0.9 },
   hamster: { x: 0, y: 0, s: 1, hat: -0.92 * 0.92 },
   sub: { x: 0.78, y: -0.12, s: 0.6, hat: -0.41 },
   train: { x: -0.8, y: -0.18, s: 0.5, hat: -0.56 },
@@ -104,7 +106,8 @@ export function drawHammy(c: CanvasRenderingContext2D, x: number, y: number, r: 
   c.lineJoin = 'round';
   c.lineCap = 'round';
   c.strokeStyle = INK;
-  if (look.form === 'sub') drawSub(c, r, look, t);
+  if (look.form === 'cube') drawCube(c, r, look, t);
+  else if (look.form === 'sub') drawSub(c, r, look, t);
   else if (look.form === 'train') drawTrain(c, r, look, t);
   else drawHamster(c, r, ry, look, t);
   c.restore();
@@ -208,6 +211,227 @@ function stickArms(c: CanvasRenderingContext2D, from: readonly (readonly [number
     c.beginPath();
     c.moveTo(x, y);
     c.lineTo(x + side * r * 0.28, y - r * 0.35);
+    c.stroke();
+  }
+  c.restore();
+}
+
+
+// ---------------------------------------------------------------------------
+// Cube Hammy: a box with War's eyes and lips. Drawn by hand until photos come
+// in; drop eyes.png, mouth.png and mouth-open.png into ../assets/face/ (cut
+// out, transparent background) and they're used instead.
+
+const FACE_FILES = import.meta.glob('../assets/face/*.{png,webp}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const facePics: Partial<Record<'eyes' | 'mouth' | 'mouth-open', HTMLImageElement>> = {};
+for (const [path, url] of Object.entries(FACE_FILES)) {
+  const name = path.split('/').pop()!.replace(/\.\w+$/, '');
+  if (name !== 'eyes' && name !== 'mouth' && name !== 'mouth-open') continue;
+  const img = new Image();
+  img.src = url;
+  facePics[name] = img;
+}
+const pic = (name: keyof typeof facePics): HTMLImageElement | null => {
+  const img = facePics[name];
+  return img && img.complete && img.naturalWidth > 0 ? img : null;
+};
+
+/** Front face of the cube; the top and left side recede up and to the left. */
+const CUBE = { x0: -0.65, x1: 0.95, y0: -0.62, y1: 0.98, dx: -0.35, dy: -0.3 };
+
+function drawCube(c: CanvasRenderingContext2D, r: number, look: Look, t: number): void {
+  const { x0, x1, y0, y1, dx, dy } = CUBE;
+  const skin = tone('#e9a066', look);
+  const topSkin = tone('#f6c08a', look, '#ffe08a');
+  const sideSkin = tone('#c27a42', look, '#b8860b');
+  const ry = r * EXTENTS.cube.h;
+
+  // Sneakers and arms behind the box.
+  for (const fx of [-0.3, 0.55]) {
+    c.fillStyle = '#f4f1ea';
+    ellipse(c, fx * r, y1 * r + r * 0.03, r * 0.24, r * 0.11);
+    c.fill();
+    c.stroke();
+    c.fillStyle = '#e8443a';
+    c.fillRect(fx * r - r * 0.2, y1 * r - r * 0.02, r * 0.4, r * 0.05);
+  }
+  c.fillStyle = skin;
+  if (look.armsUp) {
+    ellipse(c, x0 * r - r * 0.08, -r * 0.55, r * 0.1, r * 0.24, 0.5);
+    c.fill();
+    c.stroke();
+    ellipse(c, x1 * r + r * 0.08, -r * 0.6, r * 0.1, r * 0.24, -0.5);
+  } else {
+    ellipse(c, x0 * r - r * 0.05, r * 0.4, r * 0.1, r * 0.22, 0.4);
+    c.fill();
+    c.stroke();
+    ellipse(c, x1 * r + r * 0.05, r * 0.4, r * 0.1, r * 0.22, -0.4);
+  }
+  c.fill();
+  c.stroke();
+
+  // The box: top, side, then the front with his face on it.
+  c.fillStyle = topSkin;
+  c.beginPath();
+  c.moveTo(x0 * r, y0 * r);
+  c.lineTo(x1 * r, y0 * r);
+  c.lineTo((x1 + dx) * r, (y0 + dy) * r);
+  c.lineTo((x0 + dx) * r, (y0 + dy) * r);
+  c.closePath();
+  c.fill();
+  c.stroke();
+  c.fillStyle = sideSkin;
+  c.beginPath();
+  c.moveTo(x0 * r, y0 * r);
+  c.lineTo(x0 * r, y1 * r);
+  c.lineTo((x0 + dx) * r, (y1 + dy) * r);
+  c.lineTo((x0 + dx) * r, (y0 + dy) * r);
+  c.closePath();
+  c.fill();
+  c.stroke();
+  const front = () => {
+    c.beginPath();
+    c.roundRect(x0 * r, y0 * r, (x1 - x0) * r, (y1 - y0) * r, r * 0.12);
+  };
+  c.fillStyle = skin;
+  front();
+  c.fill();
+  c.save();
+  front();
+  c.clip();
+  c.fillStyle = 'rgba(255,255,255,0.12)';
+  c.fillRect(x0 * r, y0 * r, (x1 - x0) * r * 0.35, (y1 - y0) * r);
+  // Shirts start below his mouth.
+  c.translate(0, r * 0.32);
+  drawBodyFit(c, r, ry, look, t);
+  c.restore();
+  front();
+  c.stroke();
+  if (look.fit === 'hotdog') drawBun(c, r, ry);
+
+  drawCubeFace(c, r, look, t, skin);
+  drawHeadFit(c, r, ry, look, t, HEADS.cube.hat * r);
+}
+
+function drawCubeFace(c: CanvasRenderingContext2D, r: number, look: Look, t: number, skin: string): void {
+  const face = look.face;
+  const eyes: [number, number][] = [
+    [0.02 * r, -0.34 * r],
+    [0.55 * r, -0.36 * r],
+  ];
+  const ew = r * 0.19;
+  const eh = r * 0.12;
+  const blink = look.blink && face !== 'shock' && face !== 'dead';
+  const photoEyes = pic('eyes');
+  if (photoEyes && face !== 'dead') {
+    const w = r * 1.0;
+    const h = (w * photoEyes.naturalHeight) / photoEyes.naturalWidth;
+    const squint = blink || face === 'joy' || face === 'sleep' ? 0.15 : face === 'smug' || face === 'sick' ? 0.6 : face === 'shock' ? 1.2 : 1;
+    c.drawImage(photoEyes, r * 0.28 - w / 2, -r * 0.35 - (h * squint) / 2, w, h * squint);
+  } else {
+    for (const [ex, ey] of eyes) {
+      // Purple eyeshadow, like the avatar.
+      c.fillStyle = 'rgba(150,70,190,0.55)';
+      ellipse(c, ex, ey - eh * 0.55, ew * 1.15, eh * 0.9);
+      c.fill();
+      if (face === 'dead') {
+        c.beginPath();
+        c.moveTo(ex - ew * 0.7, ey - eh);
+        c.lineTo(ex + ew * 0.7, ey + eh);
+        c.moveTo(ex + ew * 0.7, ey - eh);
+        c.lineTo(ex - ew * 0.7, ey + eh);
+        c.stroke();
+        continue;
+      }
+      if (blink || face === 'joy' || face === 'sleep') {
+        c.beginPath();
+        if (face === 'joy') c.arc(ex, ey + eh * 0.5, ew * 0.8, Math.PI * 1.15, Math.PI * 1.85);
+        else c.arc(ex, ey - eh * 0.2, ew * 0.8, Math.PI * 0.15, Math.PI * 0.85);
+        c.stroke();
+        continue;
+      }
+      const big = face === 'shock' ? 1.35 : 1;
+      c.fillStyle = '#fffaf2';
+      ellipse(c, ex, ey, ew * big, eh * big);
+      c.fill();
+      c.fillStyle = '#3b1450';
+      ellipse(c, ex + ew * 0.15, ey, eh * 0.85, eh * 0.85);
+      c.fill();
+      c.fillStyle = '#12060f';
+      ellipse(c, ex + ew * 0.15, ey, eh * 0.4, eh * 0.4);
+      c.fill();
+      c.fillStyle = '#fff';
+      ellipse(c, ex + ew * 0.35, ey - eh * 0.35, eh * 0.22, eh * 0.22);
+      c.fill();
+      // Heavy upper lid and lashes.
+      c.beginPath();
+      c.ellipse(ex, ey, ew * big, eh * big, 0, Math.PI * 1.02, Math.PI * 1.98);
+      c.stroke();
+      if (face === 'smug' || face === 'sick') {
+        c.fillStyle = skin;
+        c.fillRect(ex - ew * 1.1, ey - eh * 1.2, ew * 2.2, eh * (face === 'sick' ? 1.3 : 1.05));
+        c.beginPath();
+        c.moveTo(ex - ew, ey - eh * 0.1);
+        c.lineTo(ex + ew, ey - eh * 0.1);
+        c.stroke();
+      }
+    }
+    if (face === 'sad') {
+      const ty = ((t / 1400) % 1) * r * 0.5;
+      c.fillStyle = '#7cc8ff';
+      ellipse(c, eyes[1][0] + ew * 0.4, eyes[1][1] + eh * 1.6 + ty, eh * 0.35, eh * 0.55);
+      c.fill();
+    }
+  }
+
+  // The lips.
+  const mx = r * 0.3;
+  const my = r * 0.08;
+  const mw = r * 0.42;
+  c.save();
+  c.lineWidth = Math.max(1, r * 0.03);
+  const open = face === 'shock' ? 0.9 : face === 'eat' ? look.mouth : Math.max(look.mouth, face === 'joy' ? 0.3 : 0);
+  const photoMouth = open > 0.25 ? pic('mouth-open') ?? pic('mouth') : pic('mouth');
+  if (photoMouth && face !== 'dead') {
+    const w = r * 0.95;
+    const h = (w * photoMouth.naturalHeight) / photoMouth.naturalWidth;
+    const stretch = photoMouth === pic('mouth-open') ? 1 : 1 + open * 0.5;
+    c.drawImage(photoMouth, mx - w / 2, my - (h * stretch) / 2, w, h * stretch);
+    c.restore();
+    return;
+  }
+  const curve = face === 'sad' || face === 'sick' ? -1 : face === 'meh' ? 0 : face === 'smug' ? 0.5 : 1;
+  const lip = tone('#d23ca0', look, '#e0a020');
+  const gap = r * 0.16 * open;
+  c.fillStyle = lip;
+  // Upper lip, with a dip in the middle.
+  c.beginPath();
+  c.moveTo(mx - mw, my + curve * -r * 0.04);
+  c.quadraticCurveTo(mx - mw * 0.5, my - r * 0.2, mx, my - r * 0.1);
+  c.quadraticCurveTo(mx + mw * 0.5, my - r * 0.2, mx + mw, my + curve * -r * 0.04 - (face === 'smug' ? r * 0.06 : 0));
+  c.quadraticCurveTo(mx, my + r * 0.04, mx - mw, my + curve * -r * 0.04);
+  c.fill();
+  c.stroke();
+  if (gap > 0.5) {
+    c.fillStyle = '#3a0b22';
+    ellipse(c, mx, my + gap * 0.5, mw * 0.75, gap * 0.6 + 1);
+    c.fill();
+  }
+  // Lower lip: big.
+  c.fillStyle = lip;
+  c.beginPath();
+  c.moveTo(mx - mw * 0.9, my + gap + curve * -r * 0.02);
+  c.quadraticCurveTo(mx, my + gap + r * (0.34 - curve * 0.06), mx + mw * 0.9, my + gap + curve * -r * 0.02);
+  c.quadraticCurveTo(mx, my + gap + r * 0.03, mx - mw * 0.9, my + gap + curve * -r * 0.02);
+  c.fill();
+  c.stroke();
+  c.fillStyle = 'rgba(255,170,220,0.6)';
+  ellipse(c, mx - mw * 0.2, my + gap + r * 0.08, mw * 0.3, r * 0.03, -0.1);
+  c.fill();
+  if (face === 'dead') {
+    c.fillStyle = '#f07a8a';
+    ellipse(c, mx + mw * 0.2, my + r * 0.26, r * 0.08, r * 0.1, 0.2);
+    c.fill();
     c.stroke();
   }
   c.restore();
@@ -973,7 +1197,7 @@ export function drawSkeleton(c: CanvasRenderingContext2D, x: number, y: number, 
 }
 
 /** Hammy as a small picture on its own canvas, for the shop and the phone. */
-export function paintPortrait(canvas: HTMLCanvasElement, fit: FitId, face: Face = 'happy', t = 0, form: FormId = 'hamster'): void {
+export function paintPortrait(canvas: HTMLCanvasElement, fit: FitId, face: Face = 'happy', t = 0, form: FormId = 'cube'): void {
   const rect = canvas.getBoundingClientRect();
   const w = rect.width || canvas.width;
   const h = rect.height || canvas.height;

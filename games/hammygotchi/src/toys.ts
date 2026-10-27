@@ -1,4 +1,4 @@
-// What the toys look like, in the tank and on the toy bar. Each is drawn
+// What the toys look like, in the unit and on the toy bar. Each is drawn
 // around (x, y) at size s (about its radius).
 import type { ToyId } from './defs';
 

@@ -6,7 +6,7 @@ Three mobile games that share one codebase.
 |---|---|---|
 | **Humongous Fungus** | Idle game: you are a mycelium network growing a terrarium in real time, even while the game is closed | `games/fungus` |
 | **Sporemonger** | Trading game: buy and sell goods on a live market in a mushroom town, before they rot | `games/sporemonger` |
-| **Hammygotchi** | Virtual pet: keep Hammy fed, clean and called in his tank, or he rots into mushrooms. Comes with a toy box; some days he's a meatball sub | `games/hammygotchi` |
+| **Hammygotchi** | Virtual pet: keep Cube Hammy fed, showered, on the toilet and called in his containment unit, or he rots into mushrooms. Comes with a toy box and a kitchen; some days he's a meatball sub | `games/hammygotchi` |
 
 ## Run it
 
@@ -51,7 +51,8 @@ After changing a game, copy it into its native projects with
 | `games/*/tools/` | Renders each game's app icon, launch screen and Play feature graphic |
 | `games/sporemonger/src/` | Sporemonger rules (`game.ts`), content (`defs.ts`), banner art (`scene.ts`), screens (`ui.ts`) and phone features with price-move reminders (`native.ts`) |
 | `games/sporemonger/ios`, `android` | Native app projects (Capacitor) |
-| `games/hammygotchi/src/` | Hammygotchi rules (`game.ts`), content and every line he says (`defs.ts`), the tank, its physics and the toys in it (`scene.ts`), Hammy in his three forms and his fits (`hammy.ts`), the toys' drawings (`toys.ts`), synthesized sounds (`sound.ts`), screens (`ui.ts`) and phone features (`native.ts`) |
+| `games/hammygotchi/src/` | Hammygotchi rules (`game.ts`), content and every line he says (`defs.ts`), the containment unit, its physics and the toys in it (`scene.ts`), its furniture (`room.ts`), Hammy in his four forms and his fits (`hammy.ts`), his recorded voice lines (`voice.ts`), the toys' drawings (`toys.ts`), synthesized sounds (`sound.ts`), screens (`ui.ts`) and phone features (`native.ts`) |
+| `games/hammygotchi/assets/face`, `assets/voice` | Drop-in photos of the real Hammy's eyes and mouth, and his recorded voice lines (see the README in each) |
 | `games/hammygotchi/ios`, `android` | Native app projects (Capacitor) |
 | `shared/market.ts` | Live market engine: seeded price walk, moods, trades, rot |
 | `shared/chart.ts` | Live price chart with crosshair readout |

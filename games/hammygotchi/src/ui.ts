@@ -3,17 +3,23 @@ import { fmt, fmtCountdown, fmtDuration } from '@shared/format';
 import {
   CALL_LINES,
   CALL_MAX_MOOD,
+  COOK_SECONDS,
   FITS,
   FOODS,
   FORM_BY_ID,
-  HOSE_FRESH,
   MAX_TEXTS,
+  MEAT_PRICE,
+  MENU,
   RING_SECONDS,
   ROT_SECONDS,
   SCOOP_COINS,
+  SHOWER_FRESH,
+  SOAP_FRESH,
   START_COINS,
+  TOILET_COINS,
   TOYS,
   TOY_BY_ID,
+  UPGRADES,
   type FitId,
   type FoodDef,
   type FoodId,
@@ -21,12 +27,13 @@ import {
   type Need,
   type ToyDef,
   type ToyId,
+  type UpgradeId,
 } from './defs';
 import {
   callMood,
   canCall,
-  canHose,
   canOrder,
+  canShower,
   causeText,
   deadFor,
   isAlive,
@@ -36,6 +43,7 @@ import {
   textOptions,
   typing,
   unread,
+  upgradeCost,
   type AwayReport,
 } from './game';
 import { paintPortrait, type Face } from './hammy';
@@ -51,7 +59,9 @@ export interface Controller {
   readonly form: FormId;
   order(id: FoodId): void;
   scoopAll(): void;
-  hose(): void;
+  /** Carry him to the shower or the toilet. */
+  carry(id: 'shower' | 'toilet'): void;
+  buyUpgrade(id: UpgradeId): void;
   text(id: string): void;
   call(): void;
   buyFit(id: FitId): void;
@@ -95,8 +105,10 @@ class CarePanel implements Panel {
   private eta: HTMLElement | null = null;
   private scoopBtn: HTMLButtonElement | null = null;
   private scoopSub: HTMLElement | null = null;
-  private hoseBtn: HTMLButtonElement | null = null;
-  private hoseSub: HTMLElement | null = null;
+  private toiletBtn: HTMLButtonElement | null = null;
+  private toiletSub: HTMLElement | null = null;
+  private showerBtn: HTMLButtonElement | null = null;
+  private showerSub: HTMLElement | null = null;
   private adoptBtn: HTMLButtonElement | null = null;
 
   constructor(private c: Controller) {}
@@ -121,12 +133,20 @@ class CarePanel implements Panel {
           h('p', null, `Lived ${age(s, Date.now())}. Farted ${fmt(s.stats.farts)} ${s.stats.farts === 1 ? 'time' : 'times'}. Ate ${fmt(s.stats.meals)} meals.`),
           h('p', { class: 'cause' }, causeText(s.causes)),
           this.adoptBtn,
-          h('p', { class: 'note' }, `Your fits and toys stay yours. Coins start over at ${START_COINS}.`),
+          h('p', { class: 'note' }, `Your fits, toys and stuff for the unit stay yours. Coins start over at ${START_COINS}.`),
         ),
       );
       return;
     }
     this.adoptBtn = null;
+
+    const action = (name: string, onclick: () => void): [HTMLButtonElement, HTMLElement] => {
+      const sub = h('span', { class: 'action-sub' });
+      return [h('button', { class: 'action', type: 'button', onclick }, h('span', { class: 'action-name' }, name), sub), sub];
+    };
+    [this.toiletBtn, this.toiletSub] = action('🚽 Toilet', () => this.c.carry('toilet'));
+    [this.showerBtn, this.showerSub] = action('🚿 Shower', () => this.c.carry('shower'));
+    [this.scoopBtn, this.scoopSub] = action('💩 Scoop', () => this.c.scoopAll());
 
     const pending = h('div', { class: 'orders' });
     if (s.orders.length) {
@@ -145,7 +165,7 @@ class CarePanel implements Panel {
     }
 
     const menu = h('div', { class: 'menu' });
-    for (const f of FOODS) {
+    for (const f of MENU) {
       const btn = h(
         'button',
         { class: 'food', type: 'button', onclick: () => this.c.order(f.id) },
@@ -157,23 +177,18 @@ class CarePanel implements Panel {
       this.foods.push({ id: f.id, btn });
     }
 
-    this.scoopSub = h('span', { class: 'action-sub' });
-    this.scoopBtn = h(
-      'button',
-      { class: 'action', type: 'button', onclick: () => this.c.scoopAll() },
-      h('span', { class: 'action-name' }, 'Scoop the poop'),
-      this.scoopSub,
-    );
-    this.hoseSub = h('span', { class: 'action-sub' });
-    this.hoseBtn = h('button', { class: 'action', type: 'button', onclick: () => this.c.hose() }, h('span', { class: 'action-name' }, 'Hose him down'), this.hoseSub);
-
     root.append(
-      h('div', { class: 'dosh-head' }, h('h2', { class: 'sub' }, h('span', { class: 'dosh' }, 'DoorDosh')), h('span', { class: 'note' }, 'He only eats delivery.')),
+      h('div', { class: 'actions' }, this.toiletBtn, this.showerBtn, this.scoopBtn),
+      h('p', { class: 'note' }, 'He won’t walk to the toilet or the shower himself. Tap a button to carry him, or drag him there.'),
+      h('div', { class: 'dosh-head' }, h('h2', { class: 'sub' }, h('span', { class: 'dosh' }, 'DoorDosh')), h('span', { class: 'note' }, 'Drops through the hatch.')),
       pending,
       menu,
-      h('h2', { class: 'sub' }, 'Clean up after him'),
-      h('div', { class: 'actions' }, this.scoopBtn, this.hoseBtn),
-      h('p', { class: 'note' }, 'Grab Hammy and throw him: he loves it. A quick tap is a pet. Farts and poop make the tank stink, and his neighbors leave when it gets bad.'),
+      h('h2', { class: 'sub' }, 'Cook for him'),
+      h(
+        'p',
+        { class: 'note' },
+        `Tap the fridge for a raw steak (${MEAT_PRICE} coins) and drag it onto the oven. ${COOK_SECONDS} seconds later it’s a steak; leave it and it’s charcoal. He’ll eat it raw if you let him, which he’ll regret.`,
+      ),
     );
   }
 
@@ -192,15 +207,20 @@ class CarePanel implements Panel {
       setText(this.eta, Number.isFinite(next) ? `arrives in ${fmtCountdown((next - now) / 1000)}` : '');
     }
     for (const f of this.foods) setDisabled(f.btn, !canOrder(s, f.id));
+    if (this.toiletBtn && this.toiletSub) {
+      const n = s.urges.length;
+      this.toiletBtn.classList.toggle('urgent', n > 0);
+      setText(this.toiletSub, n ? `He has to go. +${n * TOILET_COINS} coins` : 'Doesn’t need to go.');
+    }
+    if (this.showerBtn && this.showerSub) {
+      const ready = canShower(s, now);
+      setDisabled(this.showerBtn, !ready);
+      setText(this.showerSub, ready ? `+${SHOWER_FRESH + SOAP_FRESH[s.upgrades.soap]} fresh` : `Hot water in ${fmtCountdown((s.showerReadyAt - now) / 1000)}`);
+    }
     if (this.scoopBtn && this.scoopSub) {
       const n = s.poops.length;
       setDisabled(this.scoopBtn, n === 0);
-      setText(this.scoopSub, n ? `${n} on the floor · +${n * SCOOP_COINS} coins` : 'Floor is clean. For now.');
-    }
-    if (this.hoseBtn && this.hoseSub) {
-      const ready = canHose(s, now);
-      setDisabled(this.hoseBtn, !ready);
-      setText(this.hoseSub, ready ? `+${HOSE_FRESH} fresh. He hates it.` : `Hose refills in ${fmtCountdown((s.hoseReadyAt - now) / 1000)}`);
+      setText(this.scoopSub, n ? `${n} on the floor · +${n * SCOOP_COINS}` : 'Floor’s clean.');
     }
   }
 }
@@ -308,12 +328,6 @@ class PhonePanel implements Panel {
 
 // ---------------------------------------------------------------------------
 
-/** "Water balloon" fits the toy bar as "Balloon". */
-function shortName(t: ToyDef): string {
-  const word = t.name.split(' ').pop()!;
-  return word[0].toUpperCase() + word.slice(1);
-}
-
 function toyEffects(t: ToyDef): string {
   if (t.id === 'hand') return 'Throwing him: + mood';
   const parts = [`${t.mood > 0 ? '+' : ''}${t.mood} mood`];
@@ -332,7 +346,7 @@ class ShopPanel implements Panel {
 
   key(): string {
     const s = this.c.state;
-    return `${s.fit}|${s.owned.join()}|${s.toy}|${s.toys.join()}|${isAlive(s)}|${this.c.form}`;
+    return `${s.fit}|${s.owned.join()}|${s.toy}|${s.toys.join()}|${s.upgrades.vacuum}|${s.upgrades.soap}|${isAlive(s)}|${this.c.form}`;
   }
 
   private price(price: number): HTMLElement {
@@ -344,6 +358,36 @@ class ShopPanel implements Panel {
     this.cards = [];
     this.portraits = [];
     this.icons = [];
+
+    const stuff = h('div', { class: 'toys' });
+    for (const u of UPGRADES) {
+      const have = s.upgrades[u.id];
+      const next = u.levels[have];
+      const cost = upgradeCost(s, u.id);
+      const btn = h(
+        'button',
+        { class: `fit-btn${cost === null ? ' wearing' : ' buy'}`, type: 'button', onclick: () => this.c.buyUpgrade(u.id) },
+        cost === null ? 'Got it' : this.price(cost),
+      );
+      if (cost === null) btn.disabled = true;
+      const current = have ? u.levels[have - 1].name : 'None yet';
+      stuff.append(
+        h(
+          'div',
+          { class: `toy${have ? ' fit-on' : ''}` },
+          h('span', { class: 'toy-pic toy-emoji', 'aria-hidden': 'true' }, u.id === 'vacuum' ? '🤖' : '🧼'),
+          h(
+            'span',
+            { class: 'toy-main' },
+            h('span', { class: 'fit-name' }, next ? next.name : u.levels[have - 1].name),
+            h('span', { class: 'fit-blurb' }, next ? next.blurb : u.levels[have - 1].blurb),
+            h('span', { class: 'toy-fx' }, next && have ? `You have: ${current}` : have ? 'Maxed out' : ''),
+          ),
+          btn,
+        ),
+      );
+      if (cost !== null) this.cards.push({ btn, price: cost });
+    }
 
     const toys = h('div', { class: 'toys' });
     for (const t of TOYS) {
@@ -401,16 +445,19 @@ class ShopPanel implements Panel {
     }
 
     root.append(
+      h('h2', { class: 'sub' }, 'For the unit'),
+      h('p', { class: 'note' }, 'Stuff that makes him less work. It stays if he dies.'),
+      stuff,
       h('h2', { class: 'sub' }, 'Toys'),
-      h('p', { class: 'note' }, 'Pick a toy in the bar under the tank and use it on him. Nice toys lift his mood. Mean ones pay more coins and cost you his mood. Each one counts every couple of seconds.'),
+      h('p', { class: 'note' }, 'Pick a toy in the bar under the unit and use it on him. Nice toys lift his mood. Mean ones pay more coins and cost you his mood. Each one counts every couple of seconds.'),
       toys,
       h('h2', { class: 'sub' }, 'Fits'),
       h(
         'p',
         { class: 'note' },
-        form === 'hamster'
+        form === 'cube' || form === 'hamster'
           ? 'New looks for Hammy. Fits stay yours even if he dies.'
-          : `Today he's ${FORM_BY_ID[form].today} Hats and glasses still go on; shirts and costumes wait for hamster days. Fits stay yours even if he dies.`,
+          : `Today he's ${FORM_BY_ID[form].today} Hats and glasses still go on; shirts and costumes wait until he's a cube again. Fits stay yours even if he dies.`,
       ),
       grid,
     );
@@ -459,7 +506,10 @@ class LifePanel implements Panel {
       ['Calls', () => fmt(s.stats.calls)],
       ['Texts sent', () => fmt(s.stats.texts)],
       ['Times thrown', () => fmt(s.stats.flings)],
-      ['Hosed down', () => fmt(s.stats.hoses)],
+      ['Showers', () => fmt(s.stats.showers)],
+      ['Toilet trips', () => fmt(s.stats.toilet)],
+      ['Steaks cooked', () => fmt(s.stats.cooked)],
+      ['Poops vacuumed', () => fmt(s.stats.vacuumed)],
       ['Orders on your coins', () => fmt(s.stats.selfOrders)],
       ['He spent', () => `${fmt(s.stats.selfSpent)} coins`],
     ];
@@ -532,8 +582,13 @@ class LifePanel implements Panel {
 
 // ---------------------------------------------------------------------------
 
+const TAB_TITLES: Record<Tab, string> = { care: 'Care', phone: 'Phone', shop: 'Shop', life: 'Life' };
+
 export class GameUI {
   private tab: Tab = 'care';
+  /** On phones the sections slide up over the unit; on wide screens they're docked beside it. */
+  private sheetOpen = false;
+  private docked = matchMedia('(min-width: 900px)');
   private panels: Record<Tab, Panel>;
   private builtKey = '';
   private toastTimer = 0;
@@ -548,6 +603,8 @@ export class GameUI {
   private toyKey = '';
   private hint = document.getElementById('hint')!;
   private panel = document.getElementById('panel')!;
+  private sheet = document.getElementById('sheet')!;
+  private sheetTitle = document.getElementById('sheet-title')!;
   private toastEl = document.getElementById('toast')!;
   private modal = document.getElementById('modal')!;
   private tabs = [...document.querySelectorAll<HTMLButtonElement>('[data-tab]')];
@@ -560,7 +617,14 @@ export class GameUI {
 
   constructor(private c: Controller) {
     this.panels = { care: new CarePanel(c), phone: new PhonePanel(c), shop: new ShopPanel(c), life: new LifePanel(c) };
-    for (const t of this.tabs) t.addEventListener('click', () => this.setTab(t.dataset.tab as Tab));
+    for (const t of this.tabs) {
+      t.addEventListener('click', () => {
+        const tab = t.dataset.tab as Tab;
+        // Tapping the open section again puts it away.
+        if (tab === this.tab && this.sheetOpen && !this.docked.matches) this.closeSheet();
+        else this.setTab(tab);
+      });
+    }
     this.tabs[0].parentElement!.addEventListener('keydown', (e) => {
       if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
       const i = this.tabs.findIndex((t) => t.dataset.tab === this.tab);
@@ -568,26 +632,54 @@ export class GameUI {
       this.setTab(next.dataset.tab as Tab);
       next.focus();
     });
-    this.setTab('care');
+    document.getElementById('sheet-close')!.addEventListener('click', () => this.closeSheet());
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !this.modal.contains(e.target as Node)) this.closeSheet();
+    });
+    this.docked.addEventListener('change', () => this.showSheet());
+    this.setTab('care', false);
   }
 
-  get currentTab(): Tab {
-    return this.tab;
+  /** The section you can see right now, if any. */
+  get visibleTab(): Tab | null {
+    return this.sheetOpen || this.docked.matches ? this.tab : null;
   }
 
-  setTab(tab: Tab): void {
+  /** Switch section, and (unless `open` is false) bring it up. */
+  setTab(tab: Tab, open = true): void {
     this.tab = tab;
+    if (open) this.sheetOpen = true;
+    this.panel.scrollTop = 0;
+    this.showSheet();
+  }
+
+  /** Put the section away. Returns whether there was one to put away. */
+  closeSheet(): boolean {
+    if (!this.sheetOpen || this.docked.matches) return false;
+    this.sheetOpen = false;
+    this.showSheet();
+    this.tabs.find((t) => t.dataset.tab === this.tab)?.focus();
+    return true;
+  }
+
+  private showSheet(): void {
+    const visible = this.visibleTab !== null;
+    this.sheet.hidden = !visible;
     for (const t of this.tabs) {
-      const on = t.dataset.tab === tab;
-      t.setAttribute('aria-selected', String(on));
+      const on = t.dataset.tab === this.tab;
+      t.setAttribute('aria-selected', String(on && visible));
+      t.setAttribute('aria-expanded', String(on && visible));
       t.tabIndex = on ? 0 : -1;
     }
-    this.panel.setAttribute('aria-labelledby', `tab-${tab}`);
-    this.panel.scrollTop = 0;
+    setText(this.sheetTitle, TAB_TITLES[this.tab]);
+    this.panel.setAttribute('aria-labelledby', `tab-${this.tab}`);
     this.sync(true);
   }
 
   sync(force = false): void {
+    this.syncBadges();
+    this.syncToybar();
+    if (this.visibleTab === null) return;
     const p = this.panels[this.tab];
     const key = `${this.tab}|${p.key()}`;
     if (force || key !== this.builtKey) {
@@ -601,11 +693,9 @@ export class GameUI {
     }
     p.shown?.();
     p.sync();
-    this.syncBadges();
-    this.syncToybar();
   }
 
-  /** The toy bar under the tank: every toy you own, and a way to get more. */
+  /** The toy bar under the unit: every toy you own, and a way to get more. */
   private syncToybar(): void {
     const s = this.c.state;
     const key = `${s.toys.join()}|${s.toy}|${isAlive(s)}`;
@@ -627,12 +717,11 @@ export class GameUI {
           onclick: () => this.c.pickToy(t.id),
         },
         canvas,
-        h('span', { class: 'toy-label' }, shortName(t)),
       );
     });
     const more =
       s.toys.length < TOYS.length
-        ? h('button', { class: 'toy-btn toy-more', type: 'button', 'aria-label': 'Get more toys', onclick: () => this.setTab('shop') }, h('span', { class: 'toy-plus', 'aria-hidden': 'true' }, '+'), h('span', { class: 'toy-label' }, 'More'))
+        ? h('button', { class: 'toy-btn toy-more', type: 'button', 'aria-label': 'Get more toys', title: 'Get more toys', onclick: () => this.setTab('shop') }, h('span', { class: 'toy-plus', 'aria-hidden': 'true' }, '+'))
         : null;
     this.toybar.replaceChildren(...buttons, ...(more ? [more] : []));
     requestAnimationFrame(() => {
@@ -652,10 +741,15 @@ export class GameUI {
     const alive = isAlive(s);
     const texts = unread(s, now);
     const shop =
-      FITS.filter((f) => !s.owned.includes(f.id) && s.coins >= f.price).length + TOYS.filter((t) => !s.toys.includes(t.id) && s.coins >= t.price).length;
+      FITS.filter((f) => !s.owned.includes(f.id) && s.coins >= f.price).length +
+      TOYS.filter((t) => !s.toys.includes(t.id) && s.coins >= t.price).length +
+      UPGRADES.filter((u) => {
+        const cost = upgradeCost(s, u.id);
+        return cost !== null && s.coins >= cost;
+      }).length;
     const badges: Record<Tab, string> = {
-      care: alive && s.poops.length ? String(s.poops.length) : '',
-      phone: this.tab === 'phone' || !texts || !alive ? '' : String(texts),
+      care: !alive ? '' : s.urges.length ? '!' : s.poops.length ? String(s.poops.length) : '',
+      phone: this.visibleTab === 'phone' || !texts || !alive ? '' : String(texts),
       shop: shop ? String(shop) : '',
       life: '',
     };
@@ -685,7 +779,7 @@ export class GameUI {
         m.el.setAttribute('aria-valuetext', `${now} of 100, ${needWord(m.need, value)}`);
       }
     }
-    this.hint.hidden = s.stats.flings >= 2 || s.toy !== 'hand' || !this.toastEl.hidden || !isAlive(s) || this.modalOpen;
+    this.hint.hidden = s.stats.flings >= 2 || s.stats.showers + s.stats.toilet > 0 || s.toy !== 'hand' || !this.toastEl.hidden || !isAlive(s) || this.modalOpen;
   }
 
   toast(message: string, ms = 3000): void {
@@ -737,11 +831,11 @@ export class GameUI {
     this.showModal(
       [
         pic,
-        h('p', { class: 'eyebrow' }, 'Your new roommate'),
+        h('p', { class: 'eyebrow' }, 'Subject: Hammy'),
         h('h2', { id: 'modal-title' }, 'This is Hammy. He’s a lot.'),
-        h('p', null, 'He lives in your tank now. He only eats DoorDosh, mostly Dorkitos. He poops, he farts, and he stinks. The neighbors hate him.'),
-        h('p', null, 'Feed him, scoop his poop, and text and call him on his phone, or he gets sad. Ignore him long enough and he dies, rots, and turns into mushrooms. Then you lose.'),
-        h('p', null, 'The toys under the tank are for him. Some days he wakes up as something else. Just go with it.'),
+        h('p', null, 'He lives in a containment unit now. Bed, armchair, gaming PC, toilet, shower, fridge. He uses about half of it. He eats DoorDosh, he farts, and the scientist watching him needs a gas mask.'),
+        h('p', null, 'He’s lazy: drag him to the toilet when he has to go, and into the shower when he stinks. Cook him a steak. Text and call him, or he gets sad. Ignore him long enough and he dies, rots, and turns into mushrooms. Then you lose.'),
+        h('p', null, 'The toys under the unit are for him. Some days he wakes up as something else. Just go with it.'),
         h('p', { class: 'stink' }, 'He keeps living while the game is closed.'),
       ],
       'Fine.',
@@ -752,7 +846,7 @@ export class GameUI {
   showWelcome(r: AwayReport): void {
     const lines: string[] = [];
     if (r.farts) lines.push(`farted ${fmt(r.farts)} ${r.farts === 1 ? 'time' : 'times'}`);
-    if (r.poops) lines.push(`pooped ${r.poops} ${r.poops === 1 ? 'time' : 'times'}`);
+    if (r.poops) lines.push(`pooped on the floor ${r.poops} ${r.poops === 1 ? 'time' : 'times'}${r.vacuumed ? ` (the robot vacuum got ${r.vacuumed >= r.poops ? 'all of it' : r.vacuumed})` : ''}`);
     if (r.texts) lines.push(`texted you ${r.texts} ${r.texts === 1 ? 'time' : 'times'}`);
     if (r.missedCalls) lines.push(`called ${r.missedCalls} ${r.missedCalls === 1 ? 'time' : 'times'} (you missed it)`);
     const change = (need: Need, label: string) => {
@@ -770,7 +864,7 @@ export class GameUI {
         ? h('p', null, causeText(this.c.state.causes))
         : h('ul', { class: 'changes' }, change('belly', 'Belly'), change('fresh', 'Fresh'), change('mood', 'Mood')),
     ];
-    this.showModal(children, r.died ? 'Go look' : 'Back to the tank');
+    this.showModal(children, r.died ? 'Go look' : 'Back to the unit');
   }
 
   /** He's calling. Answer, decline, or let it ring out. */

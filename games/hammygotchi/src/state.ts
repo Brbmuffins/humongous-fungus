@@ -2,17 +2,20 @@ import {
   CALL_GAP_MIN,
   FITS,
   FOODS,
+  FORMS,
   MAX_MESSAGES,
   MAX_POOPS,
   MAX_TEXTS,
   START_COINS,
   START_TOYS,
   TOYS,
+  UPGRADES,
   type Cause,
   type FitId,
   type FoodId,
   type FormId,
   type ToyId,
+  type UpgradeId,
 } from './defs';
 
 export interface Message {
@@ -30,6 +33,13 @@ export interface Order {
   self: boolean;
 }
 
+/** A poop on the floor: where across the unit (0..1), and on which floor. */
+export interface Poop {
+  x: number;
+  /** On the loft instead of the ground floor. */
+  up: boolean;
+}
+
 export interface Grave {
   n: number;
   bornAt: number;
@@ -45,13 +55,19 @@ export interface LifeStats {
   scooped: number;
   calls: number;
   texts: number;
-  hoses: number;
+  showers: number;
+  /** Times he made it to the toilet. */
+  toilet: number;
   flings: number;
   selfOrders: number;
   /** Coins he spent on his own orders. */
   selfSpent: number;
   /** Times a toy was used on him (and counted). */
   toys: number;
+  /** Steaks you cooked him. */
+  cooked: number;
+  /** Poops the robot vacuums ate. */
+  vacuumed: number;
 }
 
 export interface HammyState {
@@ -71,10 +87,11 @@ export interface HammyState {
   /** Builds up from food and comes out as farts. */
   gas: number;
   coins: number;
-  /** Poops on the floor, by position across the tank (0..1). */
-  poops: number[];
-  /** When each meal still inside him comes out. */
+  poops: Poop[];
+  /** When each meal still inside him will need to come out. */
   poopDue: number[];
+  /** He needs to go: when each one ends up on the floor if he isn't on the toilet. */
+  urges: number[];
   orders: Order[];
   messages: Message[];
   /** Newest message the player has seen in the Phone tab. */
@@ -82,9 +99,15 @@ export interface HammyState {
   /** Texts you can send before he tells you to chill. */
   textBudget: number;
   callReadyAt: number;
-  hoseReadyAt: number;
+  showerReadyAt: number;
   /** Petting and flinging only count every couple of seconds. */
   fussReadyAt: number;
+  /** Lying on the bed, sitting in the chair or gaming only count every few seconds. */
+  restReadyAt: number;
+  /** When streaming next pays a coin. */
+  streamCoinAt: number;
+  /** When a robot vacuum next eats a poop while you're away. */
+  vacuumAt: number;
   nextTextAt: number;
   nextCallAt: number;
   fit: FitId;
@@ -93,6 +116,7 @@ export interface HammyState {
   toys: ToyId[];
   /** Toys only count every couple of seconds. */
   playReadyAt: number;
+  upgrades: Record<UpgradeId, number>;
   /** The form the player last saw him in, to announce a new one. */
   seenForm: FormId;
   diedAt: number | null;
@@ -102,17 +126,34 @@ export interface HammyState {
   stats: LifeStats;
 }
 
-export const noStats = (): LifeStats => ({ farts: 0, meals: 0, scooped: 0, calls: 0, texts: 0, hoses: 0, flings: 0, selfOrders: 0, selfSpent: 0, toys: 0 });
+export const noStats = (): LifeStats => ({
+  farts: 0,
+  meals: 0,
+  scooped: 0,
+  calls: 0,
+  texts: 0,
+  showers: 0,
+  toilet: 0,
+  flings: 0,
+  selfOrders: 0,
+  selfSpent: 0,
+  toys: 0,
+  cooked: 0,
+  vacuumed: 0,
+});
+
+const noUpgrades = (): Record<UpgradeId, number> => Object.fromEntries(UPGRADES.map((u) => [u.id, 0])) as Record<UpgradeId, number>;
 
 /** A fresh Hammy, a little hungry so the first thing you do is feed him. */
 export function newHammy(now: number, n: number): Pick<
   HammyState,
-  | 'n' | 'bornAt' | 'belly' | 'fresh' | 'mood' | 'health' | 'gas' | 'poops' | 'poopDue' | 'orders' | 'messages' | 'readAt'
-  | 'textBudget' | 'callReadyAt' | 'hoseReadyAt' | 'fussReadyAt' | 'nextTextAt' | 'nextCallAt' | 'diedAt' | 'causes' | 'stats'
+  | 'n' | 'bornAt' | 'belly' | 'fresh' | 'mood' | 'health' | 'gas' | 'poops' | 'poopDue' | 'urges' | 'orders' | 'messages' | 'readAt'
+  | 'textBudget' | 'callReadyAt' | 'showerReadyAt' | 'fussReadyAt' | 'restReadyAt' | 'streamCoinAt' | 'vacuumAt' | 'nextTextAt' | 'nextCallAt'
+  | 'diedAt' | 'causes' | 'stats'
 > {
   const hello =
     n === 1
-      ? ['yo its hammy. i live in ur terrarium now', 'can u doordosh me something. im starving']
+      ? ['yo its hammy. they put me in some kind of containment unit', 'can u doordosh me something. im starving']
       : ['hey its hammy. the new one', 'what happened to the last guy', 'why are there mushrooms in here'];
   return {
     n,
@@ -124,13 +165,17 @@ export function newHammy(now: number, n: number): Pick<
     gas: 0,
     poops: [],
     poopDue: [],
+    urges: [],
     orders: [],
     messages: hello.map((text, i) => ({ at: now + i, from: 'hammy', text })),
     readAt: 0,
     textBudget: MAX_TEXTS,
     callReadyAt: now,
-    hoseReadyAt: now,
+    showerReadyAt: now,
     fussReadyAt: now,
+    restReadyAt: now,
+    streamCoinAt: now,
+    vacuumAt: now,
     nextTextAt: now + 4 * 60_000,
     nextCallAt: now + CALL_GAP_MIN * 1000,
     diedAt: null,
@@ -151,7 +196,8 @@ export function newGame(now: number): HammyState {
     toy: 'hand',
     toys: [...START_TOYS],
     playReadyAt: 0,
-    seenForm: 'hamster',
+    upgrades: noUpgrades(),
+    seenForm: FORMS[0].id,
     graves: [],
     sound: true,
   };
@@ -165,10 +211,11 @@ const num = (v: unknown, fallback: number): number => (typeof v === 'number' && 
 const pos = (v: unknown, fallback: number): number => Math.max(0, num(v, fallback));
 const pct = (v: unknown, fallback: number): number => Math.min(100, pos(v, fallback));
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {});
+const unit = (v: number): number => Math.min(1, Math.max(0, v));
 const FIT_SET = new Set<string>(FITS.map((f) => f.id));
 const FOOD_SET = new Set<string>(FOODS.map((f) => f.id));
 const TOY_SET = new Set<string>(TOYS.map((t) => t.id));
-const FORM_SET = new Set<string>(['hamster', 'sub', 'train']);
+const FORM_SET = new Set<string>(FORMS.map((f) => f.id));
 const CAUSES = new Set<string>(['belly', 'fresh', 'mood', 'sushi']);
 const isCause = (c: unknown): c is Cause => typeof c === 'string' && CAUSES.has(c);
 
@@ -214,8 +261,14 @@ export function deserialize(raw: string): HammyState | null {
     : [];
 
   const times = (v: unknown): number[] => (Array.isArray(v) ? v.filter((t): t is number => typeof t === 'number' && Number.isFinite(t)) : []);
-  const poops = times(d.poops)
-    .map((x) => Math.min(1, Math.max(0, x)))
+  // Older saves kept poops as plain positions on one floor.
+  const poops = (Array.isArray(d.poops) ? d.poops : [])
+    .map((p): Poop | null => {
+      if (typeof p === 'number' && Number.isFinite(p)) return { x: unit(p), up: false };
+      const o = obj(p);
+      return typeof o.x === 'number' && Number.isFinite(o.x) ? { x: unit(o.x), up: o.up === true } : null;
+    })
+    .filter((p): p is Poop => p !== null)
     .slice(0, MAX_POOPS);
 
   const graves = Array.isArray(d.graves)
@@ -231,8 +284,12 @@ export function deserialize(raw: string): HammyState | null {
         }))
     : [];
 
+  const ups = obj(d.upgrades);
+  const upgrades = noUpgrades();
+  for (const u of UPGRADES) upgrades[u.id] = Math.min(u.levels.length, Math.floor(pos(ups[u.id], 0)));
+
   const st = obj(d.stats);
-  const stat = (k: keyof ReturnType<typeof noStats>) => pos(st[k], 0);
+  const stat = (k: string) => pos(st[k], 0);
   const diedAt = typeof d.diedAt === 'number' && Number.isFinite(d.diedAt) ? d.diedAt : null;
 
   return {
@@ -248,13 +305,18 @@ export function deserialize(raw: string): HammyState | null {
     coins: pos(d.coins, START_COINS),
     poops,
     poopDue: times(d.poopDue),
+    urges: times(d.urges),
     orders,
     messages,
     readAt: pos(d.readAt, 0),
     textBudget: Math.min(MAX_TEXTS, pos(d.textBudget, MAX_TEXTS)),
     callReadyAt: pos(d.callReadyAt, 0),
-    hoseReadyAt: pos(d.hoseReadyAt, 0),
+    // The shower replaced the hose.
+    showerReadyAt: pos(d.showerReadyAt ?? d.hoseReadyAt, 0),
     fussReadyAt: pos(d.fussReadyAt, 0),
+    restReadyAt: pos(d.restReadyAt, 0),
+    streamCoinAt: pos(d.streamCoinAt, 0),
+    vacuumAt: pos(d.vacuumAt, 0),
     nextTextAt: pos(d.nextTextAt, base.nextTextAt),
     nextCallAt: pos(d.nextCallAt, base.nextCallAt),
     fit,
@@ -262,7 +324,8 @@ export function deserialize(raw: string): HammyState | null {
     toy,
     toys,
     playReadyAt: pos(d.playReadyAt, 0),
-    seenForm: typeof d.seenForm === 'string' && FORM_SET.has(d.seenForm) ? (d.seenForm as FormId) : 'hamster',
+    upgrades,
+    seenForm: typeof d.seenForm === 'string' && FORM_SET.has(d.seenForm) ? (d.seenForm as FormId) : base.seenForm,
     diedAt,
     causes: diedAt !== null && Array.isArray(d.causes) ? d.causes.filter(isCause) : [],
     graves,
@@ -273,11 +336,14 @@ export function deserialize(raw: string): HammyState | null {
       scooped: Math.floor(stat('scooped')),
       calls: Math.floor(stat('calls')),
       texts: Math.floor(stat('texts')),
-      hoses: Math.floor(stat('hoses')),
+      showers: Math.floor(stat('showers') || stat('hoses')),
+      toilet: Math.floor(stat('toilet')),
       flings: Math.floor(stat('flings')),
       selfOrders: Math.floor(stat('selfOrders')),
       selfSpent: stat('selfSpent'),
       toys: Math.floor(stat('toys')),
+      cooked: Math.floor(stat('cooked')),
+      vacuumed: Math.floor(stat('vacuumed')),
     },
   };
 }

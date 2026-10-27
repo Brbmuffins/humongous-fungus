@@ -215,4 +215,26 @@ export const sfx = {
     hiss(0, 0.5, 1500, 0.25);
     tone('sine', 300, 900, 0, 0.3, 0.1);
   },
+  flush(): void {
+    hiss(0, 1.4, 600, 0.35, 'lowpass');
+    hiss(0.2, 1.0, 1800, 0.1);
+    tone('sine', 220, 90, 0.9, 0.4, 0.12);
+  },
+  sizzle(): void {
+    hiss(0, 1.2, 6000, 0.12, 'highpass');
+  },
+  /** The smoke alarm: three shrill beeps. */
+  alarm(): void {
+    for (let i = 0; i < 3; i++) tone('square', 3100, 3100, i * 0.18, 0.1, 0.07);
+  },
+  /** The fridge door, and something heavy and wet landing. */
+  fridge(): void {
+    tone('sine', 120, 90, 0, 0.12, 0.2);
+    tone('sine', 200, 60, 0.25, 0.14, 0.35);
+    hiss(0.25, 0.1, 500, 0.12, 'lowpass');
+  },
+  slurp(): void {
+    tone('sawtooth', 300, 900, 0, 0.25, 0.06);
+    hiss(0, 0.3, 2500, 0.12);
+  },
 };

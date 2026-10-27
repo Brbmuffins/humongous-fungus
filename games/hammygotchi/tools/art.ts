@@ -6,7 +6,8 @@
 //   /tools/art.html?kind=feature  1024×500, Google Play feature graphic
 import '@fontsource/bagel-fat-one/latin-400.css';
 import '@fontsource/rubik/latin-600.css';
-import { defaultLook, drawHammy } from '../src/hammy';
+import { EXTENTS, defaultLook, drawHammy } from '../src/hammy';
+import { drawFridge, drawGlass, drawMonitor, drawOven, drawPan, drawPlant, drawScientist, drawSteak, layoutRoom, paintRoom } from '../src/room';
 
 const kind = new URLSearchParams(location.search).get('kind') ?? 'icon';
 const BG = '#1a1026';
@@ -62,6 +63,52 @@ function cloud(c: Ctx, x: number, y: number, s: number): void {
   }
 }
 
+/** Yellow and black hazard stripes across a band, like the unit's frame. */
+function hazard(c: Ctx, y: number, w: number, h: number): void {
+  c.save();
+  c.beginPath();
+  c.rect(0, y, w, h);
+  c.clip();
+  c.fillStyle = '#1f1a24';
+  c.fillRect(0, y, w, h);
+  c.fillStyle = '#f2c230';
+  for (let x = -h; x < w + h; x += h * 1.2) {
+    c.beginPath();
+    c.moveTo(x, y + h);
+    c.lineTo(x + h * 0.6, y + h);
+    c.lineTo(x + h * 1.2, y);
+    c.lineTo(x + h * 0.6, y);
+    c.closePath();
+    c.fill();
+  }
+  c.restore();
+}
+
+/** The containment unit, with him in his armchair and a steak on, as a picture. */
+function unit(w: number, h: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const c = canvas.getContext('2d')!;
+  const m = layoutRoom(w, h);
+  paintRoom(c, m);
+  drawScientist(c, m.window, true, false, 0);
+  drawPlant(c, m.plant, 0.6, 0);
+  drawMonitor(c, m.pc, 900, true);
+  drawFridge(c, m.fridge, 0);
+  drawOven(c, m.oven, 0.9);
+  const pan = drawPan(c, m.oven);
+  drawSteak(c, pan.x, pan.y, m.r * 0.35, 'steak');
+  const chair = m.chair;
+  const hh = m.r * EXTENTS.cube.h;
+  const hx = (chair.x0 + chair.x1) / 2;
+  const hy = chair.y0 + (chair.y1 - chair.y0) * 0.35 - hh * 0.9;
+  cloud(c, hx - m.r * 1.6, hy + m.r * 0.4, m.r * 0.35);
+  drawHammy(c, hx, hy, m.r, { ...defaultLook('classic'), face: 'smug', sx: 1.04, sy: 0.92 }, 0);
+  drawGlass(c, m);
+  return canvas;
+}
+
 function wordmark(c: Ctx, x: number, y: number, size: number, align: CanvasTextAlign = 'center'): void {
   c.font = `400 ${size}px 'Bagel Fat One'`;
   c.textAlign = align;
@@ -79,28 +126,27 @@ async function main(): Promise<void> {
   if (kind === 'icon') {
     out.width = out.height = 1024;
     room(c, 1024, 1024);
+    hazard(c, 860, 1024, 164);
     // Kept inside the middle so the rounded corners never clip him.
-    cloud(c, 215, 735, 62);
-    stink(c, 512, 300, 110, 360);
-    drawHammy(c, 520, 610, 285, { ...defaultLook('classic'), face: 'joy', mouth: 0.4 }, 0);
+    cloud(c, 200, 700, 58);
+    stink(c, 540, 250, 110, 330);
+    drawHammy(c, 540, 600, 250, { ...defaultLook('classic'), face: 'happy', mouth: 0.35 }, 0);
   } else if (kind === 'feature') {
     out.width = 1024;
     out.height = 500;
     room(c, 1024, 500);
-    // The three things he might be today, on the desk.
-    c.fillStyle = '#5a3b26';
-    c.fillRect(0, 410, 1024, 90);
-    c.fillStyle = '#7a5236';
-    c.fillRect(0, 410, 1024, 5);
-    drawHammy(c, 160, 330, 72, { ...defaultLook('roadtrip'), face: 'joy' }, 0);
-    drawHammy(c, 470, 365, 64, { ...defaultLook('classic', 'sub'), face: 'happy' }, 0);
-    drawHammy(c, 820, 350, 64, { ...defaultLook('cowboy', 'train'), face: 'smug', roll: 0.6 }, 0);
-    cloud(c, 60, 360, 26);
-    wordmark(c, 512, 110, 92);
+    // The unit on the right, the name on the left.
+    c.drawImage(unit(560, 500), 464, 0);
+    wordmark(c, 236, 190, 70);
     c.fillStyle = MUTED;
-    c.font = '600 28px Rubik';
+    c.font = '600 24px Rubik';
     c.textAlign = 'center';
-    c.fillText("Some days a hamster. Some days a meatball sub. Some days a train.", 512, 165);
+    c.fillText('A virtual pet who is a lot.', 236, 240);
+    c.fillText('Keep him fed, showered and', 236, 300);
+    c.fillText('off the floor. Good luck.', 236, 332);
+    drawHammy(c, 120, 420, 34, { ...defaultLook('classic', 'sub'), face: 'happy' }, 0);
+    drawHammy(c, 236, 425, 30, { ...defaultLook('classic', 'hamster'), face: 'joy' }, 0);
+    drawHammy(c, 352, 418, 32, { ...defaultLook('cowboy', 'train'), face: 'smug', roll: 0.6 }, 0);
   } else {
     out.width = out.height = 2732;
     c.fillStyle = BG;
@@ -111,8 +157,8 @@ async function main(): Promise<void> {
     glow.addColorStop(1, 'rgba(255,154,46,0)');
     c.fillStyle = glow;
     c.fillRect(0, 0, 2732, 2732);
-    stink(c, 1366, 900, 120, 800);
-    drawHammy(c, 1366, 1240, 300, { ...defaultLook('classic'), face: 'joy', mouth: 0.4 }, 0);
+    stink(c, 1366, 860, 120, 760);
+    drawHammy(c, 1366, 1250, 280, { ...defaultLook('classic'), face: 'happy', mouth: 0.35 }, 0);
     wordmark(c, 1366, 1830, 190);
   }
   out.id = 'art';

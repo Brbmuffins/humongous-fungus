@@ -260,7 +260,10 @@ keys and GitHub secrets. Nothing new to set up in GitHub.
 - **Build** (step 6): Actions → **iOS · Hammygotchi** → Run workflow, then
   install it from TestFlight. On the phone, check that ordering food asks to
   allow notifications, that leaving the app brings Hammy's next text as a
-  notification, that farts give a heavy buzz, and that the toy bar scrolls.
+  notification, that farts give a heavy buzz, that the toy bar scrolls,
+  that you can drag Hammy onto the toilet, into the shower and up to his bed,
+  that a fridge steak can be dragged onto the oven, and that the tabs slide
+  their sheet up and (on Android) the back gesture puts it away.
 - **Pages** (step 7): `site/hammygotchi/privacy.html` and `support.html`,
   hosted along with the rest of `site/`.
 - **Store page** (step 8): everything to paste is in

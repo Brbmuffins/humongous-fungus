@@ -12,7 +12,7 @@ export const START_COINS = 50;
 /** Needs, 0..100, where full is good. */
 export const BELLY_PER_HOUR = 7;
 export const FRESH_PER_HOUR = 2;
-/** Every poop left on the floor makes the tank stink faster. */
+/** Every poop left on the floor makes the unit stink faster. */
 export const POOP_STINK_PER_HOUR = 2.5;
 export const MOOD_PER_HOUR = 5;
 /** Unread texts past the first few make him sadder. */
@@ -60,9 +60,17 @@ export const DIGEST_MIN = 120;
 export const DIGEST_RANGE = 180;
 export const SCOOP_COINS = 3;
 export const SCOOP_FRESH = 4;
-export const HOSE_FRESH = 50;
-export const HOSE_MOOD = -10;
-export const HOSE_COOLDOWN = 5 * 60;
+/**
+ * When a meal is ready to come out he needs to go, and holds it this long.
+ * Drag him onto the toilet in time, or it ends up on the floor.
+ */
+export const URGE_SECONDS = 75;
+export const TOILET_COINS = 4;
+export const TOILET_FRESH = 3;
+/** The shower. He's lazy, so he won't go in by himself; soap makes it better. */
+export const SHOWER_FRESH = 40;
+export const SHOWER_MOOD = -2;
+export const SHOWER_COOLDOWN = 90;
 /** Petting and throwing him around: a little mood, every couple of seconds. */
 export const PET_MOOD = 2;
 export const FLING_MOOD = 3;
@@ -106,7 +114,7 @@ export const RING_SECONDS = 20;
 // ---------------------------------------------------------------------------
 // DoorDosh
 
-export type FoodId = 'dorkitos' | 'pizza' | 'burrito' | 'wings' | 'sushi' | 'glowjuice' | 'salad';
+export type FoodId = 'dorkitos' | 'pizza' | 'burrito' | 'wings' | 'sushi' | 'glowjuice' | 'salad' | 'rawsteak' | 'steak' | 'burnt';
 
 export interface FoodDef {
   id: FoodId;
@@ -122,8 +130,10 @@ export interface FoodDef {
   health?: number;
   /** He orders this himself, on your coins, when he gets hungry. */
   selfOrder: boolean;
-  /** Bag color in the tank. */
+  /** Bag color in the unit. */
   color: string;
+  /** Made at home (fridge and oven), not on the DoorDosh menu. */
+  home?: true;
 }
 
 export const FOODS: readonly FoodDef[] = [
@@ -134,7 +144,79 @@ export const FOODS: readonly FoodDef[] = [
   { id: 'glowjuice', name: 'Glow Juice', blurb: 'Energy drink. Three cans and he can hear colors.', price: 8, belly: 5, mood: 15, gas: 15, poops: 0, selfOrder: true, color: '#a6e22e' },
   { id: 'sushi', name: 'Gas station sushi', blurb: 'Cheap. Fills him up. Costs him some health. Why is it warm?', price: 9, belly: 25, mood: -4, gas: 50, poops: 2, health: -15, selfOrder: false, color: '#f472b6' },
   { id: 'salad', name: 'Side salad', blurb: 'He will eat it. He will complain the whole time. Freshens him up a little.', price: 6, belly: 15, mood: -10, gas: 0, poops: 1, fresh: 8, selfOrder: false, color: '#4ade80' },
+  // From the fridge. He won't cook, so you have to.
+  { id: 'rawsteak', name: 'Raw steak', blurb: 'He will eat it raw if you let him.', price: 0, belly: 15, mood: -4, gas: 40, poops: 1, health: -8, selfOrder: false, color: '#e8566a', home: true },
+  { id: 'steak', name: 'Steak', blurb: 'You cooked. He ate.', price: 0, belly: 40, mood: 8, gas: 10, poops: 1, selfOrder: false, color: '#8a4a2a', home: true },
+  { id: 'burnt', name: 'Burnt steak', blurb: 'Charcoal, mostly.', price: 0, belly: 20, mood: -6, gas: 5, poops: 1, selfOrder: false, color: '#2a211c', home: true },
 ];
+
+/** DoorDosh only delivers what's on the menu. */
+export const MENU = FOODS.filter((f) => !f.home);
+/** A raw steak from the fridge. Cheaper than delivery, if you cook it. */
+export const MEAT_PRICE = 5;
+/** Seconds on the stove until a steak is done, and until it's charcoal. */
+export const COOK_SECONDS = 6;
+export const BURN_SECONDS = 16;
+
+// ---------------------------------------------------------------------------
+// The containment unit: furniture he can be dragged onto.
+
+export type SpotId = 'shower' | 'toilet' | 'chair' | 'bed' | 'pc';
+
+export interface RestDef {
+  /** Mood every `every` seconds while he's on it, up to `cap`. */
+  mood: number;
+  cap: number;
+  every: number;
+  /** Coins every `coinEvery` seconds (the PC: he streams). */
+  coins?: number;
+  coinEvery?: number;
+}
+
+export const REST: Partial<Record<SpotId, RestDef>> = {
+  bed: { mood: 2, cap: 60, every: 6 },
+  chair: { mood: 1, cap: 55, every: 4 },
+  pc: { mood: 1, cap: 70, every: 6, coins: 1, coinEvery: 30 },
+};
+
+// ---------------------------------------------------------------------------
+// Home upgrades
+
+export type UpgradeId = 'vacuum' | 'soap';
+
+export interface UpgradeDef {
+  id: UpgradeId;
+  name: string;
+  /** What each level is called, and costs. */
+  levels: readonly { name: string; blurb: string; price: number }[];
+}
+
+export const UPGRADES: readonly UpgradeDef[] = [
+  {
+    id: 'vacuum',
+    name: 'Robot vacuum',
+    levels: [
+      { name: 'Robot vacuum', blurb: 'Drives around the ground floor eating poop. Works while you are away.', price: 150 },
+      { name: 'Second robot vacuum', blurb: 'One for the loft too. They do not get along.', price: 400 },
+    ],
+  },
+  {
+    id: 'soap',
+    name: 'Soap',
+    levels: [
+      { name: 'Bar soap', blurb: 'Showers clean more.', price: 30 },
+      { name: 'Body wash', blurb: 'Showers clean more, and he hates them less.', price: 90 },
+      { name: 'Fancy soap', blurb: 'Smells like a candle store. He comes out happy.', price: 220 },
+    ],
+  },
+];
+
+export const UPGRADE_BY_ID = Object.fromEntries(UPGRADES.map((u) => [u.id, u])) as Record<UpgradeId, UpgradeDef>;
+/** Extra fresh and mood from a shower, by soap level. */
+export const SOAP_FRESH = [0, 12, 24, 40] as const;
+export const SOAP_MOOD = [0, 2, 5, 8] as const;
+/** Away, each robot vacuum eats one poop off the floor this often. */
+export const VACUUM_SECONDS = 45;
 
 export const FOOD_BY_ID = Object.fromEntries(FOODS.map((f) => [f.id, f])) as Record<FoodId, FoodDef>;
 /** At most this many orders on the way at once. */
@@ -177,10 +259,10 @@ export const FITS: readonly FitDef[] = [
 export const FIT_BY_ID = Object.fromEntries(FITS.map((f) => [f.id, f])) as Record<FitId, FitDef>;
 
 // ---------------------------------------------------------------------------
-// Forms: Hammy is an avatar. Some days he's a hamster, some days a meatball
-// sub, some days a train. Hats and glasses go on whatever he is.
+// Forms: Hammy is an avatar. Most days he's Cube Hammy; some days a hamster,
+// a meatball sub or a train. Hats and glasses go on whatever he is.
 
-export type FormId = 'hamster' | 'sub' | 'train';
+export type FormId = 'cube' | 'hamster' | 'sub' | 'train';
 
 export interface FormDef {
   id: FormId;
@@ -191,15 +273,26 @@ export interface FormDef {
   lines: readonly string[];
   /** What a fart sounds like, small to big. */
   fart: readonly [string, string, string];
+  /** How often he's this, compared with the others. */
+  weight: number;
 }
 
 export const FORMS: readonly FormDef[] = [
   {
+    id: 'cube',
+    name: 'Cube Hammy',
+    today: 'Cube Hammy. As usual.',
+    lines: ['I am a cube. Respect it.', 'Corners. All of them.', 'Back to normal. Cube.', "Don't roll me."],
+    fart: ['pft', 'pfffrt', 'PFFFRRRT'],
+    weight: 3,
+  },
+  {
     id: 'hamster',
     name: 'Hamster',
     today: 'a hamster. Probably.',
-    lines: ['I feel like myself today.', 'Normal day. Normal guy.', 'Back to hamster. Nice.'],
+    lines: ['Why am I a hamster?', 'I have whiskers now.', 'Do not put me in a wheel.'],
     fart: ['pft', 'pfffrt', 'PFFFRRRT'],
+    weight: 1,
   },
   {
     id: 'sub',
@@ -207,6 +300,7 @@ export const FORMS: readonly FormDef[] = [
     today: 'a meatball sub.',
     lines: ["I'm a sandwich today. Don't ask.", 'Extra sauce.', "Don't eat me.", 'Is it hot in here or is that the marinara?', 'Footlong. Thank you.', 'I am leaking sauce.'],
     fart: ['plip', 'splorp', 'SPLORRRT'],
+    weight: 1,
   },
   {
     id: 'train',
@@ -214,13 +308,14 @@ export const FORMS: readonly FormDef[] = [
     today: 'a train.',
     lines: ['Choo choo.', 'All aboard!', 'Next stop: the snack bar.', 'I am a locomotive now.', 'Tickets, please.', "I'm off the rails!"],
     fart: ['toot', 'TOOT TOOT', 'TOOOOOOOT'],
+    weight: 1,
   },
 ];
 
 export const FORM_BY_ID = Object.fromEntries(FORMS.map((f) => [f.id, f])) as Record<FormId, FormDef>;
 
 // ---------------------------------------------------------------------------
-// Toys, like the item bar in an old Flash pet game: pick one under the tank
+// Toys, like the item bar in an old Flash pet game: pick one under the unit
 // and use it on him. Nice ones lift his mood. Mean ones pay more coins.
 
 export type ToyId = 'hand' | 'feather' | 'ball' | 'glove' | 'balloon' | 'pie' | 'cushion' | 'magnet' | 'firecracker';
@@ -317,34 +412,43 @@ export const SAYS = {
   salad: ['Is this… leaves?', 'Who ordered this.', 'Rabbit food. Great.'],
   sushi: ['Why is it warm?', 'Smells fine.', 'Gas station sushi. Classic.'],
   poop: ["Don't look.", 'Oops.', 'That’s for you.', 'Fresh delivery.'],
-  hose: ['NOT THE HOSE!', 'I’M MELTING!', 'Cold! Cold! Cold!', 'Betrayal.'],
-  hungry: ['I could eat the frog.', 'Is anyone ordering food?', 'My stomach is eating itself.', 'I ate a wood chip.'],
+  shower: ['Do I have to?', 'COLD. COLD.', 'I’m melting!', 'Fine. Five minutes.', 'Smells like soap. Gross.'],
+  toilet: ['Privacy, please.', 'Ahhh.', 'Made it.', '*flush*', 'Thank you.'],
+  noToilet: ["I don't have to go.", 'Nothing in the chamber.', 'Maybe later.'],
+  urge: ['I gotta go!', 'Where’s the toilet? WHERE?', 'Uh oh.', 'It’s coming.', 'Bathroom. Now.'],
+  floorPoop: ['Too late.', 'Oops.', 'That’s on you.', 'You were supposed to carry me.'],
+  bed: ['zzz', 'Five more minutes.', 'Do not disturb.', '*snore*'],
+  chair: ['Ahh. My chair.', 'Peak comfort.', 'I’m not getting up.'],
+  pc: ['Chat, I’m back.', 'Gaming.', 'Don’t talk to me, I’m in a match.', 'Thanks for the sub!'],
+  raw: ['It’s… cold?', 'Is this cooked?', 'Tastes like fridge.'],
+  cooked: ['You cook? Marry me.', 'STEAK.', 'Chef’s kiss.'],
+  burnt: ['Crunchy.', 'Is this a rock?', 'Delicious charcoal.'],
+  hungry: ['I could eat the fridge.', 'Is anyone ordering food?', 'My stomach is eating itself.', 'I licked the oven.'],
   sad: ['Nobody ever calls me.', 'Do you even like me?', 'I’m fine. Totally fine.', 'Call me maybe?'],
   stinky: ['Smells like victory.', 'What smell?', 'That’s my natural musk.', 'I can’t smell anything.'],
   glitch: ['Uh oh.', 'Physics is broken.', 'Who turned off gravity?', 'This is fine.'],
   tickle: ['HEHEHE', 'STOP. HEHE.', 'Not the armpits!', "I'm not ticklish. HEHEHE"],
   ow: ['OW.', 'Hey!', "I'm telling.", 'Why.', 'Rude.', 'My face!'],
   ball: ['Ball!', 'Goal!', 'Mine!', 'Ow. Ball.', 'Again!'],
-  splash: ['I’M WET.', 'Who did that?', 'Was that the frog?', 'Cold!'],
+  splash: ['I’M WET.', 'Who did that?', 'Was that the scientist?', 'Cold!'],
   pie: ['…', 'Tastes good though.', 'Banana cream?', 'Worth it.'],
   cushion: ['IT WASN’T ME.', 'HAHAHA', 'Classic.', 'Do it again.'],
   magnet: ['I’m flying!', 'Whoa.', 'Put me down. Actually, don’t.'],
   bang: ['My eyebrows!', '…what?', 'I can’t hear anything.', 'Cool.'],
 } as const;
 
-export interface NeighborDef {
-  id: 'frog' | 'snail' | 'bug';
-  name: string;
-  lines: readonly string[];
-}
-
-export const NEIGHBORS: readonly NeighborDef[] = [
-  { id: 'frog', name: 'The frog', lines: ['Bro.', 'I can taste it.', 'Ribbit. (rude)', 'Every day with this guy.', 'Who let him in here?'] },
-  { id: 'snail', name: 'The snail', lines: ["I'm moving out.", "I'd leave faster if I could.", 'My shell is not airtight.', 'Unbelievable.'] },
-  { id: 'bug', name: 'The pill bug', lines: ['Rolling up. Bye.', "Don't talk to me.", 'I have one lung and it hates you.', 'Not again.'] },
+/** The scientist watching through the observation window. Nobody likes him. */
+export const SCIENTIST_LINES: readonly string[] = [
+  'Subject is… ripe.',
+  'Writing that down.',
+  'Day 40. He did it again.',
+  'I can taste it through the glass.',
+  'Who approved this?',
+  'Do not open the hatch.',
+  'I need a raise.',
 ];
 
-/** Neighbors put clothespins on below this, and leave the tank below the next. */
+/** The scientist puts on a gas mask below this, and evacuates below the next. */
 export const PINCH_BELOW = 45;
 export const LEAVE_BELOW = 18;
 
@@ -353,24 +457,25 @@ export const LEAVE_BELOW = 18;
 
 /** Things he texts you, by what's going on. */
 export const HAMMY_TEXTS = {
-  hungry: ['im starving', 'can u doordosh me something', 'i ate a wood chip. it was not good', 'how much is a burrito. asking for me', 'FOOD'],
-  stinky: ["it smells weird in here. not me tho", 'the frog put a clothespin on his nose. rude', 'can u open a window', 'pretty sure the snail is filing a complaint'],
+  hungry: ['im starving', 'can u doordosh me something', 'theres steak in the fridge. cook it for me', 'how much is a burrito. asking for me', 'FOOD'],
+  stinky: ["it smells weird in here. not me tho", 'the scientist put on a gas mask. rude', 'can u open a window', 'the plant is dying and i think its my fault'],
   sad: ['nobody ever calls me', 'u forgot about me didnt u', 'im just gonna lay here', 'hello??', 'u up'],
   poopy: ["there's a situation on the floor", 'dont come in here for a bit', 'the floor is a minefield lol'],
+  urge: ['i gotta go. carry me to the toilet', 'BATHROOM. NOW.', 'its coming. help'],
   any: [
     'u up',
     'what r u doing',
-    'the snail wont text me back',
-    'i think the pill bug is plotting something',
+    'the scientist keeps writing stuff down',
+    'they slid a pamphlet under the door. it says hygiene',
     'are we there yet',
-    'bro look at this rock',
-    'i just did a sick flip off the hut',
+    'come cook for me',
+    'i just did a sick flip off the loft',
     'rate my fit',
     'send coins',
     'who ate my dorkitos. oh wait it was me',
     "i'm thinking about starting a podcast",
     'do fish know they’re wet',
-    'if u hear a noise it was the frog',
+    'if u hear a noise it was the robot vacuum',
     'gravity was weird again today',
     'i gotta pee',
     'u ever think about how ur a mammal',
@@ -392,7 +497,7 @@ export const TEXT_OPTIONS: readonly TextOption[] = [
   { id: 'wyd', text: 'wyd' },
   { id: 'fart', text: 'stop farting' },
   { id: 'there', text: 'are we there yet?' },
-  { id: 'tank', text: "how's the tank?" },
+  { id: 'tank', text: "how's the unit?" },
   { id: 'lol', text: 'lol' },
   { id: 'pic', text: 'send pic' },
   { id: 'proud', text: 'proud of u' },
@@ -404,7 +509,7 @@ export const CHILL_REPLIES = ['bro chill 💀', 'ur blowing up my phone', 'ok ok
 export const CALL_LINES: readonly string[] = [
   'Yo! What’s up!',
   'So anyway.',
-  'Wait, hold on, the frog is staring at me.',
+  'Wait, hold on, the scientist is staring at me.',
   'Can you hear me? I’m going through a tunnel.',
   '*crunching sounds*',
   'Sorry, I’m eating.',
@@ -414,7 +519,7 @@ export const CALL_LINES: readonly string[] = [
   'Hello? Hello? Oh, you’re still there.',
   'I had a dream I was a burrito.',
   'Are you driving? Can I pick the music?',
-  'The snail called me a menace.',
+  'They wrote me up for the toilet thing again.',
   'Anyway, how are YOU?',
   'Hold on, gravity’s doing the thing again.',
 ];

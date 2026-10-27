@@ -7,27 +7,33 @@ import './styles.css';
 
 import { fmt } from '@shared/format';
 import { CloudSave, localSave as makeLocalSave } from '@shared/storage';
-import { FIT_BY_ID, FOOD_BY_ID, FORM_BY_ID, VOICEMAIL, type FitId, type FoodId, type FormId, type ToyId } from './defs';
+import { FIT_BY_ID, FOOD_BY_ID, FORM_BY_ID, TOILET_COINS, UPGRADE_BY_ID, VOICEMAIL, type FitId, type FoodId, type FormId, type ToyId, type UpgradeId } from './defs';
 import {
   adopt,
   buyFit,
+  buyMeat,
   buyToy,
+  buyUpgrade,
   canCall,
   declineCall,
   endCall,
+  feed,
   fling,
   formFor,
-  hose,
   isAlive,
   order,
   pet,
   pickToy,
   play,
+  rest,
   scoop,
   scoopAll,
   deadFor,
   sendText,
+  shower,
   step,
+  useToilet,
+  vacuumPoop,
   wake,
   wearFit,
   type AwayReport,
@@ -35,6 +41,7 @@ import {
 } from './game';
 import { TankScene } from './scene';
 import { setSound, sfx, unlock } from './sound';
+import { setVoice } from './voice';
 import { deserialize, newGame, serialize, type HammyState } from './state';
 import { GameUI, type Controller } from './ui';
 import { askForReminders, buzz, clearReminders, isNative, nativeSave, onAppState, scheduleReminders } from './native';
@@ -73,7 +80,7 @@ class Game implements Controller {
   /** Messages already on screen, so a new one from him dings once. */
   private shownMessages = 0;
   /** Today's form, worked out once a minute rather than every frame. */
-  private formCache = { at: 0, form: 'hamster' as FormId };
+  private formCache = { at: 0, form: 'cube' as FormId };
 
   constructor(hot: HotData) {
     const saves = [hot.save, hot.native, localSave.load()]
@@ -82,12 +89,17 @@ class Game implements Controller {
     const loaded = newest(saves);
     this.hadSave = loaded !== null;
     this.state = loaded ?? newGame(Date.now());
-    setSound(this.state.sound);
+    this.sound(this.state.sound);
     this.scene = new TankScene(this.canvas, {
       pet: () => this.pet(),
       fling: (speed) => this.fling(speed),
       scoop: (i) => this.scoopOne(i),
       play: (toy) => this.played(toy),
+      spot: (id) => (id === 'shower' ? this.showered() : this.flushed()),
+      rest: (id) => this.rested(id),
+      fridge: () => this.fridge(),
+      eat: (kind) => this.ate(kind),
+      vacuum: (i) => this.vacuumed(i),
     });
     this.ui = new GameUI(this);
     const { away } = step(this.state, Date.now());
@@ -135,6 +147,8 @@ class Game implements Controller {
       health: s.health,
       poops: s.poops,
       orders: s.orders,
+      urge: s.urges.length > 0,
+      vacuums: s.upgrades.vacuum,
       deadFor: deadFor(s, now),
     });
     this.scene.draw(t);
@@ -157,10 +171,15 @@ class Game implements Controller {
         buzz.fart(e.size);
         break;
       case 'poop':
-        // It came out of him, so it lands behind him.
-        s.poops[s.poops.length - 1] = this.scene.buttX();
+        // Nobody took him to the toilet in time: it lands behind him.
+        s.poops[s.poops.length - 1] = this.scene.buttPos();
         this.scene.poop();
         this.cloudDirty = true;
+        break;
+      case 'urge':
+        this.scene.urge();
+        buzz.tap();
+        if (this.ui.visibleTab !== 'care') this.ui.toast('Hammy needs to go. Drag him onto the toilet.');
         break;
       case 'delivery':
         this.scene.deliver(e.food);
@@ -172,7 +191,7 @@ class Game implements Controller {
         this.cloudDirty = true;
         break;
       case 'text':
-        if (this.ui.currentTab !== 'phone') this.ui.toast(`Hammy: ${e.text}`);
+        if (this.ui.visibleTab !== 'phone') this.ui.toast(`Hammy: ${e.text}`);
         break;
       case 'ring':
         if (this.ui.modalOpen || document.visibilityState !== 'visible') declineCall(s, Date.now(), true);
@@ -182,7 +201,7 @@ class Game implements Controller {
         this.ui.closeModal();
         this.scene.died();
         buzz.bad();
-        this.ui.setTab('care');
+        this.ui.setTab('care', false);
         this.persist();
         break;
       default:
@@ -240,14 +259,14 @@ class Game implements Controller {
         wake(this.state, Date.now());
       },
       back: () => {
-        if (!this.ui.modalOpen) return false;
+        if (!this.ui.modalOpen) return this.ui.closeSheet();
         this.ui.closeModal();
         return true;
       },
     });
   }
 
-  // The tank ---------------------------------------------------------------
+  // The unit ---------------------------------------------------------------
 
   private pet(): void {
     if (pet(this.state, Date.now())) this.cloudDirty = true;
@@ -277,6 +296,56 @@ class Game implements Controller {
     if (got.mood < 0) buzz.fart(0.6);
     else buzz.tap();
     this.cloudDirty = true;
+  }
+
+  private showered(): boolean {
+    if (!shower(this.state, Date.now())) return false;
+    buzz.tap();
+    this.changed();
+    return true;
+  }
+
+  private flushed(): boolean {
+    const n = useToilet(this.state);
+    if (!n) return false;
+    const coins = n * TOILET_COINS;
+    this.scene.flushed(coins);
+    sfx.coin();
+    buzz.success();
+    this.changed();
+    return true;
+  }
+
+  private rested(id: 'bed' | 'chair' | 'pc'): void {
+    const got = rest(this.state, id, Date.now());
+    if (!got) return;
+    if (got.coins) {
+      this.scene.popup(`+${got.coins}`);
+      sfx.coin();
+    }
+    this.cloudDirty = true;
+  }
+
+  private fridge(): boolean {
+    if (!buyMeat(this.state)) return false;
+    buzz.tap();
+    this.changed();
+    return true;
+  }
+
+  private ate(kind: FoodId): void {
+    if (!feed(this.state, kind, Date.now())) return;
+    sfx.crunch();
+    this.changed();
+  }
+
+  private vacuumed(i: number): void {
+    if (vacuumPoop(this.state, i)) this.cloudDirty = true;
+  }
+
+  private sound(on: boolean): void {
+    setSound(on);
+    setVoice(on);
   }
 
   private ring(): void {
@@ -323,11 +392,18 @@ class Game implements Controller {
     this.changed();
   }
 
-  hose(): void {
-    if (!hose(this.state, Date.now())) return;
-    this.scene.hose();
-    buzz.tap();
-    this.changed();
+  /** The Care tab's buttons: you carry him there. */
+  carry(id: 'shower' | 'toilet'): void {
+    this.scene.carryTo(id);
+  }
+
+  buyUpgrade(id: UpgradeId): void {
+    if (!buyUpgrade(this.state, id)) return;
+    sfx.buy();
+    buzz.success();
+    const level = UPGRADE_BY_ID[id].levels[this.state.upgrades[id] - 1];
+    this.ui.toast(`${level.name}: ${level.blurb}`);
+    this.changed(true);
   }
 
   text(id: string): void {
@@ -371,7 +447,7 @@ class Game implements Controller {
     if (!pickToy(this.state, id)) return;
     this.scene.setToy();
     buzz.tap();
-    if (id !== 'hand' || this.state.stats.toys === 0) this.ui.toyPicked(id);
+    this.ui.toyPicked(id);
     this.changed();
   }
 
@@ -386,13 +462,13 @@ class Game implements Controller {
     this.scene.spawn();
     this.shownMessages = 0;
     buzz.success();
-    this.ui.toast(`Hammy #${this.state.n} has entered the tank`);
+    this.ui.toast(`Hammy #${this.state.n} has entered the containment unit`);
     this.changed(true);
   }
 
   toggleSound(): void {
     this.state.sound = !this.state.sound;
-    setSound(this.state.sound);
+    this.sound(this.state.sound);
     this.changed();
   }
 
@@ -400,11 +476,11 @@ class Game implements Controller {
     Object.assign(this.state, newGame(Date.now()));
     localSave.clear();
     nativeSave.clear();
-    setSound(true);
+    this.sound(true);
     this.formCache.at = 0;
     this.scene.setToy();
     this.scene.spawn();
-    this.ui.setTab('care');
+    this.ui.setTab('care', false);
     this.changed(true);
     this.ui.showIntro();
   }
@@ -448,7 +524,7 @@ class Game implements Controller {
     const remote = raw ? deserialize(raw) : null;
     const take = (message: string | null) => {
       Object.assign(this.state, remote);
-      setSound(this.state.sound);
+      this.sound(this.state.sound);
       this.ui.closeModal();
       const { away } = step(this.state, Date.now());
       wake(this.state, Date.now());

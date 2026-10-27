@@ -1,29 +1,54 @@
-// The tank: a glass terrarium on a desk in a gamer's room, with Hammy, his
-// poop, his neighbors and whatever DoorDosh drops through the lid. Hammy has
-// physics (badly): grab him and throw him, watch him bounce, and every few
-// minutes gravity stops working properly. The toy bar works here too: balls,
-// boxing gloves, water balloons, pies, a whoopee cushion, a magnet and
-// firecrackers. When he dies he rots right here, sprouts mushrooms, and
-// leaves a skeleton.
+// The containment unit, live: Hammy, his poop, his food and his stuff, on two
+// floors. Hammy has physics (badly): grab him and throw him, drop him in the
+// shower or on the toilet, put him to bed or at his PC. He's lazy, so he
+// won't go to the toilet or shower by himself, and he won't fetch food from
+// the other floor. The fridge hands out raw steak; drag it onto the oven to
+// cook it. The toy bar works here too. Every few minutes gravity stops working
+// properly. When he dies he rots right here, sprouts mushrooms, and leaves a
+// skeleton.
 import { mulberry32 } from '@shared/rng';
 import {
+  BURN_SECONDS,
+  COOK_SECONDS,
   FOOD_BY_ID,
   FORM_BY_ID,
   LEAVE_BELOW,
-  NEIGHBORS,
   PINCH_BELOW,
   ROAD_TRIP,
   ROT_SECONDS,
   SAYS,
+  SCIENTIST_LINES,
   type FitId,
   type FoodId,
   type FormId,
-  type NeighborDef,
+  type SpotId,
   type ToyId,
 } from './defs';
 import { EXTENTS, HEADS, drawHammy, drawSkeleton, defaultLook, type Face, type Look } from './hammy';
+import {
+  LOFT_SLAB,
+  drawFridge,
+  drawGlass,
+  drawMonitor,
+  drawOven,
+  drawPan,
+  drawPlant,
+  drawScientist,
+  drawSteak,
+  drawVacuum,
+  layoutRoom,
+  paintRoom,
+  panSpot,
+  type Box,
+  type Room,
+} from './room';
 import { sfx } from './sound';
+import type { Poop } from './state';
 import { drawToy } from './toys';
+import { speak } from './voice';
+
+export type HomeFood = 'rawsteak' | 'steak' | 'burnt';
+type RestSpot = 'bed' | 'chair' | 'pc';
 
 export interface SceneView {
   now: number;
@@ -34,8 +59,12 @@ export interface SceneView {
   fresh: number;
   mood: number;
   health: number;
-  poops: readonly number[];
+  poops: readonly Poop[];
   orders: readonly { food: FoodId; arriveAt: number; self: boolean }[];
+  /** He needs to go. */
+  urge: boolean;
+  /** Robot vacuums he owns: one downstairs, then one on the loft. */
+  vacuums: number;
   /** Seconds since he died, or null. */
   deadFor: number | null;
 }
@@ -46,6 +75,14 @@ export interface SceneHandlers {
   scoop(index: number): void;
   /** A toy got him. The rules decide whether it counts. */
   play(toy: ToyId): void;
+  /** He's in the shower or on the toilet. Returns whether anything came of it. */
+  spot(id: 'shower' | 'toilet'): boolean;
+  /** He's lying on the bed, sitting in his chair or gaming (every frame). */
+  rest(id: RestSpot): void;
+  /** The fridge was tapped. Returns whether a steak came out. */
+  fridge(): boolean;
+  eat(kind: HomeFood): void;
+  vacuum(index: number): void;
 }
 
 interface Puff {
@@ -73,33 +110,27 @@ interface Bubble {
   ms: number;
 }
 
-interface Bag {
+/** Anything that falls and lands: bags, steaks, balls, firecrackers. */
+interface Thing {
   x: number;
   y: number;
   vx: number;
   vy: number;
-  food: FoodId;
   landed: boolean;
 }
 
-interface Neighbor {
-  def: NeighborDef;
-  /** 0 in the tank, 1 gone. */
-  out: number;
-  leaving: boolean;
-  x: number;
-  dir: number;
-  rolled: number;
-  bubble: Bubble | null;
+interface Bag extends Thing {
+  food: FoodId;
 }
 
-type Glitch = { kind: 'float' | 'moon' | 'sideways' | 'bouncy'; until: number; dir: number };
+interface Food extends Thing {
+  kind: HomeFood;
+  held: boolean;
+  /** On the stove since this time, or null. */
+  panAt: number | null;
+}
 
-interface Ball {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
+interface Ball extends Thing {
   spin: number;
   held: boolean;
 }
@@ -113,17 +144,24 @@ interface Punch {
   landed: boolean;
 }
 
-interface Cracker {
-  x: number;
-  y: number;
-  vy: number;
+interface Cracker extends Thing {
   litAt: number;
 }
+
+interface Vacuum {
+  x: number;
+  up: boolean;
+  dir: number;
+}
+
+type Glitch = { kind: 'float' | 'moon' | 'sideways' | 'bouncy'; until: number; dir: number };
+type Mode = 'idle' | 'walk' | 'eat' | 'mope' | 'climb';
 
 const PUNCH_OUT = 160;
 const PUNCH_BACK = 260;
 const FUSE_MS = 1800;
 const PIE_MS = 380;
+const REST_SPOTS: readonly RestSpot[] = ['bed', 'chair', 'pc'];
 
 const TAU = Math.PI * 2;
 const ease = (k: number): number => {
@@ -142,14 +180,7 @@ export class TankScene {
   private last = 0;
   private readonly calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   private view: SceneView | null = null;
-
-  // Tank geometry, in CSS pixels.
-  private L = 0;
-  private R = 0;
-  private T = 0;
-  private B = 0;
-  private floor = 0;
-  private r = 30;
+  private room: Room = layoutRoom(400, 400);
 
   // Hammy's body.
   private x = 0;
@@ -162,18 +193,30 @@ export class TankScene {
   private sqV = 0;
   private facing = 1;
   private grounded = false;
+  /** On the loft rather than the ground floor. */
+  private up = false;
   private held = false;
+  /** Thrown or dropped by hand and not landed yet. */
+  private tossed = false;
   private grab = { dx: 0, dy: 0, px: 0, py: 0, downAt: 0, moved: 0, samples: [] as { x: number; y: number; t: number }[] };
-  private mode: 'idle' | 'walk' | 'eat' | 'mope' = 'idle';
+  private mode: Mode = 'idle';
   private modeUntil = 0;
   private targetX = 0;
+  /** Where he's headed once he's up the ladder. */
+  private climbTo: RestSpot | null = null;
+  /** The furniture he's walking over to, if any. */
+  private walkTo: RestSpot | null = null;
+  /** Furniture he's using right now. */
+  private at: { id: SpotId; until: number; since: number } | null = null;
   private blinkAt = 0;
   private fartAt = -1e9;
-  private hoseUntil = 0;
   private eatUntil = 0;
+  private eating: Thing | null = null;
   private bubble: Bubble | null = null;
   private nextLineAt = 0;
   private nextComplainAt = 0;
+  private nextUrgeLine = 0;
+  private nextWhine = 0;
   private glitch: Glitch | null = null;
   private nextGlitchAt = 0;
   private youLose = false;
@@ -185,7 +228,7 @@ export class TankScene {
   private punches: Punch[] = [];
   private balloons: { x: number; y: number; vy: number }[] = [];
   private pies: { x: number; y: number; born: number }[] = [];
-  private cushion: { x: number; readyAt: number; squashAt: number } | null = null;
+  private cushion: { x: number; up: boolean; readyAt: number; squashAt: number } | null = null;
   private crackers: Cracker[] = [];
   private magnet: { x: number; y: number } | null = null;
   private feather: { x: number; y: number; moved: number } | null = null;
@@ -198,19 +241,29 @@ export class TankScene {
   private dizzyUntil = 0;
   private flash = 0;
 
+  // The unit.
+  private foods: Food[] = [];
+  private heldFood: Food | null = null;
+  private fridgeOpenUntil = 0;
+  private nextAlarm = 0;
+  private vacs: Vacuum[] = [];
+  private showerUntil = 0;
+  private flushAt = -1e9;
+  private nextZ = 0;
+  private scientistGone = false;
+  private scientistBubble: Bubble | null = null;
+
   private puffs: Puff[] = [];
   private popups: Popup[] = [];
   private bags: Bag[] = [];
   private flying: { x: number; y: number; vx: number; vy: number; born: number }[] = [];
   private poopBorn = new Map<number, number>();
   private lastPoops = 0;
-  private neighbors: Neighbor[];
   private shrooms: { dx: number; dy: number; s: number; hue: number; delay: number; tilt: number }[];
 
   constructor(private canvas: HTMLCanvasElement, private on: SceneHandlers, seed = 3) {
     this.ctx = canvas.getContext('2d')!;
     const rnd = mulberry32(seed);
-    this.neighbors = NEIGHBORS.map((def, i) => ({ def, out: 0, leaving: false, x: [0.86, 0.06, 0.45][i], dir: 1, rolled: 0, bubble: null }));
     this.shrooms = Array.from({ length: 9 }, (_, i) => ({
       // Mostly from the body, leaving the skull to look at you.
       dx: -1.45 + (i / 8) * 1.9 + (rnd() - 0.5) * 0.3,
@@ -222,8 +275,8 @@ export class TankScene {
     }));
     this.bind();
     this.resize();
-    this.x = (this.L + this.R) / 2;
-    this.y = this.floor - this.r;
+    this.x = (this.room.chair.x0 + this.room.chair.x1) / 2 - this.room.r * 2.5;
+    this.y = this.room.ground - this.room.r;
     this.targetX = this.x;
     this.nextLineAt = performance.now() + 4000;
     this.nextGlitchAt = performance.now() + 90_000 + Math.random() * 90_000;
@@ -231,53 +284,185 @@ export class TankScene {
 
   resize(): void {
     const rect = this.canvas.getBoundingClientRect();
-    this.W = Math.max(200, rect.width);
-    this.H = Math.max(160, rect.height);
+    const old = this.room;
+    // Keep him in the same spot of the unit when it changes size.
+    const fx = (this.x - old.L) / Math.max(1, old.R - old.L);
+    this.W = Math.max(240, rect.width);
+    this.H = Math.max(240, rect.height);
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     for (const c of [this.canvas, this.base]) {
       c.width = Math.round(this.W * this.dpr);
       c.height = Math.round(this.H * this.dpr);
     }
-    const side = Math.max(10, this.W * 0.035);
-    this.L = side;
-    this.R = this.W - side;
-    this.T = Math.max(24, this.H * 0.09);
-    this.B = this.H - Math.max(16, this.H * 0.07);
-    this.floor = this.B - Math.max(14, this.H * 0.085);
-    this.r = Math.min(54, Math.max(18, Math.min(this.W * 0.095, this.H * 0.12)));
-    this.x = Math.min(this.R - this.r, Math.max(this.L + this.r, this.x));
-    this.y = Math.min(this.y, this.floor - this.r);
+    this.room = layoutRoom(this.W, this.H);
+    const m = this.room;
+    this.x = m.L + fx * (m.R - m.L);
+    this.y = this.floorY() - this.size().hh;
+    for (const list of [this.foods, this.bags, this.balls, this.crackers]) for (const th of list) th.landed = false;
+    // Whatever's cooking stays in the pan.
+    const pan = panSpot(m.oven);
+    for (const f of this.foods) {
+      if (f.panAt === null) continue;
+      f.x = pan.x;
+      f.y = pan.y;
+      f.landed = true;
+    }
     this.paintBase();
+  }
+
+  private paintBase(): void {
+    const c = this.base.getContext('2d')!;
+    c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    paintRoom(c, this.room);
+  }
+
+  get r(): number {
+    return this.room.r;
   }
 
   setView(v: SceneView): void {
     const prev = this.view;
     this.view = v;
     if (v.deadFor === null) this.youLose = false;
-    // Coming back to a ruined tank: the neighbors are already gone.
-    if (!prev) {
-      const gone = v.deadFor !== null || v.fresh < LEAVE_BELOW;
-      for (const nb of this.neighbors) {
-        nb.leaving = gone;
-        nb.out = gone ? 1 : 0;
-      }
-    }
+    // Coming back to a ruined unit: the scientist has already left.
+    if (!prev) this.scientistGone = v.deadFor !== null || v.fresh < LEAVE_BELOW;
     // A new poop: it drops out of him, so put it where he is.
     if (v.poops.length > this.lastPoops && prev) {
       for (let i = this.lastPoops; i < v.poops.length; i++) this.poopBorn.set(i, this.t);
     }
     if (v.poops.length < this.lastPoops) this.poopBorn.clear();
     this.lastPoops = v.poops.length;
+    // Robot vacuums: one downstairs, the second on the loft.
+    while (this.vacs.length < Math.min(2, v.vacuums)) {
+      const up = this.vacs.length === 1;
+      this.vacs.push({ x: up ? this.room.L + 40 : (this.room.fridge.x0 + this.room.chair.x1) / 2, up, dir: 1 });
+    }
+    if (this.vacs.length > v.vacuums) this.vacs.length = v.vacuums;
   }
 
-  /** Where he is across the floor, 0..1 (for placing a poop behind him). */
-  buttX(): number {
+  /** Where he'd drop a poop right now: behind him, on whichever floor he's on. */
+  buttPos(): Poop {
+    const m = this.room;
     const bx = this.x - this.facing * this.size().hw * 0.7;
-    return Math.min(0.98, Math.max(0.02, (bx - this.L - this.r * 0.4) / (this.R - this.L - this.r * 0.8)));
+    const end = this.up ? m.loftEnd : m.R;
+    return { x: Math.min(0.98, Math.max(0.02, (bx - m.L) / (end - m.L))), up: this.up };
   }
 
-  private poopPos(p: number): { x: number; y: number } {
-    return { x: this.L + this.r * 0.4 + p * (this.R - this.L - this.r * 0.8), y: this.floor };
+  private poopPos(p: Poop): { x: number; y: number } {
+    const m = this.room;
+    const end = p.up ? m.loftEnd : m.R;
+    const pad = this.r * 0.4;
+    return { x: m.L + pad + p.x * (end - m.L - pad * 2), y: p.up ? m.loft : m.ground };
+  }
+
+  // -------------------------------------------------------------------------
+  // Geometry
+
+  /** Half width and half height of whatever he is today. */
+  private size(): { hw: number; hh: number } {
+    const e = EXTENTS[this.view?.form ?? 'cube'];
+    return { hw: this.r * e.w, hh: this.r * e.h };
+  }
+
+  /** The floor he's standing on (or would land on). */
+  private floorY(): number {
+    return this.up ? this.room.loft : this.room.ground;
+  }
+
+  /**
+   * Which floor something at x lands on, given where its bottom was last
+   * frame. The loft only catches things coming down onto it.
+   */
+  private surface(x: number, prevBottom: number): { y: number; up: boolean } {
+    const m = this.room;
+    if (x < m.loftEnd && prevBottom <= m.loft + 2) return { y: m.loft, up: true };
+    return { y: m.ground, up: false };
+  }
+
+  /** Left and right limits for walking on the floor he's on. */
+  private span(up: boolean): [number, number] {
+    const m = this.room;
+    const { hw } = this.size();
+    return up ? [m.L + hw, m.loftEnd - hw * 0.6] : [m.L + hw, m.R - hw];
+  }
+
+  /** Is (x, y) on him? `pad` grows the target for fingers. */
+  private onHim(x: number, y: number, pad = 1.2): boolean {
+    const { hw, hh } = this.size();
+    return ((x - this.x) / (hw * pad)) ** 2 + ((y - this.y) / (hh * pad + this.r * 0.1)) ** 2 < 1;
+  }
+
+  /** Where his face is right now, for pies and soot. */
+  private facePos(): { x: number; y: number; s: number } {
+    const head = HEADS[this.view?.form ?? 'cube'];
+    return { x: this.x + this.facing * head.x * this.r, y: this.y + head.y * this.r - head.s * this.r * 0.25, s: head.s * this.r };
+  }
+
+  private clampX(x: number, margin: number): number {
+    return Math.min(this.room.R - margin, Math.max(this.room.L + margin, x));
+  }
+
+  private inBox(b: Box, x: number, y: number, pad = 0): boolean {
+    return x >= b.x0 - pad && x <= b.x1 + pad && y >= b.y0 - pad && y <= b.y1 + pad;
+  }
+
+  private spotBox(id: SpotId): Box {
+    return this.room[id];
+  }
+
+  private spotUp(id: SpotId): boolean {
+    return id === 'bed' || id === 'pc';
+  }
+
+  /** The furniture under (x, y), if he were dropped there. */
+  private spotAt(x: number, y: number): SpotId | null {
+    const m = this.room;
+    // Only what's on the floor he's over: the loft is in the way of everything under it.
+    const up = x < m.loftEnd && y < m.loft + LOFT_SLAB;
+    const top = up ? m.T : x < m.loftEnd ? m.loft + LOFT_SLAB : m.T;
+    for (const id of ['shower', 'toilet', 'chair', 'bed', 'pc'] as const) {
+      if (this.spotUp(id) !== up) continue;
+      const b = this.spotBox(id);
+      if (x >= b.x0 - 4 && x <= b.x1 + 4 && y >= top && y <= b.y1) return id;
+    }
+    return null;
+  }
+
+  /** Where he sits, lies or stands on each piece of furniture. */
+  private anchor(id: SpotId): { x: number; y: number } {
+    const b = this.spotBox(id);
+    const { hh } = this.size();
+    const w = b.x1 - b.x0;
+    const h = b.y1 - b.y0;
+    switch (id) {
+      case 'shower':
+        return { x: b.x0 + w * 0.5, y: b.y1 - hh - 4 };
+      case 'toilet':
+        return { x: b.x0 + w * 0.66, y: b.y0 - hh * 0.5 };
+      case 'chair':
+        return { x: b.x0 + w * 0.5, y: b.y0 + h * 0.35 - hh * 0.9 };
+      case 'bed':
+        return { x: b.x0 + w * 0.6, y: b.y0 - hh * 0.75 };
+      case 'pc':
+        return { x: b.x0 + w * 0.15, y: b.y1 - h * 0.34 - hh * 0.9 };
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Saying things (and playing his recordings, if there are any)
+
+  say(text: string, ms = 2600, voice?: string): void {
+    this.bubble = { text, born: this.t, ms };
+    if (voice) speak(voice);
+  }
+
+  private sayKind(kind: keyof typeof SAYS, ms = 2600): void {
+    this.say(pick(SAYS[kind]), ms, kind.toLowerCase());
+  }
+
+  private scientistSays(): void {
+    if (this.scientistGone || this.scientistBubble) return;
+    this.scientistBubble = { text: pick(SCIENTIST_LINES), born: this.t, ms: 2600 };
   }
 
   // -------------------------------------------------------------------------
@@ -286,7 +471,7 @@ export class TankScene {
   fart(size: number): void {
     this.fartAt = this.t;
     const { hw, hh } = this.size();
-    const form = this.view?.form ?? 'hamster';
+    const form = this.view?.form ?? 'cube';
     const bx = this.x - this.facing * hw * 0.85;
     const by = this.y + hh * 0.55;
     const n = this.calm ? 3 : Math.round(5 + size * 6);
@@ -304,8 +489,8 @@ export class TankScene {
     }
     const words = FORM_BY_ID[form].fart;
     this.popups.push({ x: bx - this.facing * this.r * 0.4, y: by - this.r * 0.2, born: this.t, text: words[size > 1.1 ? 2 : size > 0.7 ? 1 : 0], color: '#c9f06a' });
-    // Fart propulsion, in a tank with no rules.
-    if (!this.held && this.view?.deadFor === null) {
+    // Fart propulsion, in a cell with no rules. Not while he's on the furniture.
+    if (!this.held && !this.at && this.view?.deadFor === null) {
       this.vx += this.facing * (60 + size * 160);
       this.vy -= 80 + size * 200;
       this.grounded = false;
@@ -313,29 +498,42 @@ export class TankScene {
     }
     if (form === 'train') sfx.toot(size);
     else sfx.fart(size);
-    if (size > 0.9 && Math.random() < 0.5) this.say(pick(SAYS.fart));
-    else if (Math.random() < 0.35) this.neighborComplain();
-    for (const nb of this.neighbors) if (nb.def.id === 'bug' && Math.abs(this.poopPos(nb.x).x - this.x) < this.r * 4) nb.rolled = this.t + 3500;
+    if (size > 0.9 && Math.random() < 0.5) this.sayKind('fart');
+    else if (Math.random() < 0.35) this.scientistSays();
   }
 
   poop(): void {
     sfx.plop();
-    if (Math.random() < 0.5) this.say(pick(SAYS.poop));
+    this.sayKind(Math.random() < 0.6 ? 'floorPoop' : 'poop');
+  }
+
+  /** He needs to go. He won't walk there himself. */
+  urge(): void {
+    this.nextUrgeLine = this.t + 9000;
+    this.sayKind('urge', 2400);
   }
 
   deliver(food: FoodId): void {
-    const x = this.L + (this.R - this.L) * (0.3 + Math.random() * 0.5);
-    this.bags.push({ x, y: this.T + 6, vx: (Math.random() - 0.5) * 60, vy: 0, food, landed: false });
-    if (food === 'salad') this.say(pick(SAYS.salad));
-    else if (food === 'sushi') this.say(pick(SAYS.sushi));
-    else this.say(pick(SAYS.food));
+    const m = this.room;
+    const G = this.H * 3.2;
+    // Through the hatch: onto the loft if he's up there, down the stairwell if not.
+    let vx = (Math.random() - 0.5) * 30;
+    if (this.up) {
+      const target = Math.min(m.loftEnd - 20, Math.max(m.L + 20, this.x));
+      vx = (target - m.hatchX) / Math.sqrt((2 * (m.loft - m.T)) / G);
+    }
+    this.bags.push({ x: m.hatchX, y: m.T + 6, vx, vy: 0, food, landed: false });
+    if (food === 'salad') this.sayKind('salad');
+    else if (food === 'sushi') this.sayKind('sushi');
+    else this.sayKind('food');
   }
 
-  hose(): void {
-    this.hoseUntil = this.t + 1400;
-    this.say(pick(SAYS.hose));
-    sfx.splash();
-    this.vx += 220 * (this.x < (this.L + this.R) / 2 ? 1 : -1);
+  /** The Care tab's buttons: carry him straight to the shower or toilet. */
+  carryTo(id: 'shower' | 'toilet'): void {
+    if (this.view?.deadFor !== null) return;
+    this.held = false;
+    this.up = false;
+    this.enter(id);
   }
 
   scoopFx(index: number): void {
@@ -349,16 +547,21 @@ export class TankScene {
     this.popups.push({ x: x ?? this.x, y: y ?? this.y - this.r * 1.3, born: this.t, text, color });
   }
 
-  say(text: string, ms = 2600): void {
-    this.bubble = { text, born: this.t, ms };
+  /** The toilet worked: swirl, flush, coins. */
+  flushed(coins: number): void {
+    this.flushAt = this.t;
+    sfx.flush();
+    const b = this.room.toilet;
+    this.popup(`+${coins}`, '#ffd34d', (b.x0 + b.x1) / 2, b.y0 - this.r * 1.6);
   }
 
   died(): void {
     this.bubble = null;
     this.held = false;
     this.glitch = null;
+    this.at = null;
     this.bags = [];
-    // The toys go away with him.
+    // The toys and food go away with him.
     this.setToy();
     this.balls = [];
     this.punches = [];
@@ -366,24 +569,30 @@ export class TankScene {
     this.pies = [];
     this.cushion = null;
     this.crackers = [];
+    this.foods = [];
+    this.heldFood = null;
     sfx.sad();
   }
 
-  /** A new Hammy drops into the tank. */
+  /** A new Hammy drops in through the hatch. */
   spawn(): void {
-    this.x = (this.L + this.R) / 2;
-    this.y = this.T + this.r + 8;
+    const m = this.room;
+    this.x = m.hatchX;
+    this.y = m.T + this.r + 8;
     this.vx = this.vy = this.spin = this.spinV = 0;
+    this.up = false;
     this.grounded = false;
     this.held = false;
+    this.at = null;
     this.mode = 'idle';
     this.bags = [];
     this.puffs = [];
     this.youLose = false;
-    this.say('Hi. I live here now.');
+    this.scientistGone = false;
+    this.say('Hi. I live here now.', 2600, 'hello');
   }
 
-  /** Space bar on the tank: a pat on the head. */
+  /** Space bar on the unit: a pat on the head. */
   patFromKeyboard(): void {
     if (this.view?.deadFor !== null) return;
     this.hearts();
@@ -392,14 +601,7 @@ export class TankScene {
 
   private hearts(): void {
     for (let i = 0; i < 3; i++) this.popups.push({ x: this.x + (i - 1) * this.r * 0.5, y: this.y - this.r * (1.1 + i * 0.1), born: this.t + i * 90, text: '♥', color: '#ff6fa8' });
-    if (Math.random() < 0.4) this.say(pick(SAYS.pet), 1600);
-  }
-
-  private neighborComplain(): void {
-    const here = this.neighbors.filter((n) => n.out < 0.5 && !n.bubble);
-    if (!here.length) return;
-    const nb = pick(here);
-    nb.bubble = { text: pick(nb.def.lines), born: this.t, ms: 2600 };
+    if (Math.random() < 0.4) this.sayKind('pet', 1600);
   }
 
   private kick(amount: number): void {
@@ -407,30 +609,67 @@ export class TankScene {
     this.sqV += amount * 30;
   }
 
+  /** He finds out what today's form is. */
+  morph(form: FormId): void {
+    for (let i = 0; i < (this.calm ? 4 : 16); i++) {
+      const a = (i / 16) * TAU;
+      this.puffs.push({ x: this.x, y: this.y, vx: Math.cos(a) * 90, vy: Math.sin(a) * 70 - 20, r: this.r * 0.35, born: this.t, life: 900, color: i % 2 ? '#e8dcff' : '#ffffff' });
+    }
+    this.popups.push({ x: this.x, y: this.y - this.r, born: this.t, text: 'POOF', color: '#e8dcff' });
+    this.say(pick(FORM_BY_ID[form].lines), 3000, 'form');
+    sfx.poof();
+  }
+
+  // -------------------------------------------------------------------------
+  // Furniture
+
+  private enter(id: SpotId): void {
+    const a = this.anchor(id);
+    this.x = a.x;
+    this.y = a.y;
+    this.vx = this.vy = this.spinV = 0;
+    this.spin = 0;
+    this.up = this.spotUp(id);
+    this.grounded = true;
+    this.tossed = false;
+    this.mode = 'idle';
+    this.climbTo = null;
+    const now = this.t;
+    if (id === 'shower') {
+      if (this.on.spot('shower')) {
+        this.at = { id, since: now, until: now + 3200 };
+        this.showerUntil = now + 3000;
+        sfx.splash();
+        this.sayKind('shower');
+      } else {
+        this.at = { id, since: now, until: now + 1300 };
+        this.say('Still wet. Get me out.', 1600);
+      }
+    } else if (id === 'toilet') {
+      const went = this.on.spot('toilet');
+      this.at = { id, since: now, until: now + (went ? 3000 : 1600) };
+      this.sayKind(went ? 'toilet' : 'noToilet', 1800);
+    } else {
+      this.at = { id, since: now, until: now + 20_000 + Math.random() * 30_000 };
+      this.facing = id === 'pc' ? 1 : this.facing;
+      this.sayKind(id, 1800);
+    }
+  }
+
+  /** Off the furniture with a little hop. */
+  private leave(): void {
+    if (!this.at) return;
+    const id = this.at.id;
+    this.at = null;
+    this.grounded = false;
+    this.vy = -this.H * 0.7;
+    this.vx = (id === 'shower' || id === 'bed' ? 1 : -1) * this.H * 0.35;
+    this.mode = 'idle';
+    this.modeUntil = this.t + 1500;
+  }
+
   // -------------------------------------------------------------------------
   // Input
-
-  /** Half width and half height of whatever he is today. */
-  private size(): { hw: number; hh: number } {
-    const e = EXTENTS[this.view?.form ?? 'hamster'];
-    return { hw: this.r * e.w, hh: this.r * e.h };
-  }
-
-  /** Is (x, y) on him? `pad` grows the target for fingers. */
-  private onHim(x: number, y: number, pad = 1.2): boolean {
-    const { hw, hh } = this.size();
-    return ((x - this.x) / (hw * pad)) ** 2 + ((y - this.y) / (hh * pad + this.r * 0.1)) ** 2 < 1;
-  }
-
-  /** Where his face is right now, for pies and soot. */
-  private facePos(): { x: number; y: number; s: number } {
-    const head = HEADS[this.view?.form ?? 'hamster'];
-    return { x: this.x + this.facing * head.x * this.r, y: this.y + head.y * this.r - head.s * this.r * 0.25, s: head.s * this.r };
-  }
-
-  private clampX(x: number, margin: number): number {
-    return Math.min(this.R - margin, Math.max(this.L + margin, x));
-  }
 
   private bind(): void {
     const pt = (e: PointerEvent) => {
@@ -454,7 +693,7 @@ export class TankScene {
           const br = this.ballR();
           let b = this.balls.find((x) => Math.hypot(x.x - p.x, x.y - p.y) < br * 1.6);
           if (!b) {
-            b = { x: this.clampX(p.x, br), y: Math.min(p.y, this.floor - br), vx: 0, vy: 0, spin: 0, held: true };
+            b = { x: this.clampX(p.x, br), y: Math.min(p.y, this.room.ground - br), vx: 0, vy: 0, spin: 0, held: true, landed: false };
             this.balls.push(b);
             if (this.balls.length > 3) this.balls.shift();
           }
@@ -465,33 +704,49 @@ export class TankScene {
           return;
         }
         case 'glove':
-          this.punches.push({ dir: p.x < (this.L + this.R) / 2 ? 1 : -1, y: p.y, tx: p.x, born: this.t, landed: false });
+          this.punches.push({ dir: p.x < (this.room.L + this.room.R) / 2 ? 1 : -1, y: p.y, tx: p.x, born: this.t, landed: false });
           sfx.boing();
           return;
         case 'balloon':
-          this.balloons.push({ x: this.clampX(p.x, 12), y: this.T + 12, vy: 0 });
+          this.balloons.push({ x: this.clampX(p.x, 12), y: Math.max(this.room.T + 12, Math.min(p.y, (p.y > this.room.loft ? this.room.loft + LOFT_SLAB + 12 : this.room.T + 12))), vy: 0 });
           return;
         case 'pie':
           this.pies.push({ x: p.x, y: p.y, born: this.t });
           return;
-        case 'cushion':
-          this.cushion = { x: this.clampX(p.x, this.r * 0.6), readyAt: this.t + 700, squashAt: -1e9 };
+        case 'cushion': {
+          const up = p.y < this.room.loft + LOFT_SLAB && p.x < this.room.loftEnd;
+          this.cushion = { x: Math.min(up ? this.room.loftEnd - this.r : this.room.R, Math.max(this.room.L, this.clampX(p.x, this.r * 0.6))), up, readyAt: this.t + 700, squashAt: -1e9 };
           return;
+        }
         case 'magnet':
           this.magnet = p;
+          this.leave();
           this.grounded = false;
           capture();
           return;
         case 'firecracker':
-          this.crackers.push({ x: this.clampX(p.x, 12), y: Math.min(p.y, this.floor - this.r * 0.3), vy: 0, litAt: this.t });
+          this.crackers.push({ x: this.clampX(p.x, 12), y: p.y, vx: 0, vy: 0, landed: false, litAt: this.t });
           if (this.crackers.length > 3) this.crackers.shift();
           sfx.fuse();
           return;
         default:
           break;
       }
+      // The hand: food first (it's small and on top), then Hammy, poop, the fridge.
+      const food = [...this.foods].reverse().find((f) => Math.hypot(f.x - p.x, f.y - p.y) < this.r * 0.9);
+      if (food) {
+        food.held = true;
+        food.panAt = null;
+        food.landed = false;
+        this.heldFood = food;
+        startDrag(p, food.x - p.x, food.y - p.y);
+        capture();
+        return;
+      }
       if (this.onHim(p.x, p.y)) {
+        this.leave();
         this.held = true;
+        this.climbTo = null;
         startDrag(p, this.x - p.x, this.y - p.y);
         capture();
         this.grounded = false;
@@ -499,10 +754,14 @@ export class TankScene {
       }
       for (let i = v.poops.length - 1; i >= 0; i--) {
         const pp = this.poopPos(v.poops[i]);
-        if (Math.hypot(p.x - pp.x, p.y - (pp.y - this.r * 0.2)) < this.r * 0.55) {
+        if (Math.hypot(p.x - pp.x, p.y - (pp.y - this.r * 0.2)) < this.r * 0.6) {
           this.on.scoop(i);
           return;
         }
+      }
+      if (this.inBox(this.room.fridge, p.x, p.y, 4)) {
+        this.openFridge();
+        return;
       }
       // Knocking on the glass: he looks over.
       this.facing = p.x > this.x ? 1 : -1;
@@ -516,7 +775,7 @@ export class TankScene {
         this.feather.y = p.y;
       }
       if (this.magnet) this.magnet = p;
-      if (!this.held && !this.heldBall) return;
+      if (!this.held && !this.heldBall && !this.heldFood) return;
       this.grab.moved += Math.hypot(p.x - this.grab.px, p.y - this.grab.py);
       this.grab.px = p.x;
       this.grab.py = p.y;
@@ -527,6 +786,8 @@ export class TankScene {
       const g = this.grab;
       const a = g.samples[0];
       const b = g.samples[g.samples.length - 1];
+      // The finger stopped before letting go: that's setting him down, not a throw.
+      if (this.t - b.t > 90) return { vx: 0, vy: 0 };
       const dt = Math.max(16, b.t - a.t) / 1000;
       const max = this.H * 7;
       return { vx: Math.max(-max, Math.min(max, (b.x - a.x) / dt)), vy: Math.max(-max, Math.min(max, (b.y - a.y) / dt)) };
@@ -536,11 +797,28 @@ export class TankScene {
       this.magnet = null;
       if (this.heldBall) {
         const b = this.heldBall;
-        const v = throwSpeed();
-        b.vx = v.vx;
-        b.vy = v.vy;
+        Object.assign(b, throwSpeed());
         b.held = false;
         this.heldBall = null;
+        return;
+      }
+      if (this.heldFood) {
+        const f = this.heldFood;
+        f.held = false;
+        this.heldFood = null;
+        const o = this.room.oven;
+        const pan = panSpot(o);
+        // Dropped on the stove: into the pan, if it's free.
+        if (f.x >= o.x0 - 8 && f.x <= o.x1 + 8 && f.y >= o.y0 - (o.y1 - o.y0) * 1.2 && f.y <= o.y1 && !this.foods.some((x) => x !== f && x.panAt !== null)) {
+          f.x = pan.x;
+          f.y = pan.y;
+          f.vx = f.vy = 0;
+          f.panAt = this.t;
+          f.landed = true;
+          sfx.sizzle();
+          return;
+        }
+        Object.assign(f, throwSpeed());
         return;
       }
       if (!this.held) return;
@@ -552,12 +830,21 @@ export class TankScene {
         return;
       }
       const v = throwSpeed();
+      const speed = Math.hypot(v.vx, v.vy);
+      // Set down gently over furniture: he goes on it.
+      if (speed < this.H * 1.4) {
+        const id = this.spotAt(this.x, this.y);
+        if (id) {
+          this.enter(id);
+          return;
+        }
+      }
       this.vx = v.vx;
       this.vy = v.vy;
-      const speed = Math.hypot(this.vx, this.vy);
+      this.tossed = true;
       this.spinV = this.vx * 0.012;
       if (speed > this.H * 1.5) {
-        this.say(pick(SAYS.fling), 1500);
+        this.sayKind('fling', 1500);
         sfx.boing();
       }
       this.on.fling(speed);
@@ -566,21 +853,40 @@ export class TankScene {
     this.canvas.addEventListener('pointercancel', release);
   }
 
+  private openFridge(): void {
+    if (!this.on.fridge()) {
+      this.popup('No coins', '#ff8a7a', (this.room.fridge.x0 + this.room.fridge.x1) / 2, this.room.fridge.y0 - 8);
+      return;
+    }
+    const f = this.room.fridge;
+    this.fridgeOpenUntil = this.t + 700;
+    this.foods.push({ kind: 'rawsteak', x: f.x0 + 6, y: f.y0 + (f.y1 - f.y0) * 0.4, vx: -this.H * (0.5 + Math.random() * 0.3), vy: -this.H * 0.6, landed: false, held: false, panAt: null });
+    if (this.foods.length > 4) this.foods.shift();
+    sfx.fridge();
+  }
+
   /** Changing toys drops whatever you were holding. */
   setToy(): void {
     this.feather = null;
     this.magnet = null;
     if (this.heldBall) this.heldBall.held = false;
     this.heldBall = null;
+    if (this.heldFood) this.heldFood.held = false;
+    this.heldFood = null;
     this.held = false;
   }
 
+  private vacR(): number {
+    return Math.max(12, this.r * 0.75);
+  }
+
   private ballR(): number {
-    return Math.max(8, this.r * 0.3);
+    return Math.max(7, this.r * 0.32);
   }
 
   /** Knock him: a push, a spin, a squash and maybe some stars. */
   private knock(vx: number, vy: number, dizzy: number): void {
+    this.leave();
     this.held = false;
     this.vx += vx;
     this.vy += vy;
@@ -590,25 +896,53 @@ export class TankScene {
     if (dizzy) this.dizzyUntil = Math.max(this.dizzyUntil, this.t + dizzy);
   }
 
-  /** He finds out what today's form is. */
-  morph(form: FormId): void {
-    for (let i = 0; i < (this.calm ? 4 : 16); i++) {
-      const a = (i / 16) * TAU;
-      this.puffs.push({ x: this.x, y: this.y, vx: Math.cos(a) * 90, vy: Math.sin(a) * 70 - 20, r: this.r * 0.35, born: this.t, life: 900, color: i % 2 ? '#e8dcff' : '#ffffff' });
-    }
-    this.popups.push({ x: this.x, y: this.y - this.r, born: this.t, text: 'POOF', color: '#e8dcff' });
-    this.say(pick(FORM_BY_ID[form].lines), 3000);
-    sfx.poof();
-  }
-
   // -------------------------------------------------------------------------
   // Simulation
+
+  /** Fall, land on a floor, bounce a bit. For bags, steaks, balls, firecrackers. */
+  private fall(th: Thing, dt: number, G: number, rad: number, bounce = 0.35): void {
+    if (th.landed) return;
+    const prevBottom = th.y + rad;
+    th.vy += G * dt;
+    th.x += th.vx * dt;
+    th.y += th.vy * dt;
+    if (th.x < this.room.L + rad || th.x > this.room.R - rad) {
+      th.x = this.clampX(th.x, rad);
+      th.vx = -th.vx * 0.6;
+    }
+    if (th.y < this.room.T + rad) {
+      th.y = this.room.T + rad;
+      th.vy = Math.abs(th.vy) * 0.5;
+    }
+    const s = this.surface(th.x, prevBottom);
+    if (th.y + rad >= s.y) {
+      th.y = s.y - rad;
+      if (th.vy > 140) {
+        th.vy = -th.vy * bounce;
+        th.vx *= 0.7;
+      } else {
+        th.vy = 0;
+        th.vx *= 0.85;
+        if (Math.abs(th.vx) < 20) {
+          th.vx = 0;
+          th.landed = true;
+        } else {
+          th.x += th.vx * dt;
+        }
+      }
+    }
+  }
+
+  private thingUp(th: Thing, rad: number): boolean {
+    return th.y + rad <= this.room.loft + 2 && th.x < this.room.loftEnd;
+  }
 
   private update(dt: number): void {
     const v = this.view;
     if (!v) return;
     const now = this.t;
     const dead = v.deadFor !== null;
+    const m = this.room;
     const G = this.H * 3.2;
     let gx = 0;
     let gy = G;
@@ -628,16 +962,18 @@ export class TankScene {
       } else {
         bounce = 1.02;
       }
-    } else if (!dead && !this.held && now > this.nextGlitchAt) {
+    } else if (!dead && !this.held && !this.at && now > this.nextGlitchAt) {
       this.startGlitch();
     }
 
     const r = this.r;
     const { hw, hh } = this.size();
-    const ground = this.floor - hh - r * 0.04;
+    const prevBottom = this.y + hh;
     if (dead) {
+      this.at = null;
+      const floor = this.floorY();
       this.x += (this.clampX(this.x, Math.max(hw, r * 1.3)) - this.x) * Math.min(1, dt * 4);
-      this.y += (this.floor - (v.form === 'hamster' ? r * 0.55 : hh) - this.y) * Math.min(1, dt * 6);
+      this.y += (floor - (v.form === 'hamster' ? r * 0.55 : hh) - this.y) * Math.min(1, dt * 6);
       this.vx = this.vy = 0;
     } else if (this.held) {
       const tx = this.grab.px + this.grab.dx;
@@ -649,6 +985,31 @@ export class TankScene {
       this.x = nx;
       this.y = ny;
       this.spin *= Math.exp(-dt * 6);
+      // Where he'd land if let go: the loft only if he's above it.
+      this.up = this.x < m.loftEnd && this.y + hh <= m.loft + 2;
+    } else if (this.at) {
+      const a = this.anchor(this.at.id);
+      this.x += (a.x - this.x) * Math.min(1, dt * 12);
+      this.y += (a.y - this.y) * Math.min(1, dt * 12);
+      this.vx = this.vy = 0;
+      this.updateSpot(now);
+    } else if (this.mode === 'climb' && this.climbing()) {
+      this.y -= this.H * 0.9 * dt;
+      this.x += (this.ladderX() - this.x) * Math.min(1, dt * 10);
+      this.vx = this.vy = 0;
+      if (this.y + hh <= m.loft - 2) {
+        // Off the ladder and onto the loft.
+        this.x = m.loftEnd - hw - 4;
+        this.y = m.loft - hh;
+        this.up = true;
+        this.grounded = true;
+        const to = this.climbTo;
+        this.climbTo = null;
+        this.mode = 'walk';
+        this.targetX = to ? this.anchor(to).x : this.x - hw * 2;
+        this.walkTo = to;
+        this.modeUntil = now + 6000;
+      }
     } else {
       this.vx += gx * dt;
       this.vy += gy * dt;
@@ -659,7 +1020,10 @@ export class TankScene {
         this.vx *= Math.exp(-dt * 3);
         this.vy *= Math.exp(-dt * 3);
         this.grounded = false;
-        if (Math.hypot(this.magnet.x - this.x, this.magnet.y - this.y) < r * 4) this.on.play('magnet');
+        if (Math.hypot(this.magnet.x - this.x, this.magnet.y - this.y) < r * 4) {
+          this.on.play('magnet');
+          if (!this.bubble && Math.random() < dt * 0.5) this.sayKind('magnet', 1400);
+        }
       }
       this.think(dt, v);
       this.x += this.vx * dt;
@@ -668,93 +1032,101 @@ export class TankScene {
       if (!this.grounded) this.spinV *= Math.exp(-dt * 0.8);
     }
 
-    // Glass walls, lid and floor.
-    const left = this.L + hw;
-    const right = this.R - hw;
-    const top = this.T + hh + 6;
-    let hit = 0;
-    if (this.x < left || this.x > right) {
-      this.x = Math.min(right, Math.max(left, this.x));
-      if ((this.x === left && this.vx < 0) || (this.x === right && this.vx > 0)) {
-        hit = Math.abs(this.vx);
-        this.vx = -this.vx * bounce;
+    // Glass walls, ceiling and the two floors.
+    if (!this.at && !(this.mode === 'climb' && this.climbing())) {
+      const left = m.L + hw;
+      const right = m.R - hw;
+      const top = m.T + hh + 4;
+      let hit = 0;
+      if (this.x < left || this.x > right) {
+        this.x = Math.min(right, Math.max(left, this.x));
+        if ((this.x === left && this.vx < 0) || (this.x === right && this.vx > 0)) {
+          hit = Math.abs(this.vx);
+          this.vx = -this.vx * bounce;
+        }
       }
-    }
-    if (this.y < top) {
-      this.y = top;
-      if (this.vy < 0) {
-        hit = Math.max(hit, -this.vy);
-        this.vy = -this.vy * bounce;
+      if (this.y < top) {
+        this.y = top;
+        if (this.vy < 0) {
+          hit = Math.max(hit, -this.vy);
+          this.vy = -this.vy * bounce;
+        }
       }
-    }
-    const wasGrounded = this.grounded;
-    if (this.y >= ground && !dead) {
-      this.y = ground;
-      if (this.vy > 0) {
-        if (this.vy > this.H * 0.4) hit = Math.max(hit, this.vy);
-        this.vy = this.vy > this.H * 0.5 ? -this.vy * bounce : 0;
-      }
-      this.grounded = this.vy === 0;
-      if (this.grounded) {
-        if (this.mode !== 'walk') this.vx *= Math.exp(-dt * 9);
-        this.spinV = 0;
-        this.spin *= Math.exp(-dt * 14);
-        if (Math.abs(this.spin) > Math.PI) this.spin -= Math.sign(this.spin) * TAU;
-      }
-    } else if (!dead) {
-      this.grounded = false;
-    }
-    if (hit > this.H * 0.6 && !this.held) {
-      this.kick(Math.min(0.5, hit / (this.H * 10)));
-      sfx.bonk();
-      if (hit > this.H * 2.4 && Math.random() < 0.6) this.say(pick(SAYS.bonk), 1500);
-    }
-    if (!wasGrounded && this.grounded) this.kick(0.08);
-
-    // Squash spring.
-    const k = 220;
-    const damp = 12;
-    this.sqV += (-k * this.sq - damp * this.sqV) * dt;
-    this.sq += this.sqV * dt;
-    this.sq = Math.max(-0.4, Math.min(0.4, this.sq));
-    // Train wheels turn with the ground going by.
-    if (this.grounded) this.roll += (this.vx * this.facing * dt) / Math.max(4, r * 0.26);
-
-    if (!dead) this.updateToys(dt, G);
-
-    // Bags fall in, bounce, and wait to be eaten.
-    for (const b of this.bags) {
-      if (b.landed) continue;
-      b.vy += G * dt;
-      b.x += b.vx * dt;
-      b.y += b.vy * dt;
-      if (b.x < this.L + 14 || b.x > this.R - 14) b.vx = -b.vx;
-      if (b.y > this.floor - 12) {
-        b.y = this.floor - 12;
-        if (b.vy > 120) {
-          b.vy = -b.vy * 0.35;
+      const wasGrounded = this.grounded;
+      if (!dead && !this.held) {
+        const s = this.surface(this.x, prevBottom);
+        const ground = s.y - hh - r * 0.04;
+        if (this.y >= ground) {
+          this.y = ground;
+          this.up = s.up;
+          if (this.vy > 0) {
+            if (this.vy > this.H * 0.4) hit = Math.max(hit, this.vy);
+            this.vy = this.vy > this.H * 0.5 ? -this.vy * bounce : 0;
+          }
+          this.grounded = this.vy === 0;
+          if (this.grounded) {
+            if (this.mode !== 'walk') this.vx *= Math.exp(-dt * 9);
+            this.spinV = 0;
+            this.spin *= Math.exp(-dt * 14);
+            if (Math.abs(this.spin) > Math.PI) this.spin -= Math.sign(this.spin) * TAU;
+          }
         } else {
-          b.vy = 0;
-          b.vx = 0;
-          b.landed = true;
+          this.grounded = false;
+        }
+      }
+      if (hit > this.H * 0.6 && !this.held) {
+        this.kick(Math.min(0.5, hit / (this.H * 10)));
+        sfx.bonk();
+        if (hit > this.H * 2.4 && Math.random() < 0.6) this.sayKind('bonk', 1500);
+      }
+      if (!wasGrounded && this.grounded) {
+        this.kick(0.08);
+        // Thrown onto the furniture: he stays there.
+        if (this.tossed) {
+          this.tossed = false;
+          const id = this.spotAt(this.x, this.y + hh);
+          if (id && this.spotUp(id) === this.up && id !== 'shower' && id !== 'toilet') this.enter(id);
         }
       }
     }
 
-    // Neighbors leave when it gets bad enough, and come back when it doesn't.
-    for (const nb of this.neighbors) {
-      if (dead || v.fresh < LEAVE_BELOW) nb.leaving = true;
-      else if (v.fresh > LEAVE_BELOW + 15) nb.leaving = false;
-      nb.out = Math.min(1, Math.max(0, nb.out + (nb.leaving ? dt / 2.5 : -dt / 2.5)));
-      if (nb.def.id === 'bug' && nb.out < 0.5 && now > nb.rolled) {
-        nb.x += nb.dir * dt * 0.02;
-        if (nb.x > 0.62 || nb.x < 0.3) nb.dir = -nb.dir;
-      }
-      if (nb.bubble && now - nb.bubble.born > nb.bubble.ms) nb.bubble = null;
+    // Squash spring.
+    this.sqV += (-220 * this.sq - 12 * this.sqV) * dt;
+    this.sq += this.sqV * dt;
+    this.sq = Math.max(-0.4, Math.min(0.4, this.sq));
+    if (this.grounded) this.roll += (this.vx * this.facing * dt) / Math.max(4, r * 0.26);
+    if (v.urge && !dead && !this.at) {
+      // The pee dance.
+      this.sqV += Math.sin(now * 0.03) * 0.6;
+      if (now > this.nextUrgeLine) this.urge();
     }
+
+    // Deliveries fall in and wait to be eaten; steaks too, or they cook.
+    const bagR = Math.max(9, r * 0.4);
+    for (const b of this.bags) this.fall(b, dt, G, bagR);
+    for (const f of this.foods) {
+      if (f.held) {
+        f.x = this.grab.px + this.grab.dx;
+        f.y = this.grab.py + this.grab.dy;
+      } else if (f.panAt !== null) {
+        this.cook(f, now);
+      } else {
+        this.fall(f, dt, G, Math.max(7, r * 0.3));
+      }
+    }
+
+    // The scientist evacuates when it gets bad enough, and comes back when it doesn't.
+    if (dead || v.fresh < LEAVE_BELOW) this.scientistGone = true;
+    else if (v.fresh > LEAVE_BELOW + 15) this.scientistGone = false;
+    if (this.scientistBubble && now - this.scientistBubble.born > this.scientistBubble.ms) this.scientistBubble = null;
     if (!dead && v.fresh < 60 && now > this.nextComplainAt) {
       this.nextComplainAt = now + 18_000 + Math.random() * 22_000;
-      this.neighborComplain();
+      this.scientistSays();
+    }
+
+    if (!dead) {
+      this.updateVacuums(dt, v);
+      this.updateToys(dt, G);
     }
 
     // Particles.
@@ -775,7 +1147,100 @@ export class TankScene {
     if (this.bubble && now - this.bubble.born > this.bubble.ms) this.bubble = null;
     if (!dead && now > this.nextLineAt) {
       this.nextLineAt = now + 14_000 + Math.random() * 18_000;
-      if (!this.bubble) this.say(this.line(v));
+      if (!this.bubble) this.idleLine(v);
+    }
+  }
+
+  private ladderX(): number {
+    return (this.room.ladder.x0 + this.room.ladder.x1) / 2;
+  }
+
+  private climbing(): boolean {
+    return Math.abs(this.x - this.ladderX()) < 6 && !this.up;
+  }
+
+  private cook(f: Food, now: number): void {
+    const secs = (now - (f.panAt ?? now)) / 1000;
+    if (f.kind === 'rawsteak' && secs >= COOK_SECONDS) {
+      f.kind = 'steak';
+      sfx.ding();
+      this.popup('DING', '#ffd34d', f.x, f.y - this.r);
+    }
+    if (f.kind !== 'burnt' && secs >= BURN_SECONDS) {
+      f.kind = 'burnt';
+      this.scientistSays();
+    }
+    if (Math.random() < 0.15) {
+      const burnt = f.kind === 'burnt';
+      this.puffs.push({ x: f.x + (Math.random() - 0.5) * 10, y: f.y - 4, vx: (Math.random() - 0.5) * 10, vy: -30 - Math.random() * 20, r: burnt ? 5 : 3, born: now, life: burnt ? 1500 : 700, color: burnt ? '#3d3b40' : '#f4f1ea' });
+    }
+    if (f.kind === 'burnt' && now > this.nextAlarm) {
+      this.nextAlarm = now + 900;
+      sfx.alarm();
+    }
+  }
+
+  private updateSpot(now: number): void {
+    const at = this.at!;
+    if (REST_SPOTS.includes(at.id as RestSpot)) {
+      this.on.rest(at.id as RestSpot);
+      if (at.id === 'bed' && now > this.nextZ) {
+        this.nextZ = now + 1400;
+        this.popups.push({ x: this.x + this.r * 0.5, y: this.y - this.r, born: now, text: 'z', color: '#cfe4ff' });
+      }
+      // Food on his floor gets him up.
+      if (this.nearestFood() && now - at.since > 2000) this.leave();
+    }
+    if (this.at && now > this.at.until) this.leave();
+  }
+
+  private nearestFood(): Thing | null {
+    const r = this.r;
+    const options: Thing[] = [
+      ...this.bags.filter((b) => b.landed && this.thingUp(b, Math.max(9, r * 0.4)) === this.up),
+      ...this.foods.filter((f) => !f.held && f.panAt === null && f.landed && this.thingUp(f, Math.max(7, r * 0.3)) === this.up),
+    ];
+    let best: Thing | null = null;
+    for (const o of options) if (!best || Math.abs(o.x - this.x) < Math.abs(best.x - this.x)) best = o;
+    return best;
+  }
+
+  private updateVacuums(dt: number, v: SceneView): void {
+    const m = this.room;
+    const s = this.vacR();
+    for (const vac of this.vacs) {
+      const [lo, hi] = vac.up ? [m.L + s, m.loftEnd - s] : [m.L + s, m.R - s];
+      let target = -1;
+      let best = Infinity;
+      v.poops.forEach((p, i) => {
+        if (p.up !== vac.up) return;
+        const d = Math.abs(this.poopPos(p).x - vac.x);
+        if (d < best) {
+          best = d;
+          target = i;
+        }
+      });
+      if (target >= 0) {
+        const px = this.poopPos(v.poops[target]).x;
+        vac.dir = px > vac.x ? 1 : -1;
+        if (Math.abs(px - vac.x) < s * 0.6) {
+          for (let i = 0; i < 5; i++) this.puffs.push({ x: px, y: (vac.up ? m.loft : m.ground) - 4, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30, r: 2, born: this.t, life: 400, color: '#6b4423' });
+          sfx.slurp();
+          this.on.vacuum(target);
+          continue;
+        }
+      }
+      vac.x += vac.dir * this.r * 1.8 * dt;
+      if (vac.x < lo || vac.x > hi) {
+        vac.x = Math.min(hi, Math.max(lo, vac.x));
+        vac.dir = -vac.dir;
+      }
+      // It bumps into him.
+      if (this.grounded && this.up === vac.up && Math.abs(this.x - vac.x) < this.size().hw && !this.at && Math.random() < dt * 0.8) {
+        this.vy = -this.H * 0.5;
+        this.grounded = false;
+        if (!this.bubble) this.say(pick(['Hey!', 'Watch it, robot.', 'It ate my sock.']), 1300);
+      }
     }
   }
 
@@ -794,7 +1259,7 @@ export class TankScene {
         this.nextGiggle = now + 320;
         this.popups.push({ x: this.x + (Math.random() - 0.5) * hw, y: this.y - hh, born: now, text: 'he', color: '#ff8fc8' });
         sfx.giggle();
-        if (!this.bubble && Math.random() < 0.25) this.say(pick(SAYS.tickle), 1400);
+        if (!this.bubble && Math.random() < 0.25) this.sayKind('tickle', 1400);
       }
       this.on.play('feather');
     }
@@ -809,26 +1274,11 @@ export class TankScene {
         b.vy = (ty - b.y) / Math.max(dt, 0.001);
         b.x = tx;
         b.y = ty;
+        b.landed = false;
       } else {
-        b.vy += G * dt;
-        b.x += b.vx * dt;
-        b.y += b.vy * dt;
-      }
-      if (b.x < this.L + br || b.x > this.R - br) {
-        b.x = this.clampX(b.x, br);
-        b.vx = -b.vx * 0.8;
-      }
-      if (b.y < this.T + br + 6) {
-        b.y = this.T + br + 6;
-        b.vy = Math.abs(b.vy) * 0.8;
-      }
-      if (b.y > this.floor - br) {
-        b.y = this.floor - br;
-        if (b.vy > 60) {
-          b.vy = -b.vy * 0.72;
-          if (b.vy < -this.H * 0.6) sfx.boing();
-        } else b.vy = 0;
-        b.vx *= Math.exp(-dt * 1.2);
+        b.landed = false;
+        this.fall(b, dt, G, br, 0.72);
+        b.vx *= Math.exp(-dt * 0.6);
       }
       b.spin += (b.vx * dt) / br;
       // Bouncing off him, which he takes as playing.
@@ -847,20 +1297,21 @@ export class TankScene {
           if (!this.held && -rel > this.H * 0.9) {
             this.knock(rel * ux * 0.3, rel * uy * 0.3 - this.H * 0.3, 0);
             sfx.bonk();
-            if (!this.bubble) this.say(pick(Math.random() < 0.5 ? SAYS.ow : SAYS.ball), 1300);
+            if (!this.bubble) this.sayKind(Math.random() < 0.5 ? 'ow' : 'ball', 1300);
             this.on.play('ball');
           }
         }
       }
       // A ball rolling past while he's standing around: he kicks it.
-      if (!b.held && this.grounded && !this.held && this.mode !== 'eat' && Math.abs(b.y - (this.floor - br)) < 2 && Math.abs(b.x - this.x) < hw + br * 1.6 && now > this.kickAt) {
+      const floor = this.surface(b.x, b.y + br - 1).y;
+      if (!b.held && this.grounded && !this.held && !this.at && this.mode !== 'eat' && Math.abs(b.y + br - floor) < 3 && this.thingUp(b, br) === this.up && Math.abs(b.x - this.x) < hw + br * 1.6 && now > this.kickAt) {
         this.kickAt = now + 1200;
         this.facing = b.x > this.x ? 1 : -1;
         b.vx = this.facing * this.H * (1.2 + Math.random());
         b.vy = -this.H * (1 + Math.random() * 0.8);
         this.kick(0.15);
         sfx.boing();
-        if (!this.bubble && Math.random() < 0.4) this.say(pick(SAYS.ball), 1200);
+        if (!this.bubble && Math.random() < 0.4) this.sayKind('ball', 1200);
         this.on.play('ball');
       }
     }
@@ -870,26 +1321,26 @@ export class TankScene {
       const age = now - pu.born;
       if (!pu.landed && age >= PUNCH_OUT) {
         pu.landed = true;
-        const tip = pu.tx;
-        if (this.onHim(tip, pu.y, 1.35) || Math.abs(tip - this.x) < hw * 0.8) {
-          const fx = this.clampX(this.x, hw);
+        if (this.onHim(pu.tx, pu.y, 1.35) || (Math.abs(pu.tx - this.x) < hw * 0.8 && Math.abs(pu.y - this.y) < hh * 1.6)) {
           this.knock(pu.dir * this.H * 2.6, -this.H * 1.4, 2600);
-          this.popups.push({ x: fx, y: this.y - hh, born: now, text: 'POW!', color: '#ffd34d' });
+          this.popups.push({ x: this.x, y: this.y - hh, born: now, text: 'POW!', color: '#ffd34d' });
           sfx.pow();
-          this.say(pick(SAYS.ow), 1500);
-          if (Math.random() < 0.4) this.neighborComplain();
+          this.sayKind('ow', 1500);
+          if (Math.random() < 0.4) this.scientistSays();
           this.on.play('glove');
         }
       }
       return age < PUNCH_OUT + PUNCH_BACK + 60;
     });
 
-    // Water balloons fall from the lid.
+    // Water balloons fall until they hit him or a floor.
     this.balloons = this.balloons.filter((w) => {
+      const prev = w.y + 10;
       w.vy += G * dt;
       w.y += w.vy * dt;
       const hit = this.onHim(w.x, w.y, 1.1);
-      if (!hit && w.y < this.floor - 6) return true;
+      const floor = this.surface(w.x, prev).y;
+      if (!hit && w.y < floor - 6) return true;
       for (let i = 0; i < (this.calm ? 4 : 14); i++) {
         const a = -Math.PI * (0.1 + Math.random() * 0.8);
         const sp = 80 + Math.random() * 160;
@@ -900,7 +1351,7 @@ export class TankScene {
       if (hit) {
         this.wetUntil = now + 4500;
         this.knock(0, this.H * 0.4, 0);
-        this.say(pick(SAYS.splash), 1600);
+        this.sayKind('splash', 1600);
         this.on.play('balloon');
       }
       return false;
@@ -918,33 +1369,30 @@ export class TankScene {
       this.creamUntil = now + 5500;
       this.knock(Math.sign(this.x - pie.x || 1) * this.H * 0.5, -this.H * 0.3, 0);
       sfx.splat();
-      this.say(pick(SAYS.pie), 1800);
+      this.sayKind('pie', 1800);
       this.on.play('pie');
       return false;
     });
 
     // The whoopee cushion, waiting for him to sit on it.
     const cu = this.cushion;
-    if (cu && now > cu.readyAt && this.grounded && Math.abs(this.x - cu.x) < hw * 0.8) {
+    if (cu && now > cu.readyAt && this.grounded && !this.at && this.up === cu.up && Math.abs(this.x - cu.x) < hw * 0.8) {
       cu.readyAt = now + 3000;
       cu.squashAt = now;
-      for (let i = 0; i < 6; i++) this.puffs.push({ x: cu.x + r * 0.5, y: this.floor - 6, vx: 40 + Math.random() * 60, vy: -20 - Math.random() * 30, r: r * 0.15, born: now, life: 900, color: '#ffb0d0' });
-      this.popups.push({ x: cu.x, y: this.floor - r, born: now, text: 'PBBBBBT', color: '#ffb0d0' });
+      const fy = cu.up ? this.room.loft : this.room.ground;
+      for (let i = 0; i < 6; i++) this.puffs.push({ x: cu.x + r * 0.5, y: fy - 6, vx: 40 + Math.random() * 60, vy: -20 - Math.random() * 30, r: r * 0.15, born: now, life: 900, color: '#ffb0d0' });
+      this.popups.push({ x: cu.x, y: fy - r, born: now, text: 'PBBBBBT', color: '#ffb0d0' });
       sfx.fart(1.3);
       this.vy = -this.H * 1.1;
       this.grounded = false;
-      this.say(pick(SAYS.cushion), 1800);
-      this.neighborComplain();
+      this.sayKind('cushion', 1800);
+      this.scientistSays();
       this.on.play('cushion');
     }
 
-    // Firecrackers: a fuse, then a bang that blows him across the tank.
+    // Firecrackers: a fuse, then a bang that blows him across the room.
     this.crackers = this.crackers.filter((k) => {
-      const rest = this.floor - this.r * 0.3;
-      if (k.y < rest) {
-        k.vy += G * dt;
-        k.y = Math.min(rest, k.y + k.vy * dt);
-      }
+      this.fall(k, dt, G, r * 0.3, 0.2);
       if (now - k.litAt < FUSE_MS) return true;
       this.flash = now;
       for (let i = 0; i < (this.calm ? 5 : 18); i++) {
@@ -962,7 +1410,7 @@ export class TankScene {
         this.knock(dir * this.H * 3.2 * push, -this.H * (1.2 + 2 * push), d < r * 2.6 ? 3000 : 0);
         if (d < r * 2.6) {
           this.sootUntil = now + 6500;
-          this.say(pick(SAYS.bang), 2000);
+          this.sayKind('bang', 2000);
           this.on.play('firecracker');
         }
       }
@@ -973,8 +1421,7 @@ export class TankScene {
           b.vy -= this.H * 2.5 * (1 - bd / reach);
         }
       }
-      for (const nb of this.neighbors) if (nb.def.id === 'bug') nb.rolled = now + 4000;
-      if (Math.random() < 0.6) this.neighborComplain();
+      if (Math.random() < 0.6) this.scientistSays();
       return false;
     });
   }
@@ -983,93 +1430,151 @@ export class TankScene {
   private think(dt: number, v: SceneView): void {
     const now = this.t;
     if (!this.grounded) return;
-    // Food first.
-    const bag = this.bags.find((b) => b.landed);
-    if (bag && this.mode !== 'eat') {
-      const d = bag.x - this.x;
-      if (Math.abs(d) < this.r * 1.1) {
+    if (now < this.tickleUntil) {
+      this.vx *= 0.8;
+      return;
+    }
+    const r = this.r;
+    const [lo, hi] = this.span(this.up);
+
+    // Food first, if it's on his floor. He won't go get it from the other one.
+    const food = this.mode === 'eat' ? this.eating : this.nearestFood();
+    if (food && this.mode !== 'eat') {
+      const d = food.x - this.x;
+      if (Math.abs(d) < this.size().hw * 1.1) {
         this.mode = 'eat';
+        this.eating = food;
         this.eatUntil = now + 1700;
         this.facing = d >= 0 ? 1 : -1;
         this.vx = 0;
         sfx.crunch();
       } else {
         this.mode = 'walk';
-        this.targetX = bag.x;
+        this.walkTo = null;
+        this.targetX = Math.min(hi, Math.max(lo, food.x));
         this.modeUntil = now + 4000;
       }
+    } else if (!food && now > this.nextWhine && (this.bags.some((b) => b.landed) || this.foods.some((f) => f.landed && f.panAt === null))) {
+      this.nextWhine = now + 12_000;
+      this.say(pick(['Bring it here.', 'I’m not going down there.', 'Can you bring me that?', 'Room service?']), 2000);
     }
     if (this.mode === 'eat') {
       this.vx = 0;
       if (now > this.eatUntil) {
-        const i = this.bags.indexOf(bag!);
-        if (i >= 0) {
-          const b = this.bags[i];
-          this.bags.splice(i, 1);
-          for (let k = 0; k < 6; k++)
-            this.puffs.push({ x: b.x, y: b.y, vx: (Math.random() - 0.5) * 80, vy: -40 - Math.random() * 60, r: 2 + Math.random() * 2, born: now, life: 700, color: FOOD_BY_ID[b.food].color });
-        }
+        const th = this.eating;
+        this.eating = null;
         this.mode = 'idle';
         this.modeUntil = now + 1500;
+        if (th) {
+          const bi = this.bags.indexOf(th as Bag);
+          if (bi >= 0) {
+            const b = this.bags[bi];
+            this.bags.splice(bi, 1);
+            this.crumbs(b.x, b.y, FOOD_BY_ID[b.food].color);
+          }
+          const fi = this.foods.indexOf(th as Food);
+          if (fi >= 0) {
+            const f = this.foods[fi];
+            this.foods.splice(fi, 1);
+            this.crumbs(f.x, f.y, FOOD_BY_ID[f.kind].color);
+            this.on.eat(f.kind);
+            this.sayKind(f.kind === 'rawsteak' ? 'raw' : f.kind === 'steak' ? 'cooked' : 'burnt', 2000);
+          }
+        }
       }
       return;
     }
-    if (now < this.tickleUntil) {
-      this.vx *= 0.8;
-      return;
-    }
-    if (now > this.modeUntil) {
+
+    if (now > this.modeUntil && this.mode !== 'climb') {
       const sad = v.mood < 25 || v.health < 40;
       const roll = Math.random();
-      const ball = this.balls.find((b) => !b.held && Math.abs(b.vx) < 30 && b.y >= this.floor - this.ballR() - 2);
-      if (!sad && this.cushion && now > this.cushion.readyAt && roll < 0.35) {
+      const ball = this.balls.find((b) => !b.held && Math.abs(b.vx) < 30 && b.landed && this.thingUp(b, this.ballR()) === this.up);
+      const here = REST_SPOTS.filter((s) => this.spotUp(s) === this.up);
+      const there = REST_SPOTS.filter((s) => this.spotUp(s) !== this.up);
+      if (!sad && this.cushion && this.cushion.up === this.up && now > this.cushion.readyAt && roll < 0.3) {
         // He can't stay away from it.
         this.mode = 'walk';
+        this.walkTo = null;
         this.targetX = this.cushion.x;
         this.modeUntil = now + 4000;
-      } else if (!sad && ball && roll < 0.5) {
+      } else if (!sad && ball && roll < 0.42) {
         this.mode = 'walk';
+        this.walkTo = null;
         this.targetX = ball.x;
         this.modeUntil = now + 3000;
-      } else if (sad && roll < 0.6) {
+      } else if (roll < 0.62 && here.length) {
+        // Lazy: off to lie down, sit down or game.
+        const to = pick(here);
+        this.mode = 'walk';
+        this.walkTo = to;
+        this.targetX = this.anchor(to).x;
+        this.modeUntil = now + 6000;
+      } else if (roll < 0.7 && there.length && !v.urge) {
+        if (this.up) {
+          // Down: walk off the edge of the loft.
+          this.mode = 'walk';
+          this.walkTo = null;
+          this.targetX = this.room.loftEnd + this.size().hw + 6;
+          this.modeUntil = now + 5000;
+        } else {
+          this.mode = 'climb';
+          this.climbTo = pick(there);
+          this.targetX = this.ladderX();
+          this.modeUntil = now + 9000;
+        }
+      } else if (sad && roll < 0.85) {
         this.mode = 'mope';
         this.modeUntil = now + 5000 + Math.random() * 4000;
-      } else if (roll < 0.55) {
+      } else if (roll < 0.9) {
         this.mode = 'walk';
-        this.targetX = this.L + this.size().hw * 1.5 + Math.random() * (this.R - this.L - this.size().hw * 3);
+        this.walkTo = null;
+        this.targetX = lo + Math.random() * (hi - lo);
         this.modeUntil = now + 3500;
       } else {
         this.mode = 'idle';
         this.modeUntil = now + 1500 + Math.random() * 3000;
         // Happy hops.
         if (v.mood > 70 && Math.random() < 0.4) {
-          this.vy = -this.H * (0.9 + Math.random() * 0.5);
+          this.vy = -this.H * (0.8 + Math.random() * 0.4);
           this.grounded = false;
           this.kick(0.1);
         }
       }
     }
-    if (this.mode === 'walk') {
-      const d = this.targetX - this.x;
-      if (Math.abs(d) < 6) {
+    if (this.mode === 'climb' && now > this.modeUntil) this.mode = 'idle';
+    if (this.mode === 'walk' || this.mode === 'climb') {
+      const goal = this.mode === 'climb' ? this.ladderX() : this.targetX;
+      const d = goal - this.x;
+      if (Math.abs(d) < 5) {
+        if (this.mode === 'climb') {
+          this.x = goal;
+          return;
+        }
+        const to = this.walkTo;
+        this.walkTo = null;
         this.mode = 'idle';
         this.modeUntil = now + 1200 + Math.random() * 2000;
+        if (to && this.spotUp(to) === this.up) this.enter(to);
       } else {
         this.facing = d > 0 ? 1 : -1;
-        const speed = this.r * (v.belly < 20 || v.health < 40 ? 1.1 : 2.4);
+        const speed = r * (v.belly < 20 || v.health < 40 ? 1.1 : 2.4);
         this.vx += (this.facing * speed - this.vx) * Math.min(1, dt * 8);
       }
     }
   }
 
-  private line(v: SceneView): string {
-    const moods: (readonly string[])[] = [];
-    if (v.belly < 30) moods.push(SAYS.hungry);
-    if (v.mood < 30) moods.push(SAYS.sad);
-    if (v.fresh < 35) moods.push(SAYS.stinky);
-    if (moods.length && Math.random() < 0.55) return pick(pick(moods));
-    if (v.form !== 'hamster' && Math.random() < 0.3) return pick(FORM_BY_ID[v.form].lines);
-    return pick(ROAD_TRIP);
+  private crumbs(x: number, y: number, color: string): void {
+    for (let k = 0; k < 6; k++) this.puffs.push({ x, y, vx: (Math.random() - 0.5) * 80, vy: -40 - Math.random() * 60, r: 2 + Math.random() * 2, born: this.t, life: 700, color });
+  }
+
+  private idleLine(v: SceneView): void {
+    const moods: (keyof typeof SAYS)[] = [];
+    if (v.belly < 30) moods.push('hungry');
+    if (v.mood < 30) moods.push('sad');
+    if (v.fresh < 35) moods.push('stinky');
+    if (moods.length && Math.random() < 0.55) return this.sayKind(pick(moods));
+    if (v.form !== 'cube' && Math.random() < 0.3) return this.say(pick(FORM_BY_ID[v.form].lines), 2600, 'form');
+    this.say(pick(ROAD_TRIP), 2600, 'roadtrip');
   }
 
   private startGlitch(): void {
@@ -1079,123 +1584,15 @@ export class TankScene {
     this.glitch = { kind, until: this.t + ms, dir: Math.random() < 0.5 ? -1 : 1 };
     this.nextGlitchAt = this.t + 150_000 + Math.random() * 150_000;
     this.grounded = false;
+    this.mode = 'idle';
     if (kind === 'bouncy') this.vy = -this.H * 2;
     if (kind === 'moon') this.vy = -this.H * 0.8;
-    this.say(pick(SAYS.glitch), 2000);
+    this.sayKind('glitch', 2000);
     sfx.glitch();
   }
 
   // -------------------------------------------------------------------------
   // Drawing
-
-  private paintBase(): void {
-    const c = this.base.getContext('2d')!;
-    const { W, H, L, R, T, B } = this;
-    c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    // The room: a dark wall lit by an LED strip.
-    const wall = c.createLinearGradient(0, 0, 0, H);
-    wall.addColorStop(0, '#2a1840');
-    wall.addColorStop(1, '#160d24');
-    c.fillStyle = wall;
-    c.fillRect(0, 0, W, H);
-    const led = c.createLinearGradient(0, 0, W, 0);
-    led.addColorStop(0, 'rgba(255,90,200,0.35)');
-    led.addColorStop(0.5, 'rgba(120,90,255,0.3)');
-    led.addColorStop(1, 'rgba(60,200,255,0.35)');
-    c.fillStyle = led;
-    c.fillRect(0, 0, W, 3);
-    const glow = c.createLinearGradient(0, 0, 0, H * 0.5);
-    glow.addColorStop(0, 'rgba(160,100,255,0.16)');
-    glow.addColorStop(1, 'rgba(160,100,255,0)');
-    c.fillStyle = glow;
-    c.fillRect(0, 0, W, H * 0.5);
-
-    // Desk.
-    c.fillStyle = '#5a3b26';
-    c.fillRect(0, B, W, H - B);
-    c.fillStyle = '#7a5236';
-    c.fillRect(0, B, W, 3);
-
-    // Inside the tank: back glass, bedding, a hut and a water bottle.
-    const air = c.createLinearGradient(0, T, 0, B);
-    air.addColorStop(0, '#2b3b3a');
-    air.addColorStop(1, '#22302a');
-    c.fillStyle = air;
-    c.fillRect(L, T, R - L, B - T);
-    const fl = this.floor;
-    const bed = c.createLinearGradient(0, fl, 0, B);
-    bed.addColorStop(0, '#e9d3a1');
-    bed.addColorStop(1, '#c8a86c');
-    c.fillStyle = bed;
-    c.fillRect(L, fl, R - L, B - fl);
-    // Wood shavings.
-    const rnd = mulberry32(11);
-    for (let i = 0; i < (R - L) / 3; i++) {
-      const x = L + rnd() * (R - L);
-      const y = fl - 2 + rnd() * (B - fl);
-      c.strokeStyle = rnd() < 0.5 ? 'rgba(160,120,60,0.55)' : 'rgba(255,240,200,0.6)';
-      c.lineWidth = 1 + rnd();
-      c.beginPath();
-      c.arc(x, y, 2 + rnd() * 3, rnd() * TAU, rnd() * TAU + 1.5);
-      c.stroke();
-    }
-    // Hut on the left.
-    const hw = Math.max(46, this.r * 2.1);
-    const hh = hw * 0.75;
-    const hx = L + this.r * 0.6;
-    const hy = fl - hh + 4;
-    c.fillStyle = '#9b6b3f';
-    c.strokeStyle = '#3a2414';
-    c.lineWidth = 2;
-    c.beginPath();
-    c.moveTo(hx, hy + hh);
-    c.lineTo(hx, hy + hh * 0.35);
-    c.lineTo(hx + hw / 2, hy - hh * 0.1);
-    c.lineTo(hx + hw, hy + hh * 0.35);
-    c.lineTo(hx + hw, hy + hh);
-    c.closePath();
-    c.fill();
-    c.stroke();
-    c.fillStyle = '#1d120a';
-    c.beginPath();
-    c.arc(hx + hw / 2, hy + hh, hw * 0.22, Math.PI, TAU);
-    c.fill();
-    c.strokeStyle = 'rgba(58,36,20,0.5)';
-    for (let i = 1; i < 4; i++) {
-      c.beginPath();
-      c.moveTo(hx + 3, hy + hh * 0.35 + i * hh * 0.15);
-      c.lineTo(hx + hw - 3, hy + hh * 0.35 + i * hh * 0.15);
-      c.stroke();
-    }
-    // Water bottle on the right glass.
-    const bx = R - Math.max(16, this.r * 0.55);
-    const by = T + (B - T) * 0.18;
-    c.fillStyle = 'rgba(140,200,255,0.35)';
-    c.strokeStyle = 'rgba(220,240,255,0.7)';
-    c.lineWidth = 1.5;
-    c.beginPath();
-    c.roundRect(bx - 8, by, 16, (fl - by) * 0.45, 6);
-    c.fill();
-    c.stroke();
-    c.fillStyle = '#c7ccd6';
-    c.fillRect(bx - 2, by + (fl - by) * 0.45, 4, 12);
-    // Rock for the frog.
-    const rx = L + (R - L) * 0.86;
-    c.fillStyle = '#5b6066';
-    c.beginPath();
-    c.ellipse(rx, fl + 2, Math.max(22, this.r * 0.8), Math.max(10, this.r * 0.35), 0, Math.PI, TAU);
-    c.fill();
-    // Bowl.
-    const ox = L + (R - L) * 0.62;
-    c.fillStyle = '#e8443a';
-    c.beginPath();
-    c.ellipse(ox, fl + 1, Math.max(14, this.r * 0.45), Math.max(5, this.r * 0.16), 0, 0, Math.PI);
-    c.fill();
-    c.fillStyle = '#ff9a2e';
-    c.beginPath();
-    c.ellipse(ox, fl + 1, Math.max(12, this.r * 0.4), Math.max(3, this.r * 0.08), 0, 0, TAU);
-    c.fill();
-  }
 
   private drawPoop(c: CanvasRenderingContext2D, x: number, y: number, s: number): void {
     c.fillStyle = '#6b4423';
@@ -1223,7 +1620,7 @@ export class TankScene {
 
   private stinkLines(c: CanvasRenderingContext2D, x: number, y: number, w: number, n: number, alpha: number): void {
     if (n <= 0 || alpha <= 0) return;
-    c.strokeStyle = `rgba(170,220,70,${alpha})`;
+    c.strokeStyle = `rgba(150,200,50,${alpha})`;
     c.lineWidth = 2;
     for (let i = 0; i < n; i++) {
       const ox = x + (n > 1 ? (i / (n - 1) - 0.5) * w * 0.9 : 0);
@@ -1244,7 +1641,7 @@ export class TankScene {
     const a = this.t * (0.004 + i * 0.0007) + i * 2.3;
     const x = cx + Math.cos(a) * spread + Math.sin(this.t * 0.02 + i) * 3;
     const y = cy + Math.sin(a * 1.3) * spread * 0.5 + Math.cos(this.t * 0.025 + i) * 3;
-    c.fillStyle = 'rgba(220,230,255,0.5)';
+    c.fillStyle = 'rgba(220,230,255,0.7)';
     const flap = Math.sin(this.t * 0.08 + i) > 0 ? 3 : 2;
     c.beginPath();
     c.ellipse(x - 2, y - 2, flap, 1.6, -0.5, 0, TAU);
@@ -1254,128 +1651,6 @@ export class TankScene {
     c.beginPath();
     c.arc(x, y, 1.8, 0, TAU);
     c.fill();
-  }
-
-  private drawNeighbor(c: CanvasRenderingContext2D, nb: Neighbor, v: SceneView): void {
-    if (nb.out >= 1) return;
-    const s = Math.max(10, this.r * 0.42);
-    const pinched = v.fresh < PINCH_BELOW;
-    const out = ease(nb.out);
-    c.save();
-    c.strokeStyle = '#1b2a12';
-    c.lineWidth = 1.5;
-    let hx = 0;
-    let hy = 0;
-    if (nb.def.id === 'frog') {
-      const x = this.L + (this.R - this.L) * 0.86;
-      // Leaves with a big hop up and out of the tank.
-      const y = this.floor - s * 0.9 - out * (this.floor - this.T + s * 3);
-      c.translate(x, y);
-      c.fillStyle = '#4caf50';
-      c.beginPath();
-      c.ellipse(0, 0, s * 1.1, s * 0.8, 0, 0, TAU);
-      c.fill();
-      c.stroke();
-      for (const ex of [-0.5, 0.5]) {
-        c.fillStyle = '#4caf50';
-        c.beginPath();
-        c.arc(ex * s, -s * 0.7, s * 0.36, 0, TAU);
-        c.fill();
-        c.stroke();
-        c.fillStyle = '#fff';
-        c.beginPath();
-        c.arc(ex * s, -s * 0.72, s * 0.24, 0, TAU);
-        c.fill();
-        c.fillStyle = '#111';
-        c.beginPath();
-        // Side-eye at Hammy.
-        c.arc(ex * s + (this.x < x ? -1 : 1) * s * 0.1, -s * 0.72, s * 0.11, 0, TAU);
-        c.fill();
-      }
-      c.beginPath();
-      c.moveTo(-s * 0.5, s * 0.05);
-      c.quadraticCurveTo(0, pinched ? -s * 0.1 : s * 0.25, s * 0.5, s * 0.05);
-      c.stroke();
-      if (pinched) this.clothespin(c, 0, -s * 0.25, s);
-      hx = x;
-      hy = y - s * 1.3;
-    } else if (nb.def.id === 'snail') {
-      // On the left glass, sliding up and away when it's had enough.
-      const x = this.L + 4 + s * 0.6;
-      const span = this.floor - this.T - s * 4;
-      const home = this.T + s * 2 + span * (0.55 + Math.sin(this.t * 0.00012) * 0.35);
-      const y = home - out * (home - this.T + s * 3);
-      c.translate(x, y);
-      c.fillStyle = '#d7c3a0';
-      c.beginPath();
-      c.ellipse(0, s * 0.1, s * 0.35, s * 1.1, 0, 0, TAU);
-      c.fill();
-      c.stroke();
-      c.fillStyle = '#b5651d';
-      c.beginPath();
-      c.arc(s * 0.3, s * 0.3, s * 0.7, 0, TAU);
-      c.fill();
-      c.stroke();
-      c.strokeStyle = '#6d3b10';
-      c.beginPath();
-      c.arc(s * 0.3, s * 0.3, s * 0.38, 0, TAU * 0.8);
-      c.stroke();
-      c.strokeStyle = '#1b2a12';
-      c.beginPath();
-      c.moveTo(0, -s * 0.9);
-      c.lineTo(-s * 0.15, -s * 1.4);
-      c.moveTo(s * 0.12, -s * 0.9);
-      c.lineTo(s * 0.25, -s * 1.35);
-      c.stroke();
-      if (pinched) this.clothespin(c, 0, -s * 0.75, s * 0.8);
-      hx = x + s;
-      hy = y - s * 1.6;
-    } else {
-      const p = this.poopPos(nb.x);
-      const x = p.x;
-      const y = this.floor - s * 0.4 - out * s * 0.4;
-      c.globalAlpha = 1 - out;
-      c.translate(x, y);
-      c.fillStyle = '#7d8590';
-      if (this.t < nb.rolled) {
-        c.beginPath();
-        c.arc(0, -s * 0.1, s * 0.5, 0, TAU);
-        c.fill();
-        c.stroke();
-        c.beginPath();
-        c.arc(0, -s * 0.1, s * 0.3, 0.3, 2.4);
-        c.stroke();
-      } else {
-        c.beginPath();
-        c.ellipse(0, 0, s * 0.8, s * 0.4, 0, Math.PI, TAU);
-        c.closePath();
-        c.fill();
-        c.stroke();
-        for (let i = 1; i < 5; i++) {
-          c.beginPath();
-          c.moveTo(-s * 0.8 + i * s * 0.32, 0);
-          c.lineTo(-s * 0.8 + i * s * 0.32, -s * 0.34);
-          c.stroke();
-        }
-        if (pinched) this.clothespin(c, nb.dir * s * 0.8, -s * 0.2, s * 0.6);
-      }
-      hx = x;
-      hy = y - s;
-    }
-    c.restore();
-    if (nb.bubble) this.drawBubble(nb.bubble, hx, hy, '#e3f5d0', '#1d2a10');
-  }
-
-  private clothespin(c: CanvasRenderingContext2D, x: number, y: number, s: number): void {
-    c.save();
-    c.fillStyle = '#e0b170';
-    c.strokeStyle = '#6b4a22';
-    c.lineWidth = 1;
-    c.fillRect(x - s * 0.12, y - s * 0.45, s * 0.24, s * 0.45);
-    c.strokeRect(x - s * 0.12, y - s * 0.45, s * 0.24, s * 0.45);
-    c.fillStyle = '#9aa1ab';
-    c.fillRect(x - s * 0.14, y - s * 0.26, s * 0.28, s * 0.06);
-    c.restore();
   }
 
   private drawBubble(b: Bubble, x: number, y: number, bg = '#fffaf0', ink = '#24131f'): void {
@@ -1426,25 +1701,25 @@ export class TankScene {
   }
 
   private drawBag(c: CanvasRenderingContext2D, b: Bag): void {
-    const s = Math.max(10, this.r * 0.38);
+    const s = Math.max(9, this.r * 0.4);
     c.save();
     c.translate(b.x, b.y);
     c.fillStyle = '#c99a5b';
     c.strokeStyle = '#4a3016';
     c.lineWidth = 1.5;
     c.beginPath();
-    c.moveTo(-s * 0.7, s * 0.6);
-    c.lineTo(-s * 0.6, -s * 0.6);
-    c.lineTo(s * 0.6, -s * 0.6);
-    c.lineTo(s * 0.7, s * 0.6);
+    c.moveTo(-s * 0.7, s);
+    c.lineTo(-s * 0.6, -s * 0.2);
+    c.lineTo(s * 0.6, -s * 0.2);
+    c.lineTo(s * 0.7, s);
     c.closePath();
     c.fill();
     c.stroke();
     c.fillStyle = '#ff3d2e';
-    c.fillRect(-s * 0.62, -s * 0.15, s * 1.25, s * 0.3);
+    c.fillRect(-s * 0.62, s * 0.25, s * 1.25, s * 0.3);
     c.fillStyle = FOOD_BY_ID[b.food].color;
     c.beginPath();
-    c.arc(0, -s * 0.6, s * 0.28, Math.PI, TAU);
+    c.arc(0, -s * 0.2, s * 0.28, Math.PI, TAU);
     c.fill();
     c.stroke();
     c.restore();
@@ -1504,13 +1779,13 @@ export class TankScene {
   private drawAfterEffects(c: CanvasRenderingContext2D, t: number): void {
     const face = this.facePos();
     const { hw, hh } = this.size();
-    if (t < this.wetUntil) {
-      const k = Math.min(1, (this.wetUntil - t) / 800);
-      c.fillStyle = `rgba(90,170,255,${0.22 * k})`;
+    if (t < this.wetUntil || t < this.showerUntil) {
+      const k = Math.min(1, Math.max(this.wetUntil, this.showerUntil) - t) / 800;
+      c.fillStyle = `rgba(90,170,255,${0.22 * Math.min(1, k)})`;
       c.beginPath();
       c.ellipse(this.x, this.y, hw, hh, 0, 0, TAU);
       c.fill();
-      c.fillStyle = `rgba(124,200,255,${0.9 * k})`;
+      c.fillStyle = `rgba(124,200,255,${0.9 * Math.min(1, k)})`;
       for (let i = 0; i < 4; i++) {
         const fall = ((t * 0.0015 + i * 0.27) % 1) * hh * 1.4;
         c.beginPath();
@@ -1530,7 +1805,6 @@ export class TankScene {
         c.ellipse(face.x + dx * face.s, face.y + dy * face.s, rr * face.s, rr * face.s * 0.8, 0, 0, TAU);
         c.fill();
       }
-      // Smoking hair.
       c.strokeStyle = `rgba(160,155,170,${0.7 * k})`;
       c.lineWidth = 2;
       for (let i = 0; i < 3; i++) {
@@ -1580,7 +1854,7 @@ export class TankScene {
     const r = this.r;
     const br = this.ballR();
     for (const b of this.balls) drawToy(c, 'ball', b.x, b.y, br, t, { k: b.spin });
-    for (const w of this.balloons) drawToy(c, 'balloon', w.x, w.y, Math.max(13, r * 0.5), t, { k: Math.sin(t * 0.03) });
+    for (const w of this.balloons) drawToy(c, 'balloon', w.x, w.y, Math.max(12, r * 0.5), t, { k: Math.sin(t * 0.03) });
     for (const pie of this.pies) {
       const k = Math.min(1, (t - pie.born) / PIE_MS);
       const face = this.facePos();
@@ -1589,15 +1863,14 @@ export class TankScene {
       c.save();
       c.translate(x, y);
       c.rotate(k * TAU);
-      drawToy(c, 'pie', 0, 0, Math.max(13, r * 0.5), t);
+      drawToy(c, 'pie', 0, 0, Math.max(12, r * 0.5), t);
       c.restore();
     }
     for (const pu of this.punches) {
       const age = t - pu.born;
       const out = age < PUNCH_OUT ? ease(age / PUNCH_OUT) : 1 - ease((age - PUNCH_OUT - 60) / PUNCH_BACK);
-      const wall = pu.dir > 0 ? this.L : this.R;
+      const wall = pu.dir > 0 ? this.room.L : this.room.R;
       const tip = wall + (pu.tx - wall) * Math.max(0, out);
-      // The spring.
       c.strokeStyle = '#c9ccd6';
       c.lineWidth = 2;
       c.beginPath();
@@ -1610,23 +1883,23 @@ export class TankScene {
       c.save();
       c.translate(tip, pu.y);
       c.scale(pu.dir, 1);
-      drawToy(c, 'glove', 0, 0, Math.max(14, r * 0.55), t);
+      drawToy(c, 'glove', 0, 0, Math.max(13, r * 0.55), t);
       c.restore();
     }
     if (this.magnet) {
       const m = this.magnet;
-      c.strokeStyle = 'rgba(160,200,255,0.55)';
+      c.strokeStyle = 'rgba(120,170,255,0.65)';
       c.lineWidth = 1.5;
       for (let i = 0; i < 3; i++) {
-        const k = ((t * 0.004 + i / 3) % 1);
+        const k = (t * 0.004 + i / 3) % 1;
         c.beginPath();
         c.moveTo(m.x, m.y);
         c.quadraticCurveTo((m.x + this.x) / 2 + (i - 1) * 14, (m.y + this.y) / 2 - 10, m.x + (this.x - m.x) * k, m.y + (this.y - m.y) * k);
         c.stroke();
       }
-      drawToy(c, 'magnet', m.x, m.y, Math.max(12, r * 0.42), t);
+      drawToy(c, 'magnet', m.x, m.y, Math.max(12, r * 0.45), t);
     }
-    if (this.feather) drawToy(c, 'feather', this.feather.x, this.feather.y, Math.max(12, r * 0.45), t);
+    if (this.feather) drawToy(c, 'feather', this.feather.x, this.feather.y, Math.max(12, r * 0.5), t);
   }
 
   private look(v: SceneView): Look {
@@ -1639,9 +1912,14 @@ export class TankScene {
     else if (v.mood < 25 || v.belly < 15) face = 'sad';
     if (now - this.fartAt < 1300) face = 'smug';
     if (this.mode === 'eat') face = 'eat';
-    if (this.held || fast || now < this.hoseUntil) face = v.mood > 50 && now >= this.hoseUntil ? 'joy' : 'shock';
+    if (this.held || fast) face = v.mood > 50 ? 'joy' : 'shock';
     if (this.glitch && !this.grounded) face = 'shock';
     if (this.mode === 'mope' && face !== 'shock') face = 'sad';
+    if (v.urge && !this.at) face = Math.sin(now * 0.004) > 0 ? 'shock' : 'sad';
+    if (this.at?.id === 'bed') face = 'sleep';
+    if (this.at?.id === 'pc') face = Math.sin(now * 0.002) > 0.6 ? 'joy' : 'smug';
+    if (this.at?.id === 'shower') face = now - this.at.since < 900 ? 'shock' : 'happy';
+    if (this.at?.id === 'toilet') face = now - this.at.since < 1200 ? 'smug' : 'joy';
     if (now < this.dizzyUntil) face = 'sick';
     if (now < this.sootUntil && now > this.sootUntil - 1500) face = 'shock';
     if (now < this.tickleUntil) face = 'joy';
@@ -1649,25 +1927,26 @@ export class TankScene {
     look.green = Math.max(0, Math.min(1, Math.max(((50 - v.fresh) / 50) * 0.45, ((60 - v.health) / 60) * 0.85)));
     look.fog = Math.max(0, 1 - v.fresh / 70);
     look.flip = this.facing < 0;
-    if (now > this.blinkAt + 140) {
-      if (Math.random() < 0.004) this.blinkAt = now;
-    }
+    if (now > this.blinkAt + 140 && Math.random() < 0.004) this.blinkAt = now;
     look.blink = now - this.blinkAt < 140;
-    look.armsUp = this.held || fast || this.magnet !== null || (this.glitch !== null && !this.grounded);
-    // Talking and chewing.
+    look.armsUp = this.held || fast || this.magnet !== null || (this.mode === 'climb' && this.climbing()) || (this.glitch !== null && !this.grounded);
     if (this.mode === 'eat') look.mouth = (Math.sin(now * 0.03) + 1) / 2;
     else if (now < this.tickleUntil) look.mouth = 0.5 + Math.sin(now * 0.05) * 0.3;
     else if (this.bubble && now - this.bubble.born < 700) look.mouth = (Math.sin(now * 0.04) + 1) / 2.4;
-    // Squash, stretch, and a waddle.
     const walk = this.mode === 'walk' && this.grounded ? Math.sin(now * 0.02) * 0.05 : 0;
     const breathe = Math.sin(now * 0.004) * 0.015;
     look.sx = 1 + this.sq * 0.9 - walk * 0.5 - breathe;
     look.sy = 1 - this.sq + walk + breathe;
+    if (this.at?.id === 'chair' || this.at?.id === 'toilet' || this.at?.id === 'pc') {
+      look.sy *= 0.92;
+      look.sx *= 1.04;
+    }
     if (this.held) {
       look.sx = 0.92;
       look.sy = 1.1;
     }
     look.lean = this.spin + (this.grounded ? walk * 2 : Math.max(-0.3, Math.min(0.3, this.vx * 0.0008)));
+    if (this.mode === 'climb' && this.climbing()) look.lean = Math.sin(now * 0.02) * 0.1;
     return look;
   }
 
@@ -1678,7 +1957,9 @@ export class TankScene {
     this.update(dt);
     const v = this.view;
     const c = this.ctx;
-    const { W, H, L, R, T, B, r } = this;
+    const m = this.room;
+    const { W, H, r } = this;
+    const { L, R, T, B } = m;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     c.drawImage(this.base, 0, 0, W, H);
     if (!v) return;
@@ -1690,32 +1971,43 @@ export class TankScene {
     c.rect(L, T, R - L, B - T);
     c.clip();
 
-    // Poop on the floor.
+    // The furniture that changes.
+    const sci = drawScientist(c, m.window, v.fresh < PINCH_BELOW, this.scientistGone, t);
+    drawPlant(c, m.plant, dead ? 1 : Math.min(1, Math.max(0, (65 - v.fresh) / 55)), t);
+    drawMonitor(c, m.pc, t, this.at?.id === 'pc');
+    drawFridge(c, m.fridge, t < this.fridgeOpenUntil ? 1 : 0);
+    const cooking = this.foods.some((f) => f.panAt !== null);
+    drawOven(c, m.oven, cooking ? 0.7 + Math.sin(t * 0.01) * 0.3 : 0);
+    drawPan(c, m.oven);
+
+    // Poop on the floors.
     v.poops.forEach((p, i) => {
       const pos = this.poopPos(p);
       const born = this.poopBorn.get(i);
       const age = born === undefined ? 1 : Math.min(1, (t - born) / 400);
-      const s = Math.max(6, r * 0.28) * (0.4 + 0.6 * ease(age));
-      this.drawPoop(c, pos.x, pos.y - s * 0.25 - (1 - age) * r * 0.6, s);
-      this.stinkLines(c, pos.x, pos.y - s * 1.3, s * 1.2, 2, 0.45);
+      const s = Math.max(6, r * 0.3) * (0.4 + 0.6 * ease(age));
+      this.drawPoop(c, pos.x, pos.y - s * 0.3 - (1 - age) * r * 0.6, s);
+      this.stinkLines(c, pos.x, pos.y - s * 1.3, s * 1.2, 2, 0.5);
     });
     for (const f of this.flying) {
       c.save();
       c.globalAlpha = 1 - (t - f.born) / 900;
-      this.drawPoop(c, f.x, f.y, Math.max(6, r * 0.28));
+      this.drawPoop(c, f.x, f.y, Math.max(6, r * 0.3));
       c.restore();
     }
+    for (const vac of this.vacs) drawVacuum(c, vac.x, vac.up ? m.loft : m.ground, this.vacR(), t, vac.dir);
     for (const b of this.bags) this.drawBag(c, b);
-    for (const nb of this.neighbors) this.drawNeighbor(c, nb, v);
+    for (const f of this.foods) drawSteak(c, f.x, f.y, Math.max(7, r * 0.3), f.kind);
     if (this.cushion && !dead) {
       const sq = Math.max(0, 1 - (t - this.cushion.squashAt) / 500);
-      drawToy(c, 'cushion', this.cushion.x, this.floor - Math.max(5, r * 0.18), Math.max(9, r * 0.38), t, { k: sq });
+      drawToy(c, 'cushion', this.cushion.x, (this.cushion.up ? m.loft : m.ground) - Math.max(5, r * 0.18), Math.max(9, r * 0.38), t, { k: sq });
     }
-    for (const k of this.crackers) drawToy(c, 'firecracker', k.x, k.y, Math.max(10, r * 0.42), t, { lit: true });
+    for (const k of this.crackers) drawToy(c, 'firecracker', k.x, k.y, Math.max(9, r * 0.42), t, { lit: true });
 
     // Hammy, or what's left of him.
     const look = this.look(v);
     if (dead) {
+      const floor = this.floorY();
       const fall = ease(d / 1.2);
       look.face = 'dead';
       look.flip = true;
@@ -1725,50 +2017,73 @@ export class TankScene {
       look.mouth = 0;
       const fade = 1 - ease((d - 24) / 10);
       const skeleton = ease((d - 22) / 8);
-      drawSkeleton(c, this.x, this.floor - r * 0.45, r * 1.15, skeleton);
+      drawSkeleton(c, this.x, floor - r * 0.45, r * 1.15, skeleton);
       if (fade > 0) {
-        // A hamster keels over; a sub or a train goes belly-up, wheels in the air.
+        // A hamster keels over; everything else goes belly-up.
         const hamster = v.form === 'hamster';
         const hh = this.size().hh;
         c.save();
         c.globalAlpha = fade;
-        c.translate(this.x, this.floor - (hamster ? r * 0.55 : hh));
+        c.translate(this.x, floor - (hamster ? r * 0.55 : hh));
         c.rotate((hamster ? Math.PI / 2 : Math.PI) * fall);
-        // Deflating as he goes.
         drawHammy(c, 0, hamster ? -r * 0.4 * (1 - fall) : 0, r, { ...look, flip: hamster, sx: 1 - (1 - fade) * 0.2, sy: 1 - (1 - fade) * 0.35 }, t);
         c.restore();
       }
-      for (const m of this.shrooms) {
-        const grow = ease((d - 10 - m.delay) / 6);
-        this.drawShroom(c, this.x + m.dx * r, this.floor - m.dy * r * 0.6, grow * m.s * (r / 30), m.hue, m.tilt);
+      for (const s of this.shrooms) {
+        const grow = ease((d - 10 - s.delay) / 6);
+        this.drawShroom(c, this.x + s.dx * r, floor - s.dy * r * 0.6, grow * s.s * (r / 30), s.hue, s.tilt);
       }
-      this.stinkLines(c, this.x, this.floor - r * 1.2, r * 1.6, 4, 0.7 * fade);
-      for (let i = 0; i < 4; i++) this.fly(c, this.x, this.floor - r * 1.1, i, r * 1.1);
+      this.stinkLines(c, this.x, floor - r * 1.2, r * 1.6, 4, 0.7 * fade);
+      for (let i = 0; i < 4; i++) this.fly(c, this.x, floor - r * 1.1, i, r * 1.1);
     } else {
       drawHammy(c, this.x, this.y, r, look, t);
       this.drawAfterEffects(c, t);
+      if (this.at?.id === 'bed') {
+        // Tucked in.
+        const b = m.bed;
+        c.fillStyle = '#5a7bd6';
+        c.strokeStyle = '#1f1a24';
+        c.lineWidth = 1.5;
+        c.beginPath();
+        c.roundRect(this.x - this.size().hw * 1.3, this.y + this.size().hh * 0.1, this.size().hw * 2.6, b.y1 - (this.y + this.size().hh * 0.1) - (b.y1 - b.y0) * 0.55, 6);
+        c.fill();
+        c.stroke();
+      }
       const stink = 1 - v.fresh / 100;
-      this.stinkLines(c, this.x, this.y - r * 1.05, r * 1.4, Math.round(stink * 5), Math.min(0.85, stink));
+      this.stinkLines(c, this.x, this.y - this.size().hh * 1.1, r * 1.4, Math.round(stink * 5), Math.min(0.85, stink));
       const flies = (v.fresh < 30 ? 2 : v.fresh < 50 ? 1 : 0) + (v.poops.length >= 4 ? 1 : 0);
       for (let i = 0; i < flies; i++) this.fly(c, this.x, this.y - r * 0.4, i, r * 1.2);
     }
 
-    if (!dead) this.drawToys(c, t);
-
-    // Hose water.
-    if (t < this.hoseUntil) {
-      c.strokeStyle = 'rgba(120,200,255,0.7)';
-      c.lineWidth = 3;
+    // Shower water and the toilet swirl.
+    if (t < this.showerUntil) {
+      const b = m.shower;
+      const hx = (b.x0 + b.x1) / 2;
+      c.strokeStyle = 'rgba(120,190,255,0.75)';
+      c.lineWidth = 2;
       for (let i = 0; i < 7; i++) {
-        const k = ((t * 0.004 + i / 7) % 1);
+        const k = (t * 0.003 + i / 7) % 1;
+        const x = hx + (i - 3) * 3 + (i - 3) * k * 6;
         c.beginPath();
-        c.moveTo(L + 4, T + 8 + i * 2);
-        c.quadraticCurveTo((L + this.x) / 2, T - 10, this.x + (k - 0.5) * r, this.y - r * 0.3 + k * r * 0.6);
+        c.moveTo(x, b.y0 + 20 + k * 10);
+        c.lineTo(x + (i - 3) * 2, b.y0 + 30 + k * (b.y1 - b.y0 - 40));
         c.stroke();
       }
+      if (Math.random() < 0.3) this.puffs.push({ x: hx + (Math.random() - 0.5) * 30, y: b.y0 + 30, vx: 0, vy: -10, r: 8, born: t, life: 1200, color: 'rgba(255,255,255,0.6)' });
+    }
+    if (t - this.flushAt < 1500) {
+      const b = m.toilet;
+      const k = (t - this.flushAt) / 1500;
+      c.strokeStyle = `rgba(90,170,255,${1 - k})`;
+      c.lineWidth = 2;
+      c.beginPath();
+      c.arc(b.x0 + (b.x1 - b.x0) * 0.65, b.y0 + 4, 6 + k * 8, t * 0.02, t * 0.02 + 4);
+      c.stroke();
     }
 
-    // Fart clouds over everything in the tank.
+    if (!dead) this.drawToys(c, t);
+
+    // Fart clouds over everything in the unit.
     for (const p of this.puffs) {
       const age = (t - p.born) / p.life;
       c.globalAlpha = Math.max(0, 0.55 * (1 - age));
@@ -1792,42 +2107,26 @@ export class TankScene {
     }
     c.restore();
 
-    // Glass and lid.
-    c.strokeStyle = 'rgba(210,235,255,0.55)';
-    c.lineWidth = 2;
-    c.strokeRect(L, T, R - L, B - T);
-    c.fillStyle = 'rgba(255,255,255,0.06)';
-    c.beginPath();
-    c.moveTo(L + (R - L) * 0.08, T);
-    c.lineTo(L + (R - L) * 0.16, T);
-    c.lineTo(L + (R - L) * 0.04, B);
-    c.lineTo(L, B);
-    c.lineTo(L, T + (B - T) * 0.6);
-    c.closePath();
-    c.fill();
-    c.fillStyle = '#3a3f4a';
-    c.fillRect(L - 4, T - 7, R - L + 8, 8);
-    // The DoorDosh hatch, with whatever is on the way.
-    const hx = L + (R - L) * 0.55;
+    // The glass and frame, then the hatch and what's coming through it.
+    drawGlass(c, m);
     c.fillStyle = '#ff3d2e';
-    c.fillRect(hx - 14, T - 7, 28, 8);
+    c.fillRect(m.hatchX - 14, T - 5, 28, 5);
     const next = [...v.orders].sort((a, b) => a.arriveAt - b.arriveAt)[0];
     if (next && !dead) {
       const secs = Math.max(0, Math.ceil((next.arriveAt - v.now) / 1000));
       const label = `${next.self ? "Hammy's order" : 'DoorDosh'} · ${secs >= 60 ? `${Math.ceil(secs / 60)}m` : `0:${String(secs).padStart(2, '0')}`}`;
       c.font = '600 11px Rubik, system-ui, sans-serif';
       const w = c.measureText(label).width + 16;
-      const lx = Math.min(R - w, Math.max(L, hx - w / 2));
+      const lx = Math.min(R - w, Math.max(L, m.hatchX - w / 2 - 20));
       c.fillStyle = '#ff3d2e';
       c.beginPath();
-      c.roundRect(lx, T - 24, w, 17, 9);
+      c.roundRect(lx, T + 4, w, 17, 9);
       c.fill();
       c.fillStyle = '#fff';
       c.textAlign = 'left';
       c.textBaseline = 'middle';
-      c.fillText(label, lx + 8, T - 15.5);
+      c.fillText(label, lx + 8, T + 12.5);
     }
-
     if (this.glitch && !dead) {
       c.font = '700 11px Rubik, system-ui, sans-serif';
       c.textAlign = 'left';
@@ -1851,7 +2150,8 @@ export class TankScene {
     }
     c.globalAlpha = 1;
 
-    if (!dead && this.bubble) this.drawBubble(this.bubble, this.x, this.y - r * 1.15);
+    if (this.scientistBubble) this.drawBubble(this.scientistBubble, sci.x, sci.y, '#e8f0f8', '#1c2836');
+    if (!dead && this.bubble) this.drawBubble(this.bubble, this.x, this.y - this.size().hh * 1.25);
 
     // YOU LOSE.
     if (dead && d >= ROT_SECONDS - 6) {
@@ -1859,9 +2159,9 @@ export class TankScene {
       if (!this.youLose && d < ROT_SECONDS + 5) sfx.lose();
       this.youLose = true;
       const pulse = 1 + Math.sin(t * 0.004) * 0.03;
-      const size = Math.min(W * 0.16, H * 0.22);
+      const size = Math.min(W * 0.16, H * 0.14);
       c.save();
-      c.translate(W / 2, T + (this.floor - T) * 0.42);
+      c.translate(W / 2, T + (B - T) * 0.32);
       c.scale(k * pulse, k * pulse);
       c.rotate(-0.05);
       c.font = `400 ${Math.round(size)}px 'Bagel Fat One', Rubik, system-ui, sans-serif`;

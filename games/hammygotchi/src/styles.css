@@ -1,7 +1,9 @@
-/* Layout: one-screen app. Header with the coins, the tank (Hammy lives here),
-   four meters, four tabs and a panel that scrolls on its own. One deliberate
-   look: a dark gamer bedroom with cheese-dust orange and stink green, so no
-   light theme. */
+/* Layout: one-screen app, the unit first. A slim header with the coins, the
+   four meters, the containment unit taking whatever height is left, an icon
+   toy bar and four tabs. On phones a tab slides a sheet up over the unit (tap
+   it again to put it away); on wide screens the sheet is docked to the right.
+   One deliberate look: a dark gamer bedroom with cheese-dust orange and stink
+   green, so no light theme. */
 :root {
   color-scheme: dark;
   --room: #1a1026;
@@ -78,47 +80,58 @@ button {
 }
 
 #app {
+  position: relative;
   height: 100%;
-  max-width: 640px;
+  max-width: 720px;
   margin: 0 auto;
   display: grid;
-  grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  grid-template-areas: 'top' 'meters' 'stage' 'toys' 'tabs';
   padding-inline: var(--gutter);
 }
 
 /* --- Header --------------------------------------------------------------- */
 
 .top {
+  grid-area: top;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding-block: 10px 8px;
+  padding-block: 8px 4px;
 }
 .brand {
   min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
 }
 .brand-name {
-  font: 400 clamp(24px, 7.5vw, 32px)/1 var(--font-display);
+  font: 400 22px/1 var(--font-display);
   color: var(--cheese);
   white-space: nowrap;
-  text-shadow: 0 3px 0 #6b2a00;
+  text-shadow: 0 2px 0 #6b2a00;
 }
 .who {
-  margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .purse {
-  text-align: right;
+  flex: none;
 }
 .coins {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 6px;
-  font: 700 24px/1 var(--font-ui);
+  padding: 4px 10px 4px 5px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font: 700 17px/1 var(--font-ui);
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
@@ -140,17 +153,13 @@ button {
   font-size: 10px;
   vertical-align: -3px;
 }
-.coins-label {
-  margin-top: 3px;
-  font-size: 11px;
-  color: var(--muted);
-}
 
-/* --- The tank ------------------------------------------------------------- */
+/* --- The unit ------------------------------------------------------------- */
 
 .stage {
+  grid-area: stage;
   position: relative;
-  height: clamp(210px, 35vh, 390px);
+  min-height: 0;
   margin-inline: calc(var(--gutter) * -1);
 }
 #tank {
@@ -176,14 +185,14 @@ button {
   font-size: 13px;
 }
 .hint {
-  top: calc(9% + 18px);
+  top: max(38px, 7%);
   padding: 5px 13px;
   white-space: nowrap;
   background: rgba(26, 16, 38, 0.8);
   animation: breathe 2.4s ease-in-out infinite;
 }
 .toast {
-  top: calc(9% + 14px);
+  top: max(34px, 6.5%);
   padding: 8px 16px;
   width: max-content;
   max-width: calc(100% - 32px);
@@ -208,11 +217,11 @@ button {
   }
 }
 
-/* The form of the day, on a little sign on the desk. */
+/* The form of the day, on a little sign at the bottom of the frame. */
 .today {
   position: absolute;
-  left: calc(var(--gutter) + 4px);
-  bottom: 2px;
+  right: calc(var(--gutter) + 6px);
+  bottom: 3px;
   padding: 1px 8px;
   border-radius: 6px;
   background: #3a2716;
@@ -222,12 +231,13 @@ button {
   pointer-events: none;
 }
 
-/* --- Toy bar -------------------------------------------------------------- */
+/* --- Toy bar: icons only (the toast says what a toy does when you pick it) */
 
 .toybar {
+  grid-area: toys;
   display: flex;
   gap: 6px;
-  padding-block: 8px 2px;
+  padding-block: 6px 4px;
   overflow-x: auto;
   scrollbar-width: none;
   margin-inline: calc(var(--gutter) * -1);
@@ -238,12 +248,11 @@ button {
 }
 .toy-btn {
   flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  width: 52px;
-  padding: 4px 2px 3px;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--panel);
@@ -259,66 +268,81 @@ button {
   cursor: default;
 }
 .toy-icon {
-  width: 30px;
-  height: 30px;
-}
-.toy-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.toy-btn[aria-pressed='true'] .toy-label {
-  color: var(--text);
+  width: 32px;
+  height: 32px;
 }
 .toy-more {
   border-style: dashed;
   background: none;
 }
 .toy-plus {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  font-size: 22px;
+  font-size: 24px;
+  line-height: 1;
   color: var(--cheese);
 }
 
 /* --- Meters --------------------------------------------------------------- */
 
 .meters {
+  grid-area: meters;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  padding-block: 10px 8px;
+  gap: 8px 14px;
+  padding-block: 4px 8px;
 }
 .meter {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 .meter-top {
   display: flex;
-  flex-direction: column;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
   min-width: 0;
 }
 .meter-name {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
 }
 .meter-word {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+@media (max-width: 420px) {
+  /* Too narrow for the names: an icon in front of the word instead. */
+  .meter-name {
+    display: none;
+  }
+  .meter-top {
+    justify-content: flex-start;
+  }
+  .meter-word::before {
+    margin-right: 3px;
+  }
+  [data-need='belly'] .meter-word::before {
+    content: '🍔';
+  }
+  [data-need='fresh'] .meter-word::before {
+    content: '🧼';
+  }
+  [data-need='mood'] .meter-word::before {
+    content: '🙂';
+  }
+  [data-need='health'] .meter-word::before {
+    content: '❤️';
+  }
+}
 .meter .bar {
-  height: 7px;
+  height: 6px;
 }
 [data-need='belly'] .bar-fill {
   background: var(--cheese);
@@ -337,35 +361,53 @@ button {
   animation: breathe 1.2s ease-in-out infinite;
 }
 
-/* --- Tabs ----------------------------------------------------------------- */
+/* --- Tabs --------------------------------------------------------------- */
 
 .tabs {
+  grid-area: tabs;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
-  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  margin-inline: calc(var(--gutter) * -1);
+  padding-inline: var(--gutter);
+  background: var(--room);
+  position: relative;
+  z-index: 6;
 }
 .tabs button {
-  padding: 12px 2px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 7px 2px 6px;
   border: 0;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -1px;
+  border-top: 3px solid transparent;
+  margin-top: -1px;
   background: none;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted);
   cursor: pointer;
 }
 .tabs button[aria-selected='true'] {
   color: var(--text);
-  border-bottom-color: var(--cheese);
+  border-top-color: var(--cheese);
+}
+.tab-icon {
+  font-size: 21px;
+  line-height: 1.1;
+}
+.tabs button:not([aria-selected='true']) .tab-icon {
+  filter: saturate(0.6);
+  opacity: 0.85;
 }
 .tab-label {
   position: relative;
 }
 .badge {
   position: absolute;
-  bottom: calc(100% - 4px);
+  bottom: calc(100% + 12px);
   left: calc(100% - 2px);
   min-width: 16px;
   padding: 0 5px;
@@ -373,22 +415,66 @@ button {
   background: var(--dosh);
   color: #fff;
   font: 600 10px/16px var(--font-ui);
+  text-align: center;
 }
 [data-tab='care'] .badge {
   background: #8a5a2b;
 }
-[data-tab='fits'] .badge {
-  background: var(--cheese);
-  color: var(--cheese-ink);
+
+/* --- The sheet ------------------------------------------------------------ */
+
+.sheet {
+  grid-area: 3 / 1 / 5 / 2;
+  align-self: end;
+  z-index: 5;
+  height: 64%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-inline: calc(var(--gutter) * -1);
+  border-radius: 20px 20px 0 0;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  background: var(--room);
+  box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.55);
+  animation: sheet-up 0.22s ease-out;
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px var(--gutter) 0;
+}
+.sheet-title {
+  font: 400 20px/1 var(--font-display);
+}
+.sheet-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 15px;
+  cursor: pointer;
 }
 
 /* --- Panel ---------------------------------------------------------------- */
 
 .panel {
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-block: 14px 24px;
+  padding: 12px var(--gutter) 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -527,7 +613,7 @@ button {
 /* Care: cleaning. */
 .actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 .action {
@@ -554,6 +640,14 @@ button {
 .action-sub {
   font-size: 12px;
   color: var(--muted);
+}
+.action.urgent {
+  border-color: var(--cheese);
+  background: rgba(255, 154, 46, 0.16);
+  animation: breathe 1.2s ease-in-out infinite;
+}
+.action.urgent .action-sub {
+  color: var(--cheese);
 }
 
 /* Care: after. */
@@ -828,6 +922,11 @@ button {
 .toy-fx.mean {
   color: var(--cheese);
 }
+.toy-emoji {
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+}
 .toy .fit-btn {
   margin-top: 0;
   min-width: 76px;
@@ -1087,56 +1186,118 @@ button {
   background: #ff3b30;
 }
 
-/* Short phones (iPhone SE, small Androids): a smaller tank and an icon-only
-   toy bar, so the panel underneath still has room. */
+/* Short phones (iPhone SE, small Androids): tighter everything, and the
+   sheet takes more of the unit so there's room to read. */
 @media (max-height: 720px) {
   .top {
-    padding-block: 6px 4px;
+    padding-block: 6px 2px;
   }
   .brand-name {
-    font-size: 24px;
-  }
-  .stage {
-    height: clamp(180px, 31vh, 390px);
-  }
-  .toybar {
-    padding-block: 6px 0;
-  }
-  .toy-btn {
-    width: 44px;
-    padding: 4px 2px;
-  }
-  .toy-icon,
-  .toy-plus {
-    width: 26px;
-    height: 26px;
-  }
-  .toy-label {
-    display: none;
+    font-size: 20px;
   }
   .meters {
-    padding-block: 6px 4px;
+    padding-block: 2px 6px;
   }
-  .meter-word {
-    font-size: 12px;
+  .toy-btn {
+    width: 42px;
+    height: 42px;
+  }
+  .toy-icon {
+    width: 28px;
+    height: 28px;
   }
   .tabs button {
-    padding-block: 9px 8px;
+    padding-block: 5px 4px;
+  }
+  .tab-icon {
+    font-size: 19px;
+  }
+  .sheet {
+    height: 78%;
   }
   .panel {
-    padding-top: 10px;
+    padding-top: 8px;
     gap: 10px;
   }
 }
 
+/* Wide screens: the unit on the left, the sections docked on the right. */
 @media (min-width: 900px) {
   #app {
-    max-width: 760px;
+    max-width: 1280px;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: 'top tabs' 'meters sheet' 'stage sheet' 'toys sheet';
+    column-gap: 20px;
+    padding-bottom: 12px;
+  }
+  .top {
+    padding-block: 14px 8px;
+  }
+  .brand-name {
+    font-size: 30px;
+  }
+  .meters {
+    padding-block: 4px 10px;
+  }
+  .meter-name {
+    display: inline;
+    font-size: 10px;
+  }
+  .meter-word {
+    font-size: 13px;
   }
   .stage {
     margin-inline: 0;
     border-radius: 20px;
     overflow: hidden;
+  }
+  .toybar {
+    margin-inline: 0;
+    padding-inline: 0;
+    padding-top: 10px;
+  }
+  .tabs {
+    align-self: end;
+    margin-inline: 0;
+    padding-inline: 0;
+    border-top: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .tabs button {
+    flex-direction: row;
+    justify-content: center;
+    gap: 6px;
+    padding-block: 12px 9px;
+    border-top: 0;
+    border-bottom: 3px solid transparent;
+    margin: 0 0 -1px;
+    font-size: 14px;
+  }
+  .tabs button[aria-selected='true'] {
+    border-bottom-color: var(--cheese);
+  }
+  .tab-icon {
+    font-size: 17px;
+  }
+  .badge {
+    bottom: calc(100% - 4px);
+  }
+  .sheet {
+    grid-area: sheet;
+    align-self: stretch;
+    height: auto;
+    margin-inline: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    animation: none;
+  }
+  .sheet-head {
+    display: none;
+  }
+  .panel {
+    padding-inline: 2px;
   }
 }
 

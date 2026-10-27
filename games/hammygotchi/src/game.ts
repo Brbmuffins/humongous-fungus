@@ -39,9 +39,6 @@ import {
   HAMMY_TEXTS,
   HEALTH_DRAIN_PER_HOUR,
   HEALTH_REGEN_PER_HOUR,
-  HOSE_COOLDOWN,
-  HOSE_FRESH,
-  HOSE_MOOD,
   LIVE_SECONDS,
   LONELY_PER_UNREAD,
   MAX_AWAY_SECONDS,
@@ -51,6 +48,7 @@ import {
   MAX_ORDERS,
   MAX_POOPS,
   MAX_TEXTS,
+  MEAT_PRICE,
   MISSED_CALL_MOOD,
   MOOD_PER_HOUR,
   NEED_OK,
@@ -61,6 +59,7 @@ import {
   POOP_STINK_PER_HOUR,
   REPLY_DELAY_MIN,
   REPLY_DELAY_RANGE,
+  REST,
   ROT_SECONDS,
   SCOOP_COINS,
   SCOOP_FRESH,
@@ -68,6 +67,11 @@ import {
   SELF_ETA_RANGE,
   SELF_ORDER_BELOW,
   SELF_ORDER_TIP,
+  SHOWER_COOLDOWN,
+  SHOWER_FRESH,
+  SHOWER_MOOD,
+  SOAP_FRESH,
+  SOAP_MOOD,
   START_COINS,
   TEXT_COINS,
   TEXT_GAP_MIN,
@@ -75,15 +79,22 @@ import {
   TEXT_MOOD,
   TEXT_OPTIONS,
   TEXT_REFILL_SECONDS,
+  TOILET_COINS,
+  TOILET_FRESH,
   TOY_BY_ID,
+  UPGRADE_BY_ID,
+  URGE_SECONDS,
+  VACUUM_SECONDS,
   WELCOME_SECONDS,
   type Cause,
   type FitId,
   type FoodId,
   type FormId,
   type Need,
+  type SpotId,
   type TextOption,
   type ToyId,
+  type UpgradeId,
 } from './defs';
 import { rngStep } from '@shared/rng';
 import { newHammy, type HammyState, type Message } from './state';
@@ -137,6 +148,7 @@ export const rotDone = (s: HammyState, now: number): boolean => (deadFor(s, now)
 export type HammyEvent =
   | { type: 'fart'; size: number }
   | { type: 'poop' }
+  | { type: 'urge' }
   | { type: 'delivery'; food: FoodId; self: boolean }
   | { type: 'selfOrder'; food: FoodId; cost: number }
   | { type: 'text'; text: string }
@@ -148,6 +160,8 @@ export interface AwayReport {
   elapsed: number;
   farts: number;
   poops: number;
+  /** Poops the robot vacuums ate. */
+  vacuumed: number;
   meals: number;
   texts: number;
   missedCalls: number;
@@ -207,6 +221,7 @@ function hammyText(s: HammyState, roll: Roll): string {
   if (s.fresh < 30) moods.push('stinky');
   if (s.mood < 30) moods.push('sad');
   if (s.poops.length >= 3) moods.push('poopy');
+  if (s.urges.length) moods.push('urge');
   const pool = moods.length && roll() < 0.75 ? HAMMY_TEXTS[pick(moods, roll)] : HAMMY_TEXTS.any;
   const last = [...s.messages].reverse().find((m) => m.from === 'hammy')?.text;
   const fresh = pool.filter((t) => t !== last);
@@ -250,14 +265,28 @@ function tick(s: HammyState, from: number, to: number, live: boolean, roll: Roll
       }
     }
   }
+  // A meal ready to come out means he needs to go. He holds it a while; if
+  // nobody puts him on the toilet, it ends up on the floor.
   if (s.poopDue.some((t) => t <= to)) {
-    const due = s.poopDue.filter((t) => t <= to);
+    for (const t of s.poopDue.filter((t) => t <= to)) s.urges.push(t + URGE_SECONDS * 1000);
     s.poopDue = s.poopDue.filter((t) => t > to);
+    events.push({ type: 'urge' });
+  }
+  if (s.urges.some((t) => t <= to)) {
+    const due = s.urges.filter((t) => t <= to);
+    s.urges = s.urges.filter((t) => t > to);
     for (let i = 0; i < due.length; i++) {
       if (s.poops.length >= MAX_POOPS) break;
-      s.poops.push(0.12 + roll() * 0.76);
+      s.poops.push({ x: 0.12 + roll() * 0.76, up: false });
       events.push({ type: 'poop' });
     }
+  }
+  // Robot vacuums. While you watch, they drive to the poop themselves.
+  const vacuums = s.upgrades.vacuum;
+  if (!live && vacuums > 0 && s.poops.length && to >= s.vacuumAt) {
+    s.vacuumAt = to + (VACUUM_SECONDS * 1000) / vacuums;
+    s.poops.shift();
+    s.stats.vacuumed += 1;
   }
 
   // Needs drain.
@@ -343,6 +372,7 @@ export function step(s: HammyState, now: number, roll: Roll = Math.random): Step
       elapsed: gap,
       farts: s.stats.farts - stats.farts,
       poops: count('poop'),
+      vacuumed: s.stats.vacuumed - stats.vacuumed,
       meals: s.stats.meals - stats.meals,
       texts: count('text'),
       missedCalls: count('missedCall'),
@@ -394,14 +424,84 @@ export function scoopAll(s: HammyState): number {
   return got;
 }
 
-export const canHose = (s: HammyState, now: number): boolean => isAlive(s) && now >= s.hoseReadyAt;
+export const canShower = (s: HammyState, now: number): boolean => isAlive(s) && now >= s.showerReadyAt;
 
-export function hose(s: HammyState, now: number): boolean {
-  if (!canHose(s, now)) return false;
-  s.fresh = clamp(s.fresh + HOSE_FRESH);
-  s.mood = clamp(s.mood + HOSE_MOOD);
-  s.hoseReadyAt = now + HOSE_COOLDOWN * 1000;
-  s.stats.hoses += 1;
+/** Five minutes in the shower. Better with soap. */
+export function shower(s: HammyState, now: number): boolean {
+  if (!canShower(s, now)) return false;
+  const soap = s.upgrades.soap;
+  s.fresh = clamp(s.fresh + SHOWER_FRESH + SOAP_FRESH[soap]);
+  s.mood = clamp(s.mood + SHOWER_MOOD + SOAP_MOOD[soap]);
+  s.showerReadyAt = now + SHOWER_COOLDOWN * 1000;
+  s.stats.showers += 1;
+  return true;
+}
+
+/** Sat on the toilet. Returns how many he got out (0 if he didn't need to go). */
+export function useToilet(s: HammyState): number {
+  if (!isAlive(s) || s.urges.length === 0) return 0;
+  const n = s.urges.length;
+  s.urges = [];
+  s.coins += n * TOILET_COINS;
+  s.fresh = clamp(s.fresh + n * TOILET_FRESH);
+  s.stats.toilet += n;
+  return n;
+}
+
+/**
+ * He's lying on the bed, in his chair, or at the PC. Every few seconds that
+ * lifts his mood a little (but only so far: he still wants you to call), and
+ * at the PC his stream earns a coin now and then.
+ */
+export function rest(s: HammyState, spot: SpotId, now: number): { mood: number; coins: number } | null {
+  const r = REST[spot];
+  if (!r || !isAlive(s) || now < s.restReadyAt) return null;
+  s.restReadyAt = now + r.every * 1000;
+  const mood = Math.max(0, Math.min(r.mood, r.cap - s.mood));
+  s.mood = clamp(s.mood + mood);
+  let coins = 0;
+  if (r.coins && r.coinEvery && now >= s.streamCoinAt) {
+    coins = r.coins;
+    s.coins += coins;
+    s.streamCoinAt = now + r.coinEvery * 1000;
+  }
+  return { mood, coins };
+}
+
+/** A raw steak out of the fridge. */
+export function buyMeat(s: HammyState): boolean {
+  if (!isAlive(s) || s.coins < MEAT_PRICE) return false;
+  s.coins -= MEAT_PRICE;
+  return true;
+}
+
+/** He ate something that didn't come by DoorDosh: raw, cooked or burnt steak. */
+export function feed(s: HammyState, id: FoodId, now: number, roll: Roll = Math.random): boolean {
+  if (!isAlive(s) || !FOOD_BY_ID[id]?.home) return false;
+  eat(s, id, now, roll);
+  if (id === 'steak') s.stats.cooked += 1;
+  if (s.health <= 0) die(s, now, ['sushi']);
+  return true;
+}
+
+/** A robot vacuum got to a poop while you were watching. */
+export function vacuumPoop(s: HammyState, index: number): boolean {
+  if (!isAlive(s) || s.upgrades.vacuum === 0 || index < 0 || index >= s.poops.length) return false;
+  s.poops.splice(index, 1);
+  s.stats.vacuumed += 1;
+  return true;
+}
+
+export function upgradeCost(s: HammyState, id: UpgradeId): number | null {
+  const level = UPGRADE_BY_ID[id].levels[s.upgrades[id]];
+  return level ? level.price : null;
+}
+
+export function buyUpgrade(s: HammyState, id: UpgradeId): boolean {
+  const cost = upgradeCost(s, id);
+  if (cost === null || s.coins < cost) return false;
+  s.coins -= cost;
+  s.upgrades[id] += 1;
   return true;
 }
 
@@ -439,21 +539,21 @@ function replyTo(id: string, s: HammyState, roll: Roll): string {
     case 'ate':
       return s.belly < 40 ? by(['no 😭 order me dorkitos', 'define eat', 'i licked the dorkito dust off my hands. does that count']) : by(['yeah i ate like 4 bags', 'ya im stuffed', 'yes and i regret it']);
     case 'stink':
-      return s.fresh < 40 ? by(['thats my natural musk', 'its the frog', 'u get used to it', 'no u']) : by(['i showered last month', 'smell this 💨', 'lies']);
+      return s.fresh < 40 ? by(['thats my natural musk', 'its the toilet', 'u get used to it', 'no u']) : by(['i showered last month', 'smell this 💨', 'lies']);
     case 'love':
-      return by(['❤️ dont tell the snail', 'love u too man', 'ok weirdo. ❤️', 'stop ur gonna make me cry']);
+      return by(['❤️ dont tell the scientist', 'love u too man', 'ok weirdo. ❤️', 'stop ur gonna make me cry']);
     case 'wyd':
-      return by(['laying in my own filth. u?', 'staring at the glass', 'eating', 'trying to fight the pill bug', 'nothin']);
+      return by(['laying in my own filth. u?', 'staring at the glass', 'eating', 'trying to fight the robot vacuum', 'gaming', 'nothin']);
     case 'fart':
       return by(['i cant control the wind', 'never', 'thats not a fart its a feeling', 'make me']);
     case 'there':
       return by(['recalculating…', '5 more minutes', 'we been there', 'r u driving??']);
     case 'tank':
-      return s.fresh < PINCH_BELOW ? by(['the snail moved out lol', 'kinda foggy in here', 'the frog wont talk to me']) : by(['its chill', 'the pill bug looked at me', 'cozy. 10/10']);
+      return s.fresh < PINCH_BELOW ? by(['the scientist is wearing a gas mask lol', 'kinda foggy in here', 'the plant died']) : by(['its chill', 'the scientist waved at me', 'cozy. 10/10']);
     case 'lol':
       return by(['lmao', 'lol', '😂', 'what r we laughing at']);
     case 'pic':
-      return by(['📸 [blurry photo of a dorkito]', '📸 [selfie, mostly nostril]', '📸 [the frog, unaware]', 'no ur gonna post it']);
+      return by(['📸 [blurry photo of a dorkito]', '📸 [selfie, mostly nostril]', '📸 [the scientist, unaware]', 'no ur gonna post it']);
     case 'proud':
       return by(['aw 🥹', 'of what lol', 'thanks i pooped earlier', 'finally someone notices']);
     case 'clean':
@@ -581,8 +681,9 @@ export function localDay(now: number): number {
 }
 
 /**
- * What he is on a given day. His first day he's a hamster; after that each
- * day picks another form at random, never the same two days running.
+ * What he is on a given day. His first day he's Cube Hammy; after that each
+ * day picks another form at random (Cube Hammy most often), never the same
+ * two days running.
  */
 export function formOnDay(day: number, firstDay: number, seed: number): FormId {
   if (day <= firstDay) return FORMS[0].id;
@@ -590,7 +691,16 @@ export function formOnDay(day: number, firstDay: number, seed: number): FormId {
   // Walked from his first day, so no two days in a row ever match.
   for (let d = firstDay + 1; d <= day; d++) {
     const [, roll] = rngStep((seed ^ Math.imul(d, 0x9e3779b1)) >>> 0);
-    i = (i + 1 + Math.floor(roll * (FORMS.length - 1))) % FORMS.length;
+    const others = FORMS.map((f, k) => ({ f, k })).filter((x) => x.k !== i);
+    let left = roll * others.reduce((sum, x) => sum + x.f.weight, 0);
+    i = others[others.length - 1].k;
+    for (const x of others) {
+      left -= x.f.weight;
+      if (left < 0) {
+        i = x.k;
+        break;
+      }
+    }
   }
   return FORMS[i].id;
 }

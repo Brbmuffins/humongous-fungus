@@ -86,10 +86,10 @@ export function forecast(s: HammyState, now: number): { text: Forecast | null; a
       if (!text && e.type === 'text') text = { at: t, title: 'Hammy', body: e.text };
     }
     if (alert) continue;
-    if (copy.health < 35) alert = { at: t, title: 'Hammy is dying', body: 'Like, actually. Open the tank before he turns into mushrooms.' };
-    else if (copy.belly < ALERT_BELOW) alert = { at: t, title: 'Hammy is starving', body: 'He has started looking at the frog. Order him something.' };
+    if (copy.health < 35) alert = { at: t, title: 'Hammy is dying', body: 'Like, actually. Open the unit before he turns into mushrooms.' };
+    else if (copy.belly < ALERT_BELOW) alert = { at: t, title: 'Hammy is starving', body: 'He has started eyeing the plant. Order him something.' };
     else if (copy.mood < ALERT_BELOW) alert = { at: t, title: 'Hammy misses you', body: 'He says nobody ever calls him. Call him.' };
-    else if (copy.fresh < ALERT_BELOW) alert = { at: t, title: 'The tank is a biohazard', body: 'The snail is packing. Scoop the poop and hose him down.' };
+    else if (copy.fresh < ALERT_BELOW) alert = { at: t, title: 'The unit is a biohazard', body: 'The scientist is evacuating. Scoop the poop and put him in the shower.' };
   }
   return { text, alert };
 }
