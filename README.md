@@ -56,3 +56,21 @@ After changing a game, copy it into its native projects with
 
 No framework and no runtime dependencies: TypeScript, Canvas 2D and Vite. Each
 build is a single HTML file with fonts inlined, so it runs fully offline.
+
+## Releases
+
+Each game is released from its own branch. Bump the version in
+`games/<game>/package.json` (and, for games with phone apps, `versionName` in
+`android/app/build.gradle` and `MARKETING_VERSION` in the iOS project), write
+the notes in `docs/releases/<branch>-v<version>.md`, then push a tag:
+
+```sh
+git tag -a ticker-rush-v1.0.0 -m "Ticker Rush 1.0.0"
+git push origin ticker-rush-v1.0.0
+```
+
+The Release workflow (`.github/workflows/release.yml`) tests and builds that
+game and opens a draft release on GitHub with the notes and the game's
+single-file HTML attached. Publish the draft from the Releases page when it's
+ready. Phone builds still go through the game's `android-*` and `ios-*`
+workflows.
