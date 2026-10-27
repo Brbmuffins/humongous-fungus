@@ -51,7 +51,7 @@ After changing a game, copy it into its native projects with
 | `games/*/tools/` | Renders each game's app icon, launch screen and Play feature graphic |
 | `games/sporemonger/src/` | Sporemonger rules (`game.ts`), content (`defs.ts`), banner art (`scene.ts`), screens (`ui.ts`) and phone features with price-move reminders (`native.ts`) |
 | `games/sporemonger/ios`, `android` | Native app projects (Capacitor) |
-| `games/hammygotchi/src/` | Hammygotchi rules (`game.ts`), content and every line he says (`defs.ts`), the containment unit, its physics and the toys in it (`scene.ts`), its furniture (`room.ts`), Hammy in his four forms and his fits (`hammy.ts`), his recorded voice lines (`voice.ts`), the toys' drawings (`toys.ts`), synthesized sounds (`sound.ts`), screens (`ui.ts`) and phone features (`native.ts`) |
+| `games/hammygotchi/src/` | Hammygotchi rules (`game.ts`), content and every line he says (`defs.ts`), the containment unit, its physics and the toys in it (`scene.ts`), its furniture (`room.ts`), Hammy in his four forms and his fits (`hammy.ts`), his recorded voice lines (`voice.ts`), the toys' drawings (`toys.ts`), synthesized sounds (`sound.ts`), screens (`ui.ts`), the Fart Rocket crash game on his phone (`rocket.ts`, `rocketview.ts`) and phone features (`native.ts`) |
 | `games/hammygotchi/assets/face`, `assets/voice` | Drop-in photos of the real Hammy's eyes and mouth, and his recorded voice lines (see the README in each) |
 | `games/hammygotchi/ios`, `android` | Native app projects (Capacitor) |
 | `shared/market.ts` | Live market engine: seeded price walk, moods, trades, rot |

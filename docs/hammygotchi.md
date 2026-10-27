@@ -234,6 +234,43 @@ thread or call. `src/talk.ts` does the asking and the speaking:
   the save, which syncs to the cloud. The privacy page says what's sent where
   when they're added.
 
+### Fart Rocket
+
+An app on his phone (the tile at the top of the Phone tab): a crash game.
+You bet Hammy coins, he blasts off the roof of the containment building on
+his own fart, and the multiplier climbs until something ridiculous ends the
+flight. Bail out before it does and you get your bet times the multiplier.
+Rules and content are in `src/rocket.ts`, the screen in `src/rocketview.ts`.
+
+- **The climb.** It's `e^(0.075·t)`: 2× after about 9 seconds, 10× after
+  about 31. On the way up he passes seagulls, a plane towing an ARE WE THERE
+  YET? banner, the clouds, a satellite, the moon (which wakes up), a UFO, a
+  whole fleet of them holding a HI HAMMY sign, floating Dorkitos, and a
+  series of road signs saying it's still Ohio. Past 50× the sky and his
+  exhaust go rainbow.
+- **The crash.** Each round's crash point is `floor(99 / (1 − u)) / 100` for
+  a uniform `u`: the chance he gets past x is 0.99 / x, so whatever you aim
+  for pays back 99% over many rounds, and about 2 rounds in 100 end before he
+  leaves the roof. How it ends depends on how high he got: running out of
+  gas, sneezing, spotting a Dorkito, sharting, checking his phone, a seagull,
+  Dr. Moss pulling the plug, a plane, burrito cramps, bonking the moon, alien
+  abduction, landing in Ohio.
+- **Everyone else.** Four to seven others bet each round (Dr. Moss, the robot
+  vacuum, the DoorDosh driver, Grandma, a seagull, the toilet, War…), each
+  with their own nerve, and parachute off him when they bail. The plant never
+  bails. It's a plant.
+- **Your coins.** Bets come out of his coins up front; bail-outs pay
+  `floor(bet × multiplier)`. There's an auto bail-out. Closing the app or
+  leaving the page mid-flight bails you out at the current multiplier, and a
+  bet on a round that hasn't launched comes back. When you close it he says
+  something about how it went, back in the unit. The Life tab keeps rounds,
+  best bail-out and coins up or down.
+- **Not in the store apps.** Simulated gambling raises an app's age rating,
+  so `ROCKET_IN_APPS` in `src/rocket.ts` is false and the iOS and Android
+  builds leave it out; the browser version has it. Switch it on and the
+  age-rating answers in `store/listing.md` and `store/play/listing.md` need
+  to change (both say so).
+
 ## Cube Hammy, and some days a meatball sub
 
 Hammy is an avatar: mostly Cube Hammy, a cube with War's eyes, eyeshadow and

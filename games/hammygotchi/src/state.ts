@@ -87,6 +87,10 @@ export interface LifeStats {
   cooked: number;
   /** Trash the robot vacuums picked up. */
   vacuumed: number;
+  /** Fart Rocket: rounds you bet on, coins up or down, highest cash-out. */
+  rocketRounds: number;
+  rocketNet: number;
+  rocketBest: number;
 }
 
 export interface HammyState {
@@ -170,6 +174,9 @@ export const noStats = (): LifeStats => ({
   toys: 0,
   cooked: 0,
   vacuumed: 0,
+  rocketRounds: 0,
+  rocketNet: 0,
+  rocketBest: 0,
 });
 
 const noUpgrades = (): Record<UpgradeId, number> => Object.fromEntries(UPGRADES.map((u) => [u.id, 0])) as Record<UpgradeId, number>;
@@ -397,6 +404,9 @@ export function deserialize(raw: string): HammyState | null {
       toys: Math.floor(stat('toys')),
       cooked: Math.floor(stat('cooked')),
       vacuumed: Math.floor(stat('vacuumed')),
+      rocketRounds: Math.floor(stat('rocketRounds')),
+      rocketNet: Math.floor(num(st.rocketNet, 0)),
+      rocketBest: stat('rocketBest'),
     },
   };
 }

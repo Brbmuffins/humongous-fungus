@@ -67,12 +67,14 @@ import {
   type AwayReport,
   type HammyEvent,
 } from './game';
+import { ROCKET_HOME, rocketBet, rocketCashOut, rocketRefund } from './rocket';
+import type { RocketSession } from './rocketview';
 import { TankScene, type ToiletResult } from './scene';
 import { ask, loadTalk, setTalkSound, speakLine, type Turn } from './talk';
 import { setSound, sfx, unlock } from './sound';
 import { setVoice } from './voice';
 import { deserialize, newGame, serialize, type HammyState, type Poop } from './state';
-import { GameUI, type Controller } from './ui';
+import { GameUI, ROCKET_ON, type Controller } from './ui';
 import { askForReminders, buzz, clearReminders, isNative, nativeSave, onAppState, scheduleReminders } from './native';
 
 const localSave = makeLocalSave('hammygotchi.save.v1');
@@ -575,6 +577,46 @@ class Game implements Controller {
       return;
     }
     this.talk(false);
+  }
+
+  // Fart Rocket ---------------------------------------------------------------
+
+  rocket(): void {
+    if (!ROCKET_ON || this.ui.modalOpen) return;
+    if (!isAlive(this.state)) {
+      this.ui.toast('No pilot. Hammy is dead.');
+      return;
+    }
+    this.ui.showRocket((r) => this.rocketDone(r));
+  }
+
+  rocketBet(amount: number): boolean {
+    if (!rocketBet(this.state, amount)) return false;
+    this.changed();
+    return true;
+  }
+
+  rocketCashOut(bet: number, mult: number): number {
+    const won = rocketCashOut(this.state, bet, mult);
+    this.changed();
+    return won;
+  }
+
+  rocketRefund(bet: number): void {
+    rocketRefund(this.state, bet);
+    this.changed();
+  }
+
+  /** Back in the unit after you've been betting on him: he has thoughts. */
+  private rocketDone(r: RocketSession): void {
+    if (!r.rounds || !isAlive(this.state)) return;
+    const lines = r.net > 0 ? ROCKET_HOME.won : r.net < 0 ? ROCKET_HOME.lost : ROCKET_HOME.even;
+    // Back to the unit (on phones the Phone sheet would hide him).
+    this.ui.closeSheet();
+    this.scene.fart(1.1);
+    this.scene.say(lines[Math.floor(Math.random() * lines.length)], 3200);
+    if (r.net) this.scene.popup(`${r.net > 0 ? '+' : '−'}${fmt(Math.abs(r.net))}`, r.net > 0 ? '#ffd34d' : '#ff8a7a');
+    this.changed(true);
   }
 
   buyFit(id: FitId): void {

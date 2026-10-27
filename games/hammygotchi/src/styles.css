@@ -1308,6 +1308,212 @@ button {
   background: #ff3b30;
 }
 
+/* Fart Rocket: an app on his phone, full screen over the unit. */
+.app-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 10px 0;
+  padding: 8px 12px;
+  border: 1px solid #3a2f12;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #3a2a0c, #1f1830);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.app-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--stink);
+  font-size: 22px;
+}
+.app-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: var(--muted);
+}
+.app-text strong {
+  font-size: 14px;
+  color: var(--text);
+}
+.rocket-card {
+  width: min(560px, 100%);
+  gap: 8px;
+  padding: 14px;
+  background: linear-gradient(180deg, #2a1d40, #140c20);
+}
+.rocket-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rocket-top h2 {
+  flex: 1;
+  font-size: 22px;
+}
+.rocket-coins {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #3a2a0c;
+  color: #ffd34d;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rocket-close {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: none;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+}
+.rocket-history {
+  display: flex;
+  gap: 5px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rocket-history li {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #3b2d55;
+}
+.rocket-history .lo {
+  color: #ff8a7a;
+}
+.rocket-history .mid {
+  color: var(--mint);
+}
+.rocket-history .hi {
+  color: #1d1400;
+  background: #ffd34d;
+}
+.rocket-history .none {
+  color: var(--muted);
+  font-weight: 500;
+}
+.rocket-sky {
+  width: 100%;
+  aspect-ratio: 5 / 4;
+  max-height: 46vh;
+  border-radius: 14px;
+  background: #69b7ff;
+}
+.modal-card .rocket-status {
+  min-height: 2.6em;
+  color: var(--text);
+  text-align: center;
+}
+.rocket-row {
+  display: flex;
+  gap: 6px;
+}
+.rocket-amount,
+.rocket-auto-at {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #140c20;
+  color: var(--text);
+  font: 700 16px var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.rocket-amount {
+  flex: 1;
+  padding: 8px;
+}
+.rocket-chip {
+  flex: none;
+  min-width: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #241835;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+.rocket-auto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.rocket-auto input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--cheese);
+}
+.rocket-auto-at {
+  width: 84px;
+  padding: 5px;
+}
+.modal-card .rocket-go {
+  margin-top: 2px;
+  font-size: 17px;
+}
+.rocket-go.bail {
+  background: var(--stink);
+  color: var(--stink-ink);
+  animation: bail 0.5s ease-in-out infinite alternate;
+}
+@keyframes bail {
+  to {
+    transform: scale(1.03);
+  }
+}
+.rocket-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.rocket-crowd {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px 10px;
+  font-size: 12px;
+}
+.rocket-crowd li {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--line);
+}
+.rocket-who {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rocket-bet {
+  flex: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.rocket-crowd .won .rocket-bet {
+  color: var(--mint);
+}
+.rocket-crowd .lost .rocket-bet {
+  color: #ff8a7a;
+}
+.rocket-crowd .you {
+  font-weight: 700;
+}
+
 /* Short phones (iPhone SE, small Androids): tighter everything, and the
    sheet takes more of the unit so there's room to read. */
 @media (max-height: 720px) {

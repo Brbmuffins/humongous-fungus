@@ -110,6 +110,70 @@ export function stopClip(): void {
   clip = null;
 }
 
+/** Fart Rocket's engine: one long fart that climbs with him. */
+export interface Engine {
+  /** 0 on the roof, about 1 at the moon, more after. */
+  set(level: number): void;
+  stop(): void;
+}
+
+export function engine(): Engine | null {
+  const a = ready();
+  if (!a || !noise) return null;
+  const t = a.currentTime;
+  const o = a.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.value = 60;
+  const lfo = a.createOscillator();
+  lfo.frequency.value = 18;
+  const depth = a.createGain();
+  depth.gain.value = 22;
+  lfo.connect(depth).connect(o.frequency);
+  const f = a.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.value = 320;
+  f.Q.value = 4;
+  const src = a.createBufferSource();
+  src.buffer = noise;
+  src.loop = true;
+  const nf = a.createBiquadFilter();
+  nf.type = 'bandpass';
+  nf.frequency.value = 500;
+  nf.Q.value = 0.8;
+  const ng = a.createGain();
+  ng.gain.value = 0.35;
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.2, t + 0.15);
+  o.connect(f).connect(g);
+  src.connect(nf).connect(ng).connect(g);
+  g.connect(master!);
+  o.start(t);
+  lfo.start(t);
+  src.start(t, Math.random());
+  let stopped = false;
+  return {
+    set(level: number): void {
+      if (stopped) return;
+      const now = a.currentTime;
+      const l = Math.min(2.5, Math.max(0, level));
+      o.frequency.setTargetAtTime(60 + l * 120, now, 0.1);
+      lfo.frequency.setTargetAtTime(18 + l * 26, now, 0.1);
+      f.frequency.setTargetAtTime(320 + l * 800, now, 0.1);
+      nf.frequency.setTargetAtTime(500 + l * 900, now, 0.1);
+    },
+    stop(): void {
+      if (stopped) return;
+      stopped = true;
+      const now = a.currentTime;
+      g.gain.cancelScheduledValues(now);
+      g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+      for (const n of [o, lfo, src]) n.stop(now + 0.3);
+    },
+  };
+}
+
 export const sfx = {
   /** size about 0.4 (squeak) to 1.4 (the big one). */
   fart(size: number): void {
@@ -318,5 +382,20 @@ export const sfx = {
   plunk(): void {
     tone('sine', 520, 140, 0, 0.12, 0.22);
     hiss(0.02, 0.18, 2400, 0.06, 'highpass');
+  },
+  /** Up and off the roof. */
+  whoosh(): void {
+    hiss(0, 0.7, 900, 0.22);
+    tone('sine', 200, 1200, 0, 0.5, 0.08);
+  },
+  /** Bailed out in time: the register. */
+  kaching(): void {
+    tone('square', 1319, 1319, 0, 0.06, 0.1);
+    tone('square', 1760, 1760, 0.06, 0.06, 0.1);
+    tone('square', 2637, 2637, 0.12, 0.22, 0.1);
+  },
+  /** All the way back down. */
+  fall(): void {
+    tone('sine', 1400, 160, 0.1, 1.1, 0.12);
   },
 };

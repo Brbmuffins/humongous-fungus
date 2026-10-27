@@ -50,6 +50,9 @@ import {
   type AwayReport,
 } from './game';
 import { paintPortrait, type Face } from './hammy';
+import { isNative } from './native';
+import { ROCKET_IN_APPS } from './rocket';
+import { RocketApp, type RocketHost, type RocketSession } from './rocketview';
 import { paintToyIcon } from './toys';
 import { sfx } from './sound';
 import { brain, canListen, hush, listen, loadTalk, problem, saveTalk, speakLine, speaking, voiceSource, type TalkSettings } from './talk';
@@ -57,11 +60,16 @@ import type { HammyState } from './state';
 
 export type Tab = 'care' | 'phone' | 'shop' | 'life';
 
-export interface Controller {
+/** Fart Rocket is in the browser version, and in the apps only if switched on. */
+export const ROCKET_ON = !isNative || ROCKET_IN_APPS;
+
+export interface Controller extends RocketHost {
   readonly state: HammyState;
   /** What he is today. */
   readonly form: FormId;
   order(id: FoodId): void;
+  /** Open Fart Rocket. */
+  rocket(): void;
   /** He's working on an answer to what you typed. */
   readonly thinking: boolean;
   /** Text him anything. */
@@ -351,6 +359,14 @@ class PhonePanel implements Panel {
           h('div', { class: 'phone-who' }, h('span', { class: 'phone-name' }, 'Hammy'), this.status),
           this.callBtn,
         ),
+        alive && ROCKET_ON
+          ? h(
+              'button',
+              { class: 'app-tile', type: 'button', onclick: () => this.c.rocket() },
+              h('span', { class: 'app-icon', 'aria-hidden': 'true' }, '💨'),
+              h('span', { class: 'app-text' }, h('strong', null, 'Fart Rocket'), h('span', null, 'Bet coins on how high he farts himself. Bail out before it ends.')),
+            )
+          : null,
         this.thread,
         alive
           ? h(
@@ -612,6 +628,13 @@ class LifePanel implements Panel {
       ['Orders on your coins', () => fmt(s.stats.selfOrders)],
       ['He spent', () => `${fmt(s.stats.selfSpent)} coins`],
     ];
+    if (ROCKET_ON) {
+      rows.push(
+        ['Fart Rocket rounds', () => fmt(s.stats.rocketRounds)],
+        ['Best bail-out', () => (s.stats.rocketBest ? `${s.stats.rocketBest.toFixed(2)}×` : '–')],
+        ['Fart Rocket, all in', () => `${s.stats.rocketNet > 0 ? '+' : s.stats.rocketNet < 0 ? '−' : ''}${fmt(Math.abs(s.stats.rocketNet))} coins`],
+      );
+    }
     this.stats = [];
     const dl = h('dl', { class: 'stats' });
     for (const [label, value] of rows) {
@@ -1077,6 +1100,12 @@ export class GameUI {
 
   /** On the phone with him. Returns nothing; calls onEnd with the seconds talked. */
   /** On the phone with him. You can say (or type) anything; he answers out loud. Calls onEnd with the seconds talked. */
+  /** Fart Rocket, over everything. Closing it squares up any bet still out. */
+  showRocket(onClose: (r: RocketSession) => void): void {
+    const app = new RocketApp(this.c, () => this.closeModal());
+    this.open(app.card, () => onClose(app.close()), app.focus);
+  }
+
   showCall(incoming: boolean, onEnd: (seconds: number) => void): void {
     const pic = h('canvas', { class: 'call-pic', 'aria-hidden': 'true' });
     const timer = h('p', { class: 'call-time' }, '0:00');

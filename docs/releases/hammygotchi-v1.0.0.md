@@ -30,6 +30,9 @@ never flushes and leaves his trash everywhere.
   character with Claude (on your claude.ai account in the browser version, or
   your own Anthropic key in the app), out loud with ElevenLabs or the
   device's voice.
+- Fart Rocket, a crash game on his phone (browser version only): bet coins,
+  he rides his own fart past the plane, the moon and the aliens, and you
+  bail out before he sneezes, hits a seagull or lands in Ohio.
 - Coins from his stream (it keeps paying while you're away), furniture for
   the unit, fits to dress him in,
   robot vacuums (they pick up his trash, never his poop) and soap.
