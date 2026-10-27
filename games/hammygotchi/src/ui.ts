@@ -56,6 +56,7 @@ import type { ArcadeHost, ArcadeScreen, ArcadeSession } from './arcadeview';
 import { CrossingApp } from './crossingview';
 import { MinesApp } from './minesview';
 import { PlinkoApp } from './plinkoview';
+import { SlotsApp } from './slotsview';
 import { RocketApp } from './rocketview';
 import { paintToyIcon } from './toys';
 import { sfx } from './sound';
@@ -1111,6 +1112,7 @@ export class GameUI {
       mines: () => new MinesApp(this.c, close),
       crossing: () => new CrossingApp(this.c, close),
       plinko: () => new PlinkoApp(this.c, close),
+      slots: () => new SlotsApp(this.c, close),
     };
     const app = screens[game]();
     this.open(app.card, () => onClose(app.close()), app.focus);

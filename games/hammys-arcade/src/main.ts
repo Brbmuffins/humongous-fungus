@@ -21,6 +21,7 @@ import { paintPortrait, type Face } from '@hammygotchi/hammy';
 import { MinesApp } from '@hammygotchi/minesview';
 import { PlinkoApp } from '@hammygotchi/plinkoview';
 import { RocketApp } from '@hammygotchi/rocketview';
+import { SlotsApp } from '@hammygotchi/slotsview';
 import { setSound, unlock } from '@hammygotchi/sound';
 import { START_COINS, TOP_UP_COINS, Wallet } from './wallet';
 
@@ -78,7 +79,7 @@ class ArcadePage {
           'header',
           { class: 'a-top' },
           this.portrait,
-          h('div', { class: 'a-title' }, h('h1', null, 'Hammy’s Arcade'), h('p', null, 'Four ways to lose imaginary coins on a cube.')),
+          h('div', { class: 'a-title' }, h('h1', null, 'Hammy’s Arcade'), h('p', null, 'Five ways to lose imaginary coins on a cube.')),
           h('p', { class: 'coins', 'aria-label': 'Your coins' }, h('span', { class: 'coin', 'aria-hidden': 'true' }, 'H'), this.balance),
         ),
         h('h2', { class: 'a-pick' }, 'Pick a game'),
@@ -224,6 +225,7 @@ class ArcadePage {
       mines: () => new MinesApp(this.wallet, close),
       crossing: () => new CrossingApp(this.wallet, close),
       plinko: () => new PlinkoApp(this.wallet, close),
+      slots: () => new SlotsApp(this.wallet, close),
     };
     const app = make[id]();
     // The way back to the front page, where the ✕ would be.

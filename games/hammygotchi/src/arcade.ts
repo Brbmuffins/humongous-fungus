@@ -1,5 +1,5 @@
 // Hammy's Arcade: the betting games on his phone. Fart Rocket, Hammy Mines,
-// Hammy Crossing and Poop Plinko all bet Hammy coins through here, so the
+// Hammy Crossing, Poop Plinko and Hammy Slots all bet Hammy coins through here, so the
 // coins, the stats and what he says afterwards work the same in each. Every
 // game pays back about 99 of every 100 coins bet, over many rounds.
 import type { FitId } from './defs';
@@ -18,7 +18,7 @@ export interface ArcadeSeat {
   stats: { arcade: Record<ArcadeGame, BetStats> };
 }
 
-export type ArcadeGame = 'rocket' | 'mines' | 'crossing' | 'plinko';
+export type ArcadeGame = 'rocket' | 'mines' | 'crossing' | 'plinko' | 'slots';
 
 /**
  * Betting coins is simulated gambling, which raises an app's store age
@@ -46,6 +46,7 @@ export const ARCADE: readonly ArcadeDef[] = [
   { id: 'mines', name: 'Hammy Mines', emoji: '💩', color: '#ff9a2e', blurb: 'Dorkitos under his pizza boxes. And poop.' },
   { id: 'crossing', name: 'Hammy Crossing', emoji: '🚚', color: '#3d8bff', blurb: 'Walk him across the road. Lane by lane.' },
   { id: 'plinko', name: 'Poop Plinko', emoji: '🚽', color: '#ff6fa8', blurb: 'He drops one. It bounces. Somewhere.' },
+  { id: 'slots', name: 'Hammy Slots', emoji: '🎰', color: '#a56bff', blurb: 'Zig-zag lines, a pinball orb, and a sneeze.' },
 ];
 
 export const ARCADE_BY_ID = Object.fromEntries(ARCADE.map((g) => [g.id, g])) as Record<ArcadeGame, ArcadeDef>;
@@ -115,5 +116,10 @@ export const HOME_LINES: Record<ArcadeGame, { won: readonly string[]; lost: read
     won: ['That one was worth it.', 'Best poop of my life.', 'Gold. Pure gold.'],
     lost: ['Clogged. Again.', 'That one hurt, and it didn’t even pay.', 'I need more fiber.'],
     even: ['I’m all out. For now.', 'That’s enough plinking.'],
+  },
+  slots: {
+    won: ['The machine owes me one. Now it owes you.', 'Did you see the orb? The ORB.', 'Quit while you’re ahead. (Don’t.)'],
+    lost: ['The machine is a liar and a thief. Spin again?', 'It ate everything. I tried to stop it.', 'The orb hates me personally.'],
+    even: ['Even. Suspiciously even.', 'The orb and I are at peace.'],
   },
 };

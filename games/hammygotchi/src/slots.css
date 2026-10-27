@@ -1,0 +1,94 @@
+/* Hammy Slots: the machine, its buttons, and the lines and pays panel. Imported
+   by slotsview.ts, so it comes with the game wherever it's used. */
+.slots-machine {
+  width: 100%;
+  aspect-ratio: 10 / 8.3;
+  max-height: 52vh;
+  border-radius: 14px;
+  background: #140c20;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.slots-opts {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.slots-opts .arcade-choice {
+  flex: 1 1 100%;
+}
+.slots-opts .arcade-opt {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.slots-opts .slots-turbo,
+.slots-opts .slots-lines-btn {
+  flex: 1 1 0;
+}
+.arcade-go.slots-go {
+  min-height: 48px;
+}
+.slots-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #1b1230;
+}
+.slots-lines[hidden] {
+  display: none;
+}
+.slots-lines-canvas {
+  width: 100%;
+  aspect-ratio: 5 / 3.4;
+}
+.slots-pays {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--text);
+}
+.slots-pays li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.slots-pay-icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+}
+.slots-pay-note {
+  color: var(--muted);
+  font-size: 11px;
+}
+/* A big hit shakes the whole card. */
+.arcade-card.slots-shake {
+  animation: slots-shake 0.45s ease-out;
+}
+@keyframes slots-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  15% {
+    transform: translate(-4px, 2px) rotate(-0.4deg);
+  }
+  35% {
+    transform: translate(4px, -3px) rotate(0.4deg);
+  }
+  55% {
+    transform: translate(-3px, -1px);
+  }
+  75% {
+    transform: translate(2px, 2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arcade-card.slots-shake {
+    animation: none;
+  }
+}

@@ -7,7 +7,7 @@ Four games that share one codebase.
 | **Humongous Fungus** | Idle game: you are a mycelium network growing a terrarium in real time, even while the game is closed | `games/fungus` |
 | **Sporemonger** | Trading game: buy and sell goods on a live market in a mushroom town, before they rot | `games/sporemonger` |
 | **Hammygotchi** | Virtual pet: Cube Hammy lives like a Sim in his containment unit, badly. He never flushes and leaves his trash everywhere; keep him fed, showered, cleaned up after and called, and furnish the unit, or he rots into mushrooms. Comes with a toy box and a kitchen; some days he's a meatball sub | `games/hammygotchi` |
-| **Hammy's Arcade** | Hammygotchi's four betting games (Fart Rocket, Hammy Mines, Hammy Crossing, Poop Plinko) as a page of their own, on play-money coins. Played at [hammyxchange.com/arcade](https://hammyxchange.com/arcade/); not in the phone apps | `games/hammys-arcade` |
+| **Hammy's Arcade** | Hammygotchi's betting games (Fart Rocket, Hammy Mines, Hammy Crossing, Poop Plinko and the zig-zag slot machine Hammy Slots) as a page of their own, on play-money coins. Played at [hammyxchange.com/arcade](https://hammyxchange.com/arcade/); not in the phone apps | `games/hammys-arcade` |
 
 ## Run it
 
@@ -53,7 +53,7 @@ After changing a game, copy it into its native projects with
 | `games/*/tools/` | Renders each game's app icon, launch screen and Play feature graphic |
 | `games/sporemonger/src/` | Sporemonger rules (`game.ts`), content (`defs.ts`), banner art (`scene.ts`), screens (`ui.ts`) and phone features with price-move reminders (`native.ts`) |
 | `games/sporemonger/ios`, `android` | Native app projects (Capacitor) |
-| `games/hammygotchi/src/` | Hammygotchi rules (`game.ts`), content and every line he says (`defs.ts`), the containment unit, its physics and the toys in it (`scene.ts`), its furniture (`room.ts`), Hammy in his four forms and his fits (`hammy.ts`), his recorded voice lines (`voice.ts`), the toys' drawings (`toys.ts`), synthesized sounds (`sound.ts`), screens (`ui.ts`), the betting games in Hammy's Arcade on his phone (`arcade.ts`; `rocket.ts`, `mines.ts`, `crossing.ts`, `plinko.ts`, each with a `…view.ts`, and the road's traffic in `cars.ts`) and phone features (`native.ts`) |
+| `games/hammygotchi/src/` | Hammygotchi rules (`game.ts`), content and every line he says (`defs.ts`), the containment unit, its physics and the toys in it (`scene.ts`), its furniture (`room.ts`), Hammy in his four forms and his fits (`hammy.ts`), his recorded voice lines (`voice.ts`), the toys' drawings (`toys.ts`), synthesized sounds (`sound.ts`), screens (`ui.ts`), the betting games in Hammy's Arcade on his phone (`arcade.ts`; `rocket.ts`, `mines.ts`, `crossing.ts`, `plinko.ts`, `slots.ts`, each with a `…view.ts`, the road's traffic in `cars.ts`, and the slots' symbols in `slotsart.ts` and exact payback maths in `slotsmath.ts`) and phone features (`native.ts`) |
 | `games/hammygotchi/assets/face`, `assets/voice` | Drop-in photos of the real Hammy's eyes and mouth, and his recorded voice lines (see the README in each) |
 | `games/hammygotchi/ios`, `android` | Native app projects (Capacitor) |
 | `games/hammys-arcade/src/` | Hammy's Arcade: the front page and games (`main.ts`), the play-money wallet and its save (`wallet.ts`), and the page's styles. The games' rules and screens are Hammygotchi's, imported through the `@hammygotchi` alias (see [docs/hammys-arcade.md](docs/hammys-arcade.md)) |
