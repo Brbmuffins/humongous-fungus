@@ -1,0 +1,29 @@
+{
+  "appId": "com.muffindevelopment.sugarcrash",
+  "appName": "Sugar Crash",
+  "webDir": "../../dist/sugarcrash",
+  "backgroundColor": "#160a24",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#160a24"
+  },
+  "android": {
+    "backgroundColor": "#160a24"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "launchAutoHide": true,
+      "backgroundColor": "#160a24",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true
+    },
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

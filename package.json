@@ -2,16 +2,18 @@
   "name": "fungus-games",
   "private": true,
   "version": "0.1.0",
-  "description": "Two mobile games: Humongous Fungus (idle terrarium) and Sporemonger (mushroom market trading).",
+  "description": "Three mobile games: Humongous Fungus (idle terrarium), Sporemonger (mushroom market trading) and Sugar Crash (a crash game for play money).",
   "type": "module",
   "scripts": {
     "dev": "GAME=fungus vite --host",
     "dev:sporemonger": "GAME=sporemonger vite --host",
-    "build": "tsc --noEmit && GAME=fungus vite build && GAME=sporemonger vite build",
-    "build:artifact": "npm run build && node scripts/make-artifact.mjs fungus && node scripts/make-artifact.mjs sporemonger",
+    "dev:sugarcrash": "GAME=sugarcrash vite --host",
+    "build": "tsc --noEmit && GAME=fungus vite build && GAME=sporemonger vite build && GAME=sugarcrash vite build",
+    "build:artifact": "npm run build && node scripts/make-artifact.mjs fungus && node scripts/make-artifact.mjs sporemonger && node scripts/make-artifact.mjs sugarcrash",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "sim": "tsx scripts/simulate.ts"
+    "sim": "tsx scripts/simulate.ts",
+    "sim:sugarcrash": "tsx scripts/sugarcrash-sim.ts"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
@@ -30,6 +32,7 @@
   },
   "workspaces": [
     "games/fungus",
-    "games/sporemonger"
+    "games/sporemonger",
+    "games/sugarcrash"
   ]
 }

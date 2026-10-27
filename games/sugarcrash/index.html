@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#160a24" />
+    <title>Sugar Crash</title>
+    <meta name="claude:viewport-fit-sides" content="cover" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="top">
+        <h1 class="logo" aria-label="Sugar Crash"><span class="logo-donut" aria-hidden="true"></span>Sugar <em>Crash</em></h1>
+        <div class="wallet" aria-label="Your coins"><span class="coin" aria-hidden="true">M</span><span id="coins">1,000</span></div>
+      </header>
+      <div class="subbar">
+        <nav class="history" id="history" aria-label="Last rounds"></nav>
+        <div class="tools">
+          <button class="icon-btn" id="stats-btn" type="button" aria-label="Stats" title="Stats">📈</button>
+          <button class="icon-btn" id="fair-btn" type="button" aria-label="Provably fair" title="Provably fair">🔒</button>
+          <button class="icon-btn" id="help-btn" type="button" aria-label="How to play" title="How to play">?</button>
+          <button class="icon-btn" id="sound-btn" type="button" aria-label="Sound on" title="Sound">🔊</button>
+        </div>
+      </div>
+      <main class="stage" id="stage">
+        <canvas id="sky" aria-hidden="true"></canvas>
+        <p class="sr" id="live" aria-live="polite"></p>
+        <div class="toast" id="toast" role="status" hidden></div>
+      </main>
+      <section class="controls" aria-label="Your bet">
+        <div class="field">
+          <label class="label" for="bet">Bet</label>
+          <div class="amount">
+            <span class="coin coin-small" aria-hidden="true">M</span>
+            <input id="bet" type="text" inputmode="numeric" autocomplete="off" value="100" />
+          </div>
+        </div>
+        <div class="field">
+          <label class="label auto-label"><input id="auto-on" type="checkbox" /> <span>Auto cash out</span></label>
+          <div class="amount">
+            <input id="auto" type="text" inputmode="decimal" autocomplete="off" value="2.00" aria-label="Auto cash out at" />
+            <span class="x">×</span>
+          </div>
+        </div>
+        <div class="quick-row" role="group" aria-label="Quick bet">
+          <button type="button" data-q="half">½</button>
+          <button type="button" data-q="double">2×</button>
+          <button type="button" data-q="min">Min</button>
+          <button type="button" data-q="max">Max</button>
+        </div>
+        <button class="action" id="action" type="button"><span class="action-main" id="action-main">Bet</span><span class="action-sub" id="action-sub"></span></button>
+      </section>
+      <section class="players" aria-label="Players this round">
+        <div class="players-head">
+          <span id="count">0 players</span>
+          <span class="wagered"><span class="coin coin-small" aria-hidden="true">M</span><span id="wagered">0</span></span>
+        </div>
+        <ol class="rows" id="rows"></ol>
+        <p class="fine">Play money only. Coins can't be bought or cashed out.</p>
+      </section>
+      <div class="modal" id="modal" hidden></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
