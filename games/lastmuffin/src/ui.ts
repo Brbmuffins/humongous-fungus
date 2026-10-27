@@ -136,7 +136,8 @@ export class UI {
 
   updateHud(run: Run): void {
     const need = xpToNext(run.level);
-    this.xpFill.style.width = `${Math.min(100, (run.xp / need) * 100).toFixed(1)}%`;
+    const fill = `scaleX(${Math.min(1, run.xp / need).toFixed(3)})`;
+    if (this.xpFill.style.transform !== fill) this.xpFill.style.transform = fill;
     setText(this.levelEl, `Lv ${run.level}`);
     setText(this.clockEl, run.overtime ? `Overtime ${time(run.t - RUN_SECONDS)}` : clockText(run.t));
     setText(this.timerEl, time(run.t));
@@ -181,6 +182,13 @@ export class UI {
     const card = this.build(screen, extra);
     this.screenEl.append(card);
     card.querySelector<HTMLElement>('[data-focus]')?.focus();
+    // A level-up can pop up under a thumb that's still steering: give it a
+    // moment before a tap counts.
+    if (screen === 'levelup') {
+      const offers = [...card.querySelectorAll<HTMLButtonElement>('.offer')];
+      for (const b of offers) b.classList.add('arming');
+      window.setTimeout(() => offers.forEach((b) => b.classList.remove('arming')), 300);
+    }
     requestAnimationFrame(() => {
       for (const cv of card.querySelectorAll<HTMLCanvasElement>('canvas[data-muffin]')) paintMuffin(cv, cv.dataset.muffin as MuffinId, (cv.dataset.face as 'happy') ?? 'happy', cv.dataset.locked === '1');
       for (const cv of card.querySelectorAll<HTMLCanvasElement>('canvas[data-enemy]')) paintEnemy(cv, cv.dataset.enemy as never);
@@ -222,7 +230,13 @@ export class UI {
       h('h1', { class: 'wordmark' }, h('span', null, 'Last'), h('span', null, 'Muffin'), h('span', null, 'Standing')),
       h('canvas', { class: 'hero', 'data-muffin': m.muffin, 'aria-hidden': 'true' }),
       h('p', { class: 'tagline' }, 'Survive the night in the bakery. Everything wants to eat you.'),
-      h('div', { class: 'title-buttons' }, this.btn('Play', () => this.c.show('select'), 'btn btn-big', true), this.btn('The Pantry', () => this.c.show('pantry'), 'btn btn-quiet'), this.btn('Records', () => this.c.show('records'), 'btn btn-quiet')),
+      h(
+        'div',
+        { class: 'title-buttons' },
+        this.btn(`Play as ${MUFFIN_BY_ID[m.muffin].name}`, () => this.c.start(), 'btn btn-big', true),
+        h('div', { class: 'title-row' }, this.btn('Muffins', () => this.c.show('select'), 'btn btn-quiet'), this.btn('The Pantry', () => this.c.show('pantry'), 'btn btn-quiet')),
+        this.btn('Records', () => this.c.show('records'), 'btn btn-quiet'),
+      ),
       h('p', { class: 'title-foot' }, crumbsTag(m.crumbs), ' crumbs', m.wins ? ` · ${m.wins} ${m.wins === 1 ? 'sunrise' : 'sunrises'}` : ''),
     );
   }
@@ -381,7 +395,7 @@ export class UI {
       h(
         'div',
         { class: 'offer-foot' },
-        this.btn(`Reroll (${run.rerolls})`, () => this.c.reroll(), 'btn btn-quiet', false),
+        h('button', { class: 'btn btn-quiet', type: 'button', disabled: run.rerolls <= 0, title: run.rerolls ? null : 'Second Opinion in the Pantry gives rerolls', onclick: () => this.c.reroll() }, `Reroll (${run.rerolls})`),
         this.btn('Skip: +10 health', () => this.c.skip(), 'btn btn-quiet'),
       ),
       this.c.meta.pantry.autopick ? this.btn('📖 Let the Recipe Book pick from now on', () => this.c.toggleAutoPick(), 'btn-link') : null,

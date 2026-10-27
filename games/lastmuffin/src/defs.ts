@@ -15,8 +15,8 @@ export const MAX_LEVEL = 5;
 
 export const PLAYER = {
   hp: 100,
-  /** World units a second. The screen shows about 480 across its short side. */
-  speed: 120,
+  /** World units a second. The screen shows about 420 across its short side. */
+  speed: 140,
   radius: 13,
   /** Sprinkles closer than this fly to you. */
   magnet: 62,
@@ -28,7 +28,7 @@ export const PLAYER = {
 };
 
 /** The hop: a quick dash you can't be hurt during. */
-export const HOP = { cooldown: 3.5, distance: 92, seconds: 0.18, safe: 0.32 };
+export const HOP = { cooldown: 2.5, distance: 100, seconds: 0.18, safe: 0.32 };
 
 // ---------------------------------------------------------------------------
 // Weapons
@@ -105,7 +105,7 @@ export const WEAPONS: readonly WeaponDef[] = [
     unit: ['blueberry', 'blueberries'],
     color: '#4f6bd8',
     levels: levels(
-      { damage: 10, cooldown: 0.9, count: 1, area: 1, speed: 340, pierce: 1, duration: 1.4, knockback: 40 },
+      { damage: 10, cooldown: 0.75, count: 1, area: 1, speed: 430, pierce: 1, duration: 1.2, knockback: 40 },
       { count: 1 },
       { damage: 5 },
       { count: 1, cooldown: -0.1 },
@@ -357,10 +357,10 @@ export interface EnemyDef {
 }
 
 export const ENEMIES: readonly EnemyDef[] = [
-  { id: 'ant', name: 'Ant', hp: 5, speed: 60, damage: 5, radius: 7, xp: 1, heft: 0, crumbs: 0.02 },
+  { id: 'ant', name: 'Ant', hp: 5, speed: 66, damage: 5, radius: 7, xp: 1, heft: 0, crumbs: 0.02 },
   { id: 'fly', name: 'Fruit fly', hp: 3, speed: 92, damage: 3, radius: 6, xp: 1, heft: 0, crumbs: 0.02, wobble: true },
-  { id: 'mouse', name: 'Mouse', hp: 16, speed: 76, damage: 8, radius: 11, xp: 2, heft: 0.1, crumbs: 0.04 },
-  { id: 'roach', name: 'Cockroach', hp: 30, speed: 90, damage: 10, radius: 11, xp: 3, heft: 0.2, crumbs: 0.05 },
+  { id: 'mouse', name: 'Mouse', hp: 16, speed: 82, damage: 8, radius: 11, xp: 2, heft: 0.1, crumbs: 0.04 },
+  { id: 'roach', name: 'Cockroach', hp: 30, speed: 96, damage: 10, radius: 11, xp: 3, heft: 0.2, crumbs: 0.05 },
   { id: 'pigeon', name: 'Pigeon', hp: 22, speed: 150, damage: 9, radius: 12, xp: 2, heft: 0.2, crumbs: 0.04 },
   { id: 'mold', name: 'Mold', hp: 60, speed: 38, damage: 12, radius: 16, xp: 5, heft: 0.4, crumbs: 0.08, splits: { into: 'moldling', n: 3 } },
   { id: 'moldling', name: 'Little mold', hp: 10, speed: 62, damage: 6, radius: 8, xp: 1, heft: 0.1, crumbs: 0.01 },
@@ -374,7 +374,7 @@ export const ENEMIES: readonly EnemyDef[] = [
 export const ENEMY_BY_ID = Object.fromEntries(ENEMIES.map((e) => [e.id, e])) as Record<EnemyId, EnemyDef>;
 
 /** Pests get tougher as the night goes on: this much more health a minute. */
-export const HP_PER_MINUTE = 0.1;
+export const HP_PER_MINUTE = 0.18;
 /** After sunrise (overtime) they get tougher much faster. */
 export const OVERTIME_HP_PER_MINUTE = 0.35;
 
@@ -387,18 +387,18 @@ export interface Wave {
 }
 
 export const WAVES: readonly Wave[] = [
-  { mix: { ant: 3, fly: 2 }, rate: 1.4, max: 40 },
-  { mix: { ant: 3, fly: 1, mouse: 2 }, rate: 2, max: 60 },
-  { mix: { ant: 2, mouse: 3, roach: 1 }, rate: 2.6, max: 80 },
-  { mix: { mouse: 2, roach: 3, ant: 2 }, rate: 3.2, max: 100 },
-  { mix: { roach: 3, mold: 2, mouse: 2 }, rate: 3.6, max: 120 },
-  { mix: { mold: 3, roach: 3, fly: 2 }, rate: 4, max: 140 },
-  { mix: { raccoon: 1, mouse: 3, roach: 3 }, rate: 4.6, max: 160 },
-  { mix: { raccoon: 2, mold: 3, roach: 3 }, rate: 5, max: 180 },
-  { mix: { seagull: 1, raccoon: 2, roach: 4 }, rate: 5.6, max: 200 },
-  { mix: { seagull: 2, raccoon: 2, mold: 3 }, rate: 6.2, max: 230 },
-  { mix: { seagull: 3, raccoon: 3, roach: 3, mold: 2 }, rate: 7, max: 260 },
-  { mix: { seagull: 4, raccoon: 4, mold: 3, mouse: 2 }, rate: 8, max: 300 },
+  { mix: { ant: 3, fly: 2 }, rate: 2.6, max: 70 },
+  { mix: { ant: 3, fly: 1, mouse: 2 }, rate: 3.4, max: 90 },
+  { mix: { ant: 2, mouse: 3, roach: 1 }, rate: 4, max: 110 },
+  { mix: { mouse: 2, roach: 3, ant: 2 }, rate: 4.6, max: 130 },
+  { mix: { roach: 3, mold: 2, mouse: 2 }, rate: 5, max: 150 },
+  { mix: { mold: 3, roach: 3, fly: 2 }, rate: 5.4, max: 170 },
+  { mix: { raccoon: 1, mouse: 3, roach: 3 }, rate: 6, max: 190 },
+  { mix: { raccoon: 2, mold: 3, roach: 3 }, rate: 6.4, max: 210 },
+  { mix: { seagull: 1, raccoon: 2, roach: 4 }, rate: 7, max: 230 },
+  { mix: { seagull: 2, raccoon: 2, mold: 3 }, rate: 7.6, max: 250 },
+  { mix: { seagull: 3, raccoon: 3, roach: 3, mold: 2 }, rate: 8.4, max: 280 },
+  { mix: { seagull: 4, raccoon: 4, mold: 3, mouse: 2 }, rate: 9.4, max: 320 },
 ];
 
 /** Things that happen at a set time of night. */
@@ -410,8 +410,8 @@ export type NightEvent =
   | { at: number; type: 'flock'; enemy: EnemyId; n: number };
 
 export const EVENTS: readonly NightEvent[] = [
-  { at: 75, type: 'ring', enemy: 'ant', n: 36 },
-  { at: 150, type: 'flock', enemy: 'pigeon', n: 14 },
+  { at: 50, type: 'ring', enemy: 'ant', n: 40 },
+  { at: 115, type: 'flock', enemy: 'pigeon', n: 16 },
   { at: 180, type: 'boss', enemy: 'queen' },
   { at: 270, type: 'flock', enemy: 'pigeon', n: 22 },
   { at: 330, type: 'ring', enemy: 'roach', n: 40 },
@@ -438,9 +438,9 @@ export const WIN_CRUMBS = 100;
 
 /** Sprinkles to get from level `level` to the next. */
 export function xpToNext(level: number): number {
-  if (level < 20) return 5 + (level - 1) * 8;
-  if (level < 40) return 157 + (level - 20) * 11;
-  return 377 + (level - 40) * 14;
+  if (level < 20) return 5 + (level - 1) * 7;
+  if (level < 40) return 139 + (level - 20) * 10;
+  return 339 + (level - 40) * 13;
 }
 
 // ---------------------------------------------------------------------------

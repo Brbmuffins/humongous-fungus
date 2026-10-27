@@ -20,13 +20,13 @@ function place(r: Run, id: EnemyId, x: number, y: number): Enemy {
 }
 
 describe('defs', () => {
-  it('needs 5 sprinkles for level 2, then 8 more each level, then more', () => {
+  it('needs 5 sprinkles for level 2, then 7 more each level, then more', () => {
     expect(xpToNext(1)).toBe(5);
-    expect(xpToNext(2)).toBe(13);
-    expect(xpToNext(19)).toBe(149);
-    expect(xpToNext(20)).toBe(157);
-    expect(xpToNext(21)).toBe(168);
-    expect(xpToNext(41)).toBe(391);
+    expect(xpToNext(2)).toBe(12);
+    expect(xpToNext(19)).toBe(131);
+    expect(xpToNext(20)).toBe(139);
+    expect(xpToNext(21)).toBe(149);
+    expect(xpToNext(41)).toBe(352);
   });
   it('describes each weapon level in words', () => {
     expect(levelText(WEAPON_BY_ID.blaster, 1)).toBe('+1 blueberry');
@@ -81,14 +81,15 @@ describe('a run', () => {
   });
   it('spawns pests off screen, more as the night goes on, up to a cap', () => {
     const r = run();
+    // The night opens with a handful already on their way.
     r.step(1 / 60, still);
-    for (let i = 0; i < 120; i++) r.step(1 / 60, still);
-    expect(r.enemies.length).toBeGreaterThan(0);
-    for (const e of r.enemies) expect(Math.hypot(e.x - r.x, e.y - r.y)).toBeGreaterThan(400);
+    expect(r.enemies.length).toBeGreaterThanOrEqual(10);
+    // Off the screen: past its left or right edge, or its top or bottom.
+    for (const e of r.enemies) expect(Math.abs(e.x - r.x) > r.view.w / 2 || Math.abs(e.y - r.y) > r.view.h / 2).toBe(true);
     r.revives = 99;
     r.hp = 1e9;
     play(r, 50);
-    expect(r.enemies.length).toBeLessThanOrEqual(40 + 36);
+    expect(r.enemies.length).toBeLessThanOrEqual(70 + 40);
   });
   it('blueberries kill ants, which drop sprinkles that level you up', () => {
     const r = run();
@@ -121,7 +122,7 @@ describe('a run', () => {
   });
   it('queues several level-ups at once', () => {
     const r = run();
-    r.addXp(5 + 13 + 21);
+    r.addXp(5 + 12 + 19);
     expect(r.level).toBe(4);
     r.step(1 / 60, still);
     r.choose(0);
@@ -255,7 +256,7 @@ describe('a run', () => {
     const r = run();
     expect(r.hpScale()).toBe(1);
     r.t = 600;
-    expect(r.hpScale()).toBeCloseTo(2);
+    expect(r.hpScale()).toBeCloseTo(2.8);
   });
 });
 
@@ -269,13 +270,13 @@ describe('automation', () => {
     expect(r.xp).toBe(0);
     const c = run();
     c.passives.push({ id: 'chef', level: 1 });
-    sprinkle(c, 200, 0);
-    sprinkle(c, -150, 120);
-    for (let i = 0; i < 300 && c.pickups.length; i++) c.step(1 / 60, still);
+    sprinkle(c, 200, 0, 3);
+    sprinkle(c, -150, 120, 3);
+    for (let i = 0; i < 300 && c.pickups.some((p) => p.value === 3); i++) c.step(1 / 60, still);
     expect(c.chefs).toHaveLength(1);
-    expect(c.pickups).toHaveLength(0);
-    expect(c.xp).toBe(2);
+    expect(c.pickups.filter((p) => p.value === 3)).toHaveLength(0);
     // Level 5: three helpers.
+    while (c.state === 'levelup') c.skip();
     c.passives[0].level = 5;
     c.step(1 / 60, still);
     expect(c.chefs).toHaveLength(3);
@@ -315,8 +316,8 @@ describe('automation', () => {
     r.step(1 / 60, still);
     expect(r.hp).toBe(100);
     for (let i = 0; i < 12; i++) r.step(1 / 60, still);
-    // It hopped away from the raccoon.
-    expect(r.x).toBeLessThan(-HOP.distance * 0.8);
+    // It hopped clear of the raccoon.
+    expect(Math.hypot(r.x - 30, r.y)).toBeGreaterThan(30 + HOP.distance * 0.8);
     const off = run({ pantry: { autohop: 1 }, autoHop: false });
     place(off, 'raccoon', 30, 0);
     for (let i = 0; i < 20; i++) off.step(1 / 60, still);

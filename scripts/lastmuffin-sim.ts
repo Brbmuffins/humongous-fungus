@@ -1,6 +1,6 @@
 // Last Muffin Standing balance sim: a bot that kites the swarm and grabs
 // sprinkles plays whole nights, and this prints how each one went.
-//   npx tsx scripts/lastmuffin-sim.ts [muffin] [nights] [pantry level for everything] [auto]
+//   npx tsx scripts/lastmuffin-sim.ts [muffin] [nights] [pantry level for everything] [auto|pulse|hop]
 //   npx tsx scripts/lastmuffin-sim.ts blueberry 6 2 auto
 import { RUN_SECONDS, type MuffinId } from '../games/lastmuffin/src/defs';
 import { Run, type Input } from '../games/lastmuffin/src/run';
@@ -8,11 +8,12 @@ import { Run, type Input } from '../games/lastmuffin/src/run';
 const muffin = (process.argv[2] ?? 'blueberry') as MuffinId;
 const seeds = Number(process.argv[3] ?? 5);
 const pl = Number(process.argv[4] ?? 0);
-const auto = process.argv[5] === 'auto';
+// "auto" adds the automation upgrades (Fridge Magnet and Auto-Hop); "pulse" or "hop" adds just one.
+const extra = process.argv[5] ?? '';
 const pantry = {
   ...(pl ? { might: pl, health: pl, armor: Math.min(3, pl), speed: Math.min(3, pl), magnet: Math.min(3, pl), growth: pl, cooldown: Math.min(3, pl) } : {}),
-  // With "auto", the automation upgrades too: Fridge Magnet, Auto-Hop.
-  ...(auto ? { pulse: 3, autohop: 1 } : {}),
+  ...(extra === 'auto' || extra === 'pulse' ? { pulse: 3 } : {}),
+  ...(extra === 'auto' || extra === 'hop' ? { autohop: 1 } : {}),
 };
 
 function bot(r: Run, t: number): Input {

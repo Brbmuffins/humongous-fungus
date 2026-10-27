@@ -18,13 +18,13 @@ headless bot can play whole runs. Every number is in `src/defs.ts`.
   keep going in overtime, where the pests keep coming and get tougher fast.
 - **Moving:** put your thumb anywhere and drag (the stick appears where you
   touched), or WASD and the arrow keys. **Hop** (the button, Space or Shift)
-  is a quick dash you can't be hurt during, every 3.5 seconds.
+  is a quick dash you can't be hurt during, every 2.5 seconds.
 - **Health:** 100, plus upgrades. Every pest touching you hurts (at most once
   every 0.6 seconds each); armor takes some off every hit, but never below 1.
   Milk heals 30.
 - **Sprinkles** are experience: every pest drops some, and they fly to you
-  when you're close. Level 2 takes 5, and each level after needs 8 more than
-  the last (11 more from level 20, 14 from 40).
+  when you're close. Level 2 takes 5, and each level after needs 7 more than
+  the last (10 more from level 20, 13 from 40).
 - **Crumbs** are the money you keep. Some pests drop them, bosses' pie tins
   hold 40, sunrise is worth 100, and the Tip Jar adds more.
 
@@ -73,12 +73,12 @@ knockback, a big yellow BONK! over the pest and the best sound in the game.
 
 Ants and fruit flies first, then mice, cockroaches, mold (which splits into
 three little molds), raccoons and seagulls. Each minute of the night has its
-own mix, spawn rate and cap (`WAVES`), and pests get 10% more health every
+own mix, spawn rate and cap (`WAVES`), and pests get 18% more health every
 minute. Pests spawn just off screen, mostly ahead of you when you run, and
 ones left far behind come back around ahead of you, so you can't just outrun
 the night.
 
-At set times: a ring of pests closes in around you (ants at 1:15, cockroaches,
+At set times: a ring of pests closes in around you (ants at 0:50, cockroaches,
 mold, raccoons later), flocks of pigeons and seagulls fly straight across, and
 three bosses arrive:
 
@@ -121,19 +121,42 @@ mostly steering:
 | Recipe Book | Pantry: 300 | Level-ups and pie tins pick for themselves (finishing evolutions first, then leveling what you have), so the night never pauses. A toast says what it took. Switch it off in Pause, the Pantry or Records |
 | Auto-Hop | Pantry: 400 | Hops away by itself when a pest or a slice of toast is about to touch you, whenever the hop is ready. Can be switched off too |
 
+## Pace
+
+The night starts busy: ten pests are already on their way at midnight, and
+they appear just past the edge of the screen (not on a circle around it, which
+on a tall phone put the ones from the sides far away). The first is on screen
+within a second and level 2 comes in a few seconds. The muffin moves at 140,
+faster than everything but seagulls and pigeons; the spawner puts most pests
+ahead of you when you run, so running alone doesn't win.
+
+The game keeps real time on slow devices: a frame that took too long is played
+as several short steps instead of slowing the night down, and if frames stay
+slower than about 40 a second for a couple of seconds it draws with fewer
+pixels (down to 0.75 per point), going back up once it has been smooth for a
+while. Sprites are drawn once per size, trimmed to what's visible and copied
+pixel for pixel; damage numbers are cached the same way.
+
 ## Balance
 
 `scripts/lastmuffin-sim.ts` has a bot that kites the swarm, grabs sprinkles
 and picks the way the Recipe Book does play whole nights
-(`npx tsx scripts/lastmuffin-sim.ts blueberry 6 2`; add `auto` for the
-Fridge Magnet and Auto-Hop). Roughly: with no Pantry
-upgrades, most nights end between 5 and 10 minutes and one in six to one in
-three reaches sunrise; with every Pantry upgrade at level 2, about a third
-do; at level 4, all of them. The Fridge Magnet and Auto-Hop on their own raise the
-level a night reaches and about double the sunrises, without making it a
-given. (It's a poor player with melee weapons: it runs
-away from everything, so the Whisk and Hot Coffee look worse than they are.) A night brings home 30 to 400 crumbs, so the first few
-Pantry levels and muffins come within a handful of nights.
+(`npx tsx scripts/lastmuffin-sim.ts blueberry 20 2`; add `auto` for the
+Fridge Magnet and Auto-Hop, or `pulse` or `hop` for one of them). Over 20
+nights each, roughly:
+
+| Setup | Reach sunrise | Average night |
+|---|---|---|
+| Blueberry, no Pantry | 1 in 5 | 9 minutes |
+| Every Pantry upgrade at level 2 | 5 in 8 | 11 minutes |
+| No Pantry, plus Fridge Magnet | 9 in 20 | 11 minutes |
+| No Pantry, plus Auto-Hop | 6 in 20 | 8.5 minutes |
+| No Pantry, plus both | 12 in 20 | 11 minutes |
+
+The bot is a poor player with melee weapons: it runs away from everything,
+so the Whisk and Hot Coffee look worse than they are. A night brings home
+anywhere from a few dozen to about 1,500 crumbs, so the first few Pantry
+levels and muffins come within a handful of nights.
 
 ## Saving
 

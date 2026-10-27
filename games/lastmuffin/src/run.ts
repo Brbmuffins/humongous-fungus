@@ -221,6 +221,10 @@ const TAU = Math.PI * 2;
 /** Pests farther than this get moved back near you. */
 const RECYCLE = 1000;
 const LOOK = 420;
+/** How far past the edge of the screen pests appear. */
+const EDGE = 40;
+/** Pests already on their way when the night starts. */
+const OPENING = 10;
 /** Bosses stop summoning past this many pests. */
 const MAX_ENEMIES = 340;
 
@@ -274,7 +278,7 @@ export class Run {
   private uid = 1;
   private nextPulse = 0;
   private wantsAutoHop: boolean;
-  private spawnDebt = 0;
+  private spawnDebt = OPENING;
   private nextEvent = 0;
   private grid = new Map<number, Enemy[]>();
   private events: RunEvent[] = [];
@@ -430,25 +434,38 @@ export class Run {
   }
 
   /**
-   * Auto-Hop: a pest (or a slice of toast) about to touch you, and which way
-   * is away from it. Null when nothing's that close.
+   * Auto-Hop: when a pest (or a slice of toast) is about to touch you, the
+   * clearest way out: of twelve directions, the one whose landing spot has
+   * the fewest pests near it (ties go the way you're heading). Null when
+   * nothing's that close.
    */
   private dodge(): [number, number] | null {
     if (!this.stats.autoHop) return null;
-    let best: [number, number] | null = null;
-    let bestGap = 8;
-    const check = (x: number, y: number, r: number) => {
-      const dx = this.x - x;
-      const dy = this.y - y;
-      const d = Math.hypot(dx, dy) || 1;
-      const gap = d - r - PLAYER.radius;
-      if (gap < bestGap) {
-        bestGap = gap;
-        best = [dx / d, dy / d];
+    const close = (x: number, y: number, r: number) => Math.hypot(this.x - x, this.y - y) - r - PLAYER.radius < 8;
+    let threat = false;
+    for (const e of this.enemies) if (!e.dead && this.t >= e.contactAt && close(e.x, e.y, e.def.radius)) threat = true;
+    for (const sh of this.shots) if (sh.kind === 'toast' && close(sh.x, sh.y, sh.r)) threat = true;
+    if (!threat) return null;
+    let best: [number, number] = [this.fx, this.fy];
+    let bestScore = Infinity;
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * TAU;
+      const dx = Math.cos(a);
+      const dy = Math.sin(a);
+      const lx = this.x + dx * HOP.distance;
+      const ly = this.y + dy * HOP.distance;
+      let danger = 0;
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        const d2 = (e.x - lx) ** 2 + (e.y - ly) ** 2;
+        if (d2 < 160 * 160) danger += (e.def.radius + 20) ** 2 / Math.max(100, d2);
       }
-    };
-    for (const e of this.enemies) if (!e.dead && this.t >= e.contactAt) check(e.x, e.y, e.def.radius);
-    for (const sh of this.shots) if (sh.kind === 'toast') check(sh.x, sh.y, sh.r);
+      const score = danger - (dx * this.fx + dy * this.fy) * 0.05;
+      if (score < bestScore) {
+        bestScore = score;
+        best = [dx, dy];
+      }
+    }
     return best;
   }
 
@@ -486,11 +503,17 @@ export class Run {
     return e;
   }
 
-  /** Somewhere just off screen; usually ahead of you if you're running, so you can't just outrun them. */
+  /**
+   * Just past the edge of the screen (not a circle around it, so on a tall
+   * phone they don't start far off to the sides); usually ahead of you if
+   * you're running, so you can't just outrun them.
+   */
   private offScreen(): [number, number] {
     const ahead = this.moving && this.rnd() < 0.6;
     const a = ahead ? Math.atan2(this.fy, this.fx) + (this.rnd() - 0.5) * 2 : this.rnd() * TAU;
-    const r = this.ringRadius();
+    const c = Math.abs(Math.cos(a)) || 1e-6;
+    const sn = Math.abs(Math.sin(a)) || 1e-6;
+    const r = Math.min(this.view.w / 2 / c, this.view.h / 2 / sn) + EDGE;
     return [this.x + Math.cos(a) * r, this.y + Math.sin(a) * r];
   }
 
@@ -1117,7 +1140,7 @@ export class Run {
     const magnet = this.stats.magnet;
     const grab = PLAYER.radius + 10;
     // Pickups fly to you faster the farther you can reach.
-    const pull = Math.max(260, this.stats.speed * 2.2) * Math.sqrt(magnet / PLAYER.magnet);
+    const pull = Math.max(420, this.stats.speed * 3) * Math.sqrt(magnet / PLAYER.magnet);
     for (const p of this.pickups) {
       if (Number.isNaN(p.x)) continue;
       const dx = this.x - p.x;

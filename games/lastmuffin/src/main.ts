@@ -15,6 +15,8 @@ import { UI, type Controller, type Screen } from './ui';
 import { View } from './view';
 
 const localSave = makeLocalSave('lastmuffin.save.v1');
+/** The longest single step of the simulation, in seconds. */
+const STEP = 1 / 30;
 const CLOUD_SAVE_MS = 30_000;
 
 interface HotData {
@@ -41,6 +43,9 @@ class Game implements Controller {
   private canvas = document.getElementById('game') as HTMLCanvasElement;
   private last = 0;
   private endAt = 0;
+  private slowFor = 0;
+  private smoothFor = 0;
+  private lowered = 0;
   private met = new Set<EnemyId>();
   private lastCloud = 0;
   private hadSave: boolean;
@@ -130,13 +135,18 @@ class Game implements Controller {
   // The loop
 
   private frame = (t: number): void => {
-    const dt = Math.min(0.05, Math.max(0, (t - (this.last || t)) / 1000));
+    // Real time, however slowly the screen keeps up: a slow frame is played
+    // as several short steps rather than slowing the night down.
+    const real = Math.min(0.25, Math.max(0, (t - (this.last || t)) / 1000));
     this.last = t;
+    const dt = Math.min(0.05, real);
+    this.watchSpeed(real);
     const run = this.run;
     if (run) {
       const input = this.controls.read();
-      if (run.state === 'playing' && this.ui.current === null) {
-        const events = run.step(dt, input);
+      const steps = Math.ceil(real / STEP);
+      for (let i = 0; i < steps && run.state === 'playing' && this.ui.current === null; i++) {
+        const events = run.step(real / steps, i === 0 ? input : { ...input, hop: false });
         this.view.consume(events, run, t);
         this.react(events);
         this.afterStep(run);
@@ -161,6 +171,33 @@ class Game implements Controller {
     }
     requestAnimationFrame(this.frame);
   };
+
+  /**
+   * If the screen can't keep up (frames slower than about 40 a second for a
+   * couple of seconds), draw with fewer pixels; if it's been smooth for a
+   * while, try more again. Only during a run, when it matters.
+   */
+  private watchSpeed(real: number): void {
+    // Menus and level-ups don't count, but don't reset the tally either.
+    if (!this.run || this.run.state !== 'playing' || this.ui.current !== null || real <= 0) return;
+    if (real > 1 / 40) {
+      this.slowFor += real;
+      this.smoothFor = 0;
+    } else if (real < 1 / 55) {
+      this.smoothFor += real;
+      this.slowFor = Math.max(0, this.slowFor - real);
+    }
+    const d = this.view.pixelDensity;
+    if (this.slowFor > 2 && d > 0.75) {
+      this.slowFor = 0;
+      if (this.view.setDensity(d - 0.25)) this.run.view = this.view.worldView;
+    } else if (this.smoothFor > 20 && d < 1.5 && this.lowered < 3) {
+      // Back up a notch, but give up after bouncing a few times.
+      this.smoothFor = 0;
+      this.lowered += 1;
+      if (this.view.setDensity(d + 0.25)) this.run.view = this.view.worldView;
+    }
+  }
 
   /** Sounds, buzzes and words for what just happened. */
   private react(events: RunEvent[]): void {
@@ -274,6 +311,7 @@ class Game implements Controller {
   // Controller
 
   start(): void {
+    this.slowFor = this.smoothFor = 0;
     const run = new Run({ muffin: this.meta.muffin, pantry: this.meta.pantry, seed: Date.now() % 2147483647, autoHop: this.meta.autoHop });
     run.view = this.view.worldView;
     this.run = run;

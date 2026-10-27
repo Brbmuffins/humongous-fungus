@@ -50,6 +50,22 @@ interface Num {
   bonk: boolean;
 }
 
+/** A cached drawing, trimmed to its visible pixels. */
+interface Sprite {
+  img: HTMLCanvasElement;
+  /** Device pixels from the thing's center to the image's top-left corner. */
+  ox: number;
+  oy: number;
+}
+
+/** A pest that just got squashed, shrinking away. */
+interface Pop {
+  sp: Sprite;
+  x: number;
+  y: number;
+  born: number;
+}
+
 interface Flash {
   kind: 'strike' | 'swipe' | 'ring';
   x: number;
@@ -68,7 +84,13 @@ export class View {
   H = 0;
   private dpr = 1;
   zoom = 1;
-  private sprites = new Map<string, HTMLCanvasElement>();
+  private sprites = new Map<string, Sprite>();
+  private texts = new Map<string, HTMLCanvasElement>();
+  /** The context is at the plain device-pixel transform (fast sprite copies need no change). */
+  private plain = false;
+  private pops: Pop[] = [];
+  /** Cap on pixels per point; the game lowers it if a device can't keep up. */
+  private density = 1.5;
   private floor: HTMLCanvasElement | null = null;
   private bits: Bit[] = [];
   private nums: Num[] = [];
@@ -87,20 +109,36 @@ export class View {
   constructor(private canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext('2d', { alpha: false })!;
     this.resize();
+    // Labels drawn before the fonts arrived used a fallback: draw them again.
+    document.fonts?.addEventListener?.('loadingdone', () => this.texts.clear());
   }
 
   resize(): void {
     const r = this.canvas.getBoundingClientRect();
     this.W = Math.max(200, r.width);
     this.H = Math.max(200, r.height);
-    // At most 1.5 pixels per point (less on big screens): there can be
-    // hundreds of pests, and the art is soft-edged anyway.
-    this.dpr = Math.min(this.W * this.H > 900_000 ? 1.25 : 1.5, window.devicePixelRatio || 1);
+    // At most 1.5 pixels per point (less on big screens, and less again on
+    // slow devices): there can be hundreds of pests, and the art is soft anyway.
+    this.dpr = Math.min(this.W * this.H > 900_000 ? Math.min(1.25, this.density) : this.density, window.devicePixelRatio || 1);
     this.canvas.width = Math.round(this.W * this.dpr);
     this.canvas.height = Math.round(this.H * this.dpr);
     this.zoom = Math.min(1.6, Math.max(0.7, Math.min(this.W, this.H) / SHORT_SIDE));
     this.sprites.clear();
+    this.texts.clear();
     this.floor = null;
+  }
+
+  /** Draw at fewer pixels per point (or back up). Returns whether anything changed. */
+  setDensity(d: number): boolean {
+    const next = Math.max(0.75, Math.min(1.5, d));
+    if (next === this.density) return false;
+    this.density = next;
+    this.resize();
+    return true;
+  }
+
+  get pixelDensity(): number {
+    return this.density;
   }
 
   /** What the run should think the screen shows, in world units. */
@@ -112,6 +150,7 @@ export class View {
     this.bits = [];
     this.nums = [];
     this.flashes = [];
+    this.pops = [];
     this.hurtAt = -1e9;
     this.shake = 0;
   }
@@ -119,55 +158,124 @@ export class View {
   // -------------------------------------------------------------------------
   // Sprites
 
-  /** A cached sprite drawn at size `s` (world units), centered, `half` world units each side. */
-  private sprite(key: string, s: number, half: number, paint: (c: Ctx, s: number) => void, flash = false): HTMLCanvasElement {
-    const k = `${key}|${flash ? 1 : 0}`;
-    let canvas = this.sprites.get(k);
-    if (canvas) return canvas;
-    const px = this.zoom * this.dpr;
-    const size = Math.ceil(half * 2 * px);
-    canvas = document.createElement('canvas');
-    canvas.width = canvas.height = size;
-    const c = canvas.getContext('2d')!;
-    c.setTransform(px, 0, 0, px, size / 2, size / 2);
-    paint(c, s);
-    if (flash) {
-      c.setTransform(1, 0, 0, 1, 0, 0);
-      c.globalCompositeOperation = 'source-atop';
-      c.fillStyle = 'rgba(255,255,255,0.85)';
-      c.fillRect(0, 0, size, size);
+  /**
+   * A cached sprite: drawn once at size `s` (world units) around its center,
+   * within `half` world units each side, then trimmed to what's visible.
+   * Mirrored and white-flash copies are cached too, so drawing one is a copy.
+   */
+  private sprite(key: string, s: number, half: number, paint: (c: Ctx, s: number) => void, flash = false, flip = false): Sprite {
+    const k = `${key}|${flash ? 1 : 0}|${flip ? 1 : 0}`;
+    const hit = this.sprites.get(k);
+    if (hit) return hit;
+    let made: Sprite;
+    if (flip) {
+      const base = this.sprite(key, s, half, paint, flash, false);
+      const img = document.createElement('canvas');
+      img.width = base.img.width;
+      img.height = base.img.height;
+      const c = img.getContext('2d')!;
+      c.setTransform(-1, 0, 0, 1, img.width, 0);
+      c.drawImage(base.img, 0, 0);
+      made = { img, ox: -(base.ox + base.img.width), oy: base.oy };
+    } else {
+      const px = this.zoom * this.dpr;
+      const size = Math.max(2, Math.ceil(half * 2 * px));
+      const full = document.createElement('canvas');
+      full.width = full.height = size;
+      const c = full.getContext('2d', { willReadFrequently: true })!;
+      c.setTransform(px, 0, 0, px, size / 2, size / 2);
+      paint(c, s);
+      if (flash) {
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.globalCompositeOperation = 'source-atop';
+        c.fillStyle = 'rgba(255,255,255,0.85)';
+        c.fillRect(0, 0, size, size);
+      }
+      // Trim the empty margin: most of a sprite's box is transparent.
+      const data = c.getImageData(0, 0, size, size).data;
+      let x0 = size;
+      let y0 = size;
+      let x1 = -1;
+      let y1 = -1;
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          if (data[(y * size + x) * 4 + 3] > 6) {
+            if (x < x0) x0 = x;
+            if (x > x1) x1 = x;
+            if (y < y0) y0 = y;
+            if (y > y1) y1 = y;
+          }
+        }
+      }
+      if (x1 < 0) {
+        x0 = y0 = 0;
+        x1 = y1 = 0;
+      }
+      const img = document.createElement('canvas');
+      img.width = x1 - x0 + 1;
+      img.height = y1 - y0 + 1;
+      img.getContext('2d')!.drawImage(full, -x0, -y0);
+      made = { img, ox: x0 - size / 2, oy: y0 - size / 2 };
     }
-    this.sprites.set(k, canvas);
-    return canvas;
+    this.sprites.set(k, made);
+    return made;
   }
 
-  /** Draw a sprite at world (x, y), flipped if facing left. */
-  private blit(img: HTMLCanvasElement, x: number, y: number, flip: boolean, rot = 0, alpha = 1): void {
+  /** Draw a sprite centered at world (x, y): a straight copy unless it's turned or scaled. */
+  private blit(sp: Sprite, x: number, y: number, rot = 0, alpha = 1, scale = 1): void {
     const c = this.ctx;
     const px = this.dpr;
-    const sx = (x - this.camX) * this.zoom + this.W / 2;
-    const sy = (y - this.camY) * this.zoom + this.H / 2;
-    const w = img.width / this.dpr;
-    if (sx < -w || sx > this.W + w || sy < -w || sy > this.H + w) return;
+    const dx = ((x - this.camX) * this.zoom + this.W / 2) * px;
+    const dy = ((y - this.camY) * this.zoom + this.H / 2) * px;
+    const w = sp.img.width;
+    const h = sp.img.height;
+    const reach = Math.max(w, h) + Math.abs(sp.ox) + Math.abs(sp.oy);
+    if (dx < -reach || dx > this.canvas.width + reach || dy < -reach || dy > this.canvas.height + reach) return;
     if (alpha !== 1) c.globalAlpha = alpha;
-    if (rot) {
-      const cos = Math.cos(rot) * px;
-      const sin = Math.sin(rot) * px;
-      c.setTransform(flip ? -cos : cos, flip ? -sin : sin, -sin, cos, sx * px, sy * px);
+    if (rot || scale !== 1) {
+      const cos = Math.cos(rot) * scale;
+      const sin = Math.sin(rot) * scale;
+      c.setTransform(cos, sin, -sin, cos, dx, dy);
+      this.plain = false;
+      c.drawImage(sp.img, sp.ox, sp.oy);
     } else {
-      c.setTransform(flip ? -px : px, 0, 0, px, sx * px, sy * px);
+      if (!this.plain) {
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        this.plain = true;
+      }
+      c.drawImage(sp.img, Math.round(dx + sp.ox), Math.round(dy + sp.oy));
     }
-    c.drawImage(img, -w / 2, -w / 2, w, w);
     if (alpha !== 1) c.globalAlpha = 1;
+  }
+
+  private enemySprite(id: EnemyId, frame: number, flash: boolean, left: boolean): Sprite {
+    const s = ENEMY_BY_ID[id].radius * LOOK;
+    return this.sprite(
+      `e:${id}:${frame}`,
+      s,
+      s * (REACH[id] ?? 1.5),
+      (cc, ss) => {
+        // A shadow on the floor.
+        cc.fillStyle = 'rgba(0,0,0,0.25)';
+        cc.beginPath();
+        cc.ellipse(0, ss * 0.85, ss * 0.95, ss * 0.28, 0, 0, TAU);
+        cc.fill();
+        drawEnemy(cc, id, ss, frame);
+      },
+      flash,
+      left,
+    );
   }
 
   /** Switch to drawing in world units. */
   private world(): void {
+    this.plain = false;
     const z = this.zoom * this.dpr;
     this.ctx.setTransform(z, 0, 0, z, (this.W / 2 - this.camX * this.zoom) * this.dpr, (this.H / 2 - this.camY * this.zoom) * this.dpr);
   }
 
   private screen(): void {
+    this.plain = false;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
   }
 
@@ -239,6 +347,7 @@ export class View {
           if (e.bonk) this.shake = Math.max(this.shake, 3);
           break;
         case 'kill': {
+          if (this.pops.length < 40) this.pops.push({ sp: this.enemySprite(e.enemy, 0, true, e.x > run.x), x: e.x, y: e.y, born: t });
           const color = ENEMY_COLOR[e.enemy];
           const n = this.bits.length > 260 ? 2 : 5;
           for (let i = 0; i < n; i++) {
@@ -331,13 +440,13 @@ export class View {
       if (p.kind === 'xp') {
         const tier = p.value >= 20 ? 2 : p.value >= 5 ? 1 : 0;
         const img = this.sprite(`xp${tier}`, 3.4 + tier * 0.8, 7, (cc, s) => drawSprinkle(cc, s, SPRINKLE_COLORS[tier], -0.6));
-        this.blit(img, p.x, p.y, false);
+        this.blit(img, p.x, p.y);
       } else if (p.kind === 'crumb') {
-        this.blit(this.sprite('crumb', 4.5, 7, drawCrumb), p.x, p.y + Math.sin(t * 0.005 + p.x) * 1.5, false);
+        this.blit(this.sprite('crumb', 4.5, 7, drawCrumb), p.x, p.y + Math.sin(t * 0.005 + p.x) * 1.5);
       } else if (p.kind === 'milk') {
-        this.blit(this.sprite('milk', 7, 10, drawMilk), p.x, p.y, false);
+        this.blit(this.sprite('milk', 7, 10, drawMilk), p.x, p.y);
       } else if (p.kind === 'magnet') {
-        this.blit(this.sprite('magnet', 8, 11, drawMagnet), p.x, p.y, false);
+        this.blit(this.sprite('magnet', 8, 11, drawMagnet), p.x, p.y);
       } else {
         this.world();
         c.save();
@@ -347,24 +456,19 @@ export class View {
       }
     }
 
-    // Pests, sorted so lower ones are in front.
-    const frame = Math.floor(t / 140) % 2;
+    // Pests, sorted so lower ones are in front, then the ones just squashed.
+    const frame = Math.floor(t / 110) % 2;
     const list = run.enemies.slice().sort((a, b) => a.y - b.y);
     for (const e of list) {
-      const def = e.def;
-      const s = def.radius * LOOK;
-      const flash = run.t < e.flashUntil;
-      const img = this.sprite(`e:${def.id}:${(frame + (e.uid & 1)) % 2}`, s, s * (REACH[def.id] ?? 1.5), (cc, ss) => {
-        // A shadow on the floor.
-        cc.fillStyle = 'rgba(0,0,0,0.25)';
-        cc.beginPath();
-        cc.ellipse(0, ss * 0.85, ss * 0.95, ss * 0.28, 0, 0, TAU);
-        cc.fill();
-        drawEnemy(cc, def.id, ss, (frame + (e.uid & 1)) % 2);
-      }, flash);
       const left = e.flock ? e.flock.vx < 0 : e.x > run.x;
-      this.blit(img, e.x, e.y, left);
+      this.blit(this.enemySprite(e.def.id, (frame + (e.uid & 1)) % 2, run.t < e.flashUntil, left), e.x, e.y);
     }
+    this.pops = this.pops.filter((p) => {
+      const k = (t - p.born) / 160;
+      if (k >= 1) return false;
+      this.blit(p.sp, p.x, p.y - k * 6, 0, 1 - k, 1 + k * 0.35 - k * k * 0.9);
+      return true;
+    });
 
     // The muffin.
     if (player) this.drawMuffin(run, t, frame);
@@ -374,14 +478,14 @@ export class View {
       const w = run.weapons[sh.slot];
       if (sh.kind === 'berry') {
         const color = w?.evolved ? WEAPON_BY_ID.blaster.evolved.color : WEAPON_BY_ID.blaster.color;
-        this.blit(this.sprite(`berry:${color}:${Math.round(sh.r)}`, sh.r, sh.r * 1.6, (cc, s) => drawBerry(cc, s, color)), sh.x, sh.y, false);
+        this.blit(this.sprite(`berry:${color}:${Math.round(sh.r)}`, sh.r, sh.r * 1.6, (cc, s) => drawBerry(cc, s, color)), sh.x, sh.y);
       } else if (sh.kind === 'crumb') {
-        this.blit(this.sprite(`shotcrumb:${Math.round(sh.r)}`, sh.r, sh.r * 1.4, drawCrumb), sh.x, sh.y, false, sh.age * 9);
+        this.blit(this.sprite(`shotcrumb:${Math.round(sh.r)}`, sh.r, sh.r * 1.4, drawCrumb), sh.x, sh.y, sh.age * 9);
       } else if (sh.kind === 'pin') {
         const color = w?.evolved ? WEAPON_BY_ID.pin.evolved.color : WEAPON_BY_ID.pin.color;
-        this.blit(this.sprite(`pin:${color}:${Math.round(sh.r)}`, sh.r, sh.r * 1.3, (cc, s) => drawPin(cc, s, color)), sh.x, sh.y, false, sh.age * 14);
+        this.blit(this.sprite(`pin:${color}:${Math.round(sh.r)}`, sh.r, sh.r * 1.3, (cc, s) => drawPin(cc, s, color)), sh.x, sh.y, sh.age * 14);
       } else {
-        this.blit(this.sprite('toast', sh.r, sh.r * 1.5, drawToast), sh.x, sh.y, false, sh.age * 5);
+        this.blit(this.sprite('toast', sh.r, sh.r * 1.5, drawToast), sh.x, sh.y, sh.age * 5);
       }
     }
     for (const w of run.weapons) {
@@ -389,13 +493,15 @@ export class View {
       const s = 14 * run.weaponStats(w).area;
       const color = w.evolved ? WEAPON_BY_ID.knives.evolved.color : WEAPON_BY_ID.knives.color;
       const img = this.sprite(`knife:${color}:${Math.round(s)}`, s, s * 1.2, (cc, ss) => drawKnife(cc, ss, color));
-      for (const k of run.orbitPositions(w)) this.blit(img, k.x, k.y, false, k.a + Math.PI / 2);
+      for (const k of run.orbitPositions(w)) this.blit(img, k.x, k.y, k.a + Math.PI / 2);
     }
 
     // Sous Chef helpers, and whatever they're carrying.
     if (run.chefs.length) {
-      const img = this.sprite(`chef:${frame}`, 11.5, 18, (cc, ss) => drawChef(cc, ss, frame));
-      for (const ch of run.chefs) this.blit(img, ch.x, ch.y + Math.sin(t * 0.008 + ch.phase) * 2, (ch.target?.x ?? run.x) < ch.x);
+      for (const ch of run.chefs) {
+        const img = this.sprite(`chef:${frame}`, 11.5, 18, (cc, ss) => drawChef(cc, ss, frame), false, (ch.target?.x ?? run.x) < ch.x);
+        this.blit(img, ch.x, ch.y + Math.sin(t * 0.008 + ch.phase) * 2);
+      }
     }
 
     this.drawFlashes(t);
@@ -415,7 +521,7 @@ export class View {
     const hurt = t - this.hurtAt < 250;
     const face: MuffinFace = run.state === 'dead' ? 'dead' : hurt ? 'hurt' : run.t < run.hopUntil ? 'bonk' : 'happy';
     const f = run.moving || run.t < run.hopUntil ? frame : 0;
-    const img = this.sprite(`m:${run.muffin}:${f}:${face}`, s, s * 1.7, (cc, ss) => drawMuffin(cc, ss, def, f, face));
+    const img = this.sprite(`m:${run.muffin}:${f}:${face}`, s, s * 1.7, (cc, ss) => drawMuffin(cc, ss, def, f, face), false, run.fx < 0);
     // The hop is a little jump.
     const k = run.t < run.hopUntil ? 1 - (run.hopUntil - run.t) / 0.18 : 0;
     const lift = Math.sin(Math.min(1, k) * Math.PI) * 14;
@@ -427,7 +533,7 @@ export class View {
     // Blink while you can't be hurt.
     const safe = run.t < run.safeUntil && run.t >= run.hopUntil;
     const alpha = safe && Math.floor(t / 80) % 2 ? 0.45 : 1;
-    this.blit(img, run.x, run.y - lift - s * 0.1, run.fx < 0, 0, alpha);
+    this.blit(img, run.x, run.y - lift - s * 0.1, 0, alpha);
     // Health under the muffin, and the hop recharging.
     this.world();
     const w = 30;
@@ -575,12 +681,43 @@ export class View {
     c.globalAlpha = 1;
   }
 
-  private drawNumbers(t: number): void {
-    const c = this.ctx;
-    this.screen();
+  /** A bit of outlined text, drawn once at this density and reused (text is slow to draw). */
+  private label(text: string, font: string, size: number, fill: string, line: number): HTMLCanvasElement {
+    const key = `${font}|${size}|${fill}|${text}`;
+    const hit = this.texts.get(key);
+    if (hit) return hit;
+    if (this.texts.size > 400) this.texts.clear();
+    const px = this.dpr;
+    const canvas = document.createElement('canvas');
+    const c = canvas.getContext('2d')!;
+    c.font = font;
+    const w = c.measureText(text).width;
+    canvas.width = Math.ceil((w + line * 2 + 4) * px);
+    canvas.height = Math.ceil((size * 1.3 + line * 2) * px);
+    c.setTransform(px, 0, 0, px, canvas.width / 2, canvas.height / 2);
+    c.font = font;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.lineJoin = 'round';
+    c.lineWidth = line;
+    c.strokeStyle = INK;
+    c.strokeText(text, 0, 0);
+    c.fillStyle = fill;
+    c.fillText(text, 0, 0);
+    this.texts.set(key, canvas);
+    return canvas;
+  }
+
+  private drawNumbers(t: number): void {
+    const c = this.ctx;
+    const px = this.dpr;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    this.plain = true;
+    const put = (img: HTMLCanvasElement, x: number, y: number, scale = 1) => {
+      const w = img.width * scale;
+      const h = img.height * scale;
+      c.drawImage(img, Math.round(x * px - w / 2), Math.round(y * px - h / 2), w, h);
+    };
     this.nums = this.nums.filter((n) => {
       const age = (t - n.born) / 1000;
       const life = n.bonk ? 0.9 : 0.55;
@@ -590,24 +727,10 @@ export class View {
       c.globalAlpha = Math.min(1, (life - age) / 0.2);
       if (n.bonk) {
         const pop = 1 + Math.max(0, 0.4 - age) * 1.5;
-        c.font = `400 ${Math.round(20 * pop)}px 'Bagel Fat One', Rubik, system-ui, sans-serif`;
-        c.lineWidth = 5;
-        c.strokeStyle = INK;
-        c.strokeText('BONK!', x, y - 14);
-        c.fillStyle = '#ffd34d';
-        c.fillText('BONK!', x, y - 14);
-        c.font = `700 ${Math.round(14 * pop)}px Rubik, system-ui, sans-serif`;
-        c.lineWidth = 4;
-        c.strokeText(n.text, x, y + 4);
-        c.fillStyle = '#fff4c0';
-        c.fillText(n.text, x, y + 4);
+        put(this.label('BONK!', "400 20px 'Bagel Fat One', Rubik, system-ui, sans-serif", 20, '#ffd34d', 5), x, y - 14, pop);
+        put(this.label(n.text, '700 14px Rubik, system-ui, sans-serif', 14, '#fff4c0', 4), x, y + 4, pop);
       } else {
-        c.font = '700 12px Rubik, system-ui, sans-serif';
-        c.lineWidth = 3;
-        c.strokeStyle = INK;
-        c.strokeText(n.text, x, y);
-        c.fillStyle = '#ffffff';
-        c.fillText(n.text, x, y);
+        put(this.label(n.text, '700 12px Rubik, system-ui, sans-serif', 12, '#ffffff', 3), x, y);
       }
       return true;
     });
