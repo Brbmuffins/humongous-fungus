@@ -59,7 +59,7 @@ import { PlinkoApp } from './plinkoview';
 import { RocketApp } from './rocketview';
 import { paintToyIcon } from './toys';
 import { sfx } from './sound';
-import { brain, canListen, hush, listen, loadTalk, problem, saveTalk, speakLine, speaking, voiceSource, type TalkSettings } from './talk';
+import { canListen, deviceVoices, hasVoice, hisDeviceVoice, hush, listen, loadTalk, loadVoices, saveTalk, speakLine, speaking, type TalkSettings } from './talk';
 import type { HammyState } from './state';
 
 export type Tab = 'care' | 'phone' | 'shop' | 'life';
@@ -602,7 +602,6 @@ class LifePanel implements Panel {
   private confirming = false;
   /** Bumped when the talk settings change, so the panel redraws. */
   private talkKey = 0;
-  private talkStatus: HTMLElement | null = null;
   private stats: { el: HTMLElement; value: () => string }[] = [];
 
   constructor(private c: Controller) {}
@@ -710,7 +709,7 @@ class LifePanel implements Panel {
     );
   }
 
-  /** Talking to him: his brain, his voice and the keys for both. */
+  /** Talking to him: when he talks out loud, and in which of this device's voices. */
   private talkSettings(): HTMLElement {
     const t = loadTalk();
     const set = (patch: Partial<TalkSettings>) => {
@@ -720,49 +719,41 @@ class LifePanel implements Panel {
     };
     const toggle = (label: string, on: boolean, flip: () => void) =>
       h('button', { class: 'toggle', type: 'button', role: 'switch', 'aria-checked': String(on), onclick: flip }, h('span', null, label), h('span', { class: 'toggle-state' }, on ? 'On' : 'Off'));
-    const field = (label: string, value: string, secret: boolean, placeholder: string, save: (v: string) => void) => {
-      const input = h('input', { class: 'key-input', type: secret ? 'password' : 'text', autocomplete: 'off', spellcheck: 'false', placeholder });
-      input.value = value;
-      input.addEventListener('change', () => save(input.value.trim()));
-      return h('label', { class: 'key-field' }, h('span', null, label), input);
-    };
-    this.talkStatus = h('p', { class: 'note talk-status' }, '…');
-    const status = this.talkStatus;
-    void brain().then((b) => {
-      const head = b === 'claude' ? 'His brain: Claude, on your claude.ai account.' : b === 'key' ? 'His brain: Claude, with your Anthropic key.' : 'His brain: his canned replies. Add an Anthropic key for the real thing.';
-      const v = voiceSource();
-      const voice = v === 'eleven' ? 'His voice: ElevenLabs.' : v === 'device' ? 'His voice: this device’s.' : 'His voice: none on this device.';
-      setText(status, [head, voice, problem()].filter(Boolean).join(' '));
+    // His voice: one of this device's, the same for every line, picked here.
+    const pickVoice = h('select', { class: 'key-input voice-pick', 'aria-label': 'His voice on this device' });
+    pickVoice.addEventListener('change', () => {
+      saveTalk({ ...loadTalk(), deviceVoice: pickVoice.value });
+      void speakLine('yo its hammy. this is my voice now');
     });
-    const inside = !!(window as unknown as { claude?: unknown }).claude;
+    const voiceRow = hasVoice() ? h('label', { class: 'key-field' }, h('span', null, 'His voice'), pickVoice) : null;
+    if (voiceRow) {
+      void loadVoices().then(() => {
+        const mine = hisDeviceVoice()?.voiceURI ?? '';
+        pickVoice.replaceChildren(...deviceVoices().map((v) => h('option', { value: v.voiceURI, selected: v.voiceURI === mine }, `${v.name}${v.localService ? '' : ' (online)'}`)));
+        voiceRow.hidden = !pickVoice.options.length;
+      });
+    }
     return h(
       'section',
       { class: 'talk-settings' },
       h('h2', { class: 'sub' }, 'Talking to Hammy'),
-      status,
+      h(
+        'p',
+        { class: 'note talk-status' },
+        hasVoice()
+          ? 'He answers from his own lines, and talks in one of this device’s voices, the same one every time. It all runs right here: free, nothing sent anywhere.'
+          : 'He answers from his own lines, right here: free, nothing sent anywhere. This device has no voice for him, so he only texts.',
+      ),
       toggle('He talks out loud on calls', t.speakCalls, () => set({ speakCalls: !t.speakCalls })),
       toggle('Read his texts out loud', t.readTexts, () => set({ readTexts: !t.readTexts })),
-      h(
-        'details',
-        { class: 'keys' },
-        h('summary', null, inside ? 'Voice and keys' : 'Your own keys'),
-        h(
-          'p',
-          { class: 'note' },
-          inside
-            ? 'Inside claude.ai he already thinks with Claude on your account (it asks you once). An ElevenLabs voice needs the app: pages here can’t reach the internet.'
-            : 'Add an Anthropic API key for his brain, and an ElevenLabs key plus a voice ID for his voice (clone War’s voice on ElevenLabs and paste its ID). Keys stay on this device, never in your save. What you say to him goes to Anthropic and ElevenLabs under your account.',
-        ),
-        inside ? null : field('Anthropic API key', t.anthropicKey, true, 'sk-ant-…', (v) => set({ anthropicKey: v })),
-        inside ? null : field('ElevenLabs API key', t.elevenKey, true, 'xi-…', (v) => set({ elevenKey: v })),
-        inside ? null : field('ElevenLabs voice ID', t.voiceId, false, 'Voice ID', (v) => set({ voiceId: v })),
-        h(
-          'div',
-          { class: 'key-row' },
-          h('button', { class: 'btn btn-quiet', type: 'button', onclick: () => void speakLine(`yo its hammy. ${this.c.state.bowl ? 'i didnt flush btw' : 'are we there yet'}`).then(() => this.c.refresh()) }, 'Test his voice'),
-          inside ? null : h('button', { class: 'btn btn-quiet', type: 'button', onclick: () => set({ anthropicKey: '', elevenKey: '', voiceId: '' }) }, 'Forget keys'),
-        ),
-      ),
+      voiceRow,
+      hasVoice()
+        ? h(
+            'div',
+            { class: 'key-row' },
+            h('button', { class: 'btn btn-quiet', type: 'button', onclick: () => void speakLine(`yo its hammy. ${this.c.state.bowl ? 'i didnt flush btw' : 'are we there yet'}`) }, 'Test his voice'),
+          )
+        : null,
     );
   }
 

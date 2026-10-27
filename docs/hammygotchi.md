@@ -205,34 +205,27 @@ he dies:
   you say something (type it, or tap the mic where the browser can listen),
   then answers you, out loud.
 
-### Talking to him for real
+### Talking to him
 
-What you type to him, and what you say on a call, gets an answer in
-character from Claude, who plays him from `HAMMY_PERSONA` in `src/defs.ts`
-plus a few lines about what's going on in the unit right now (`situation`
-in `src/game.ts`: his meters, whether he has to go, what's unflushed, his
-trash, his furniture, today's form). He remembers the last 16 messages of a
-thread or call. `src/talk.ts` does the asking and the speaking:
+Everything here runs on the device, for free: no accounts, no API keys,
+nothing sent anywhere. `src/talk.ts` does the speaking and listening.
 
-- **His brain.** Inside claude.ai the page asks Claude itself (the `sample`
-  capability, quick tier), on the viewer's own account; Claude asks them to
-  allow it the first time. Anywhere else (the phone apps, a plain browser)
-  it uses an Anthropic API key added in the Life tab (Claude Opus 5.5 at low
-  effort, with server-side refusal fallback on). With neither, or when a
-  call fails, he answers from his canned replies, picked by keywords.
-- **His voice.** ElevenLabs (`eleven_flash_v2_5`) with a key and a voice ID
-  from the Life tab: clone War's voice on ElevenLabs and paste its ID. On the
-  phone apps that request goes through Capacitor's native HTTP. Without it,
-  or inside claude.ai (whose pages can't reach the network), he uses the
-  device's own speech, pitched down. Either way it plays through the game's
-  own audio, so the sound switch mutes him too. He talks out loud on calls
-  by default; reading his texts out loud is a switch in the Life tab.
+- **His answers.** What you type to him, and what you say on a call, gets
+  an answer from his own lines (`cannedReply` in `src/game.ts`): what you
+  said picks the topic (hi, how are you, food, poop, stink, gaming, coins,
+  Dr. Moss, his bed, War, Ohio, the arcade, sorry, insults, bye, questions…)
+  and what's going on in the unit picks the line (he has to go, the toilet's
+  full, he's starving, there's no PC). He tries not to repeat one of his
+  last few lines. Texts get a moment of "typing…" first.
+- **His voice.** One of the device's own speech voices, pitched down, and
+  always the same one: the game waits for the device's voice list, picks the
+  best English voice (on-device ones first), and remembers it, so it never
+  changes from one line to the next. The Life tab lets you pick another. He
+  talks out loud on calls by default; reading his texts out loud is a
+  switch.
 - **Your voice.** The call screen's mic uses the browser's speech
   recognition where there is one (Chrome, Safari). It's hidden where there
   isn't, which includes the phone apps' web views for now.
-- **The keys** are kept on the device under their own storage key, never in
-  the save, which syncs to the cloud. The privacy page says what's sent where
-  when they're added.
 
 ### Hammy's Arcade
 

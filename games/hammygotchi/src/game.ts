@@ -672,6 +672,58 @@ export function replyTo(id: string, s: HammyState, roll: Roll): string {
       return by(['aw 🥹', 'of what lol', 'thanks i pooped earlier', 'finally someone notices']);
     case 'clean':
       return by(['u clean it', 'its organized chaos', 'ur not my mom', 'ok (i will not)']);
+    // The rest only come up when you type him something yourself.
+    case 'hi':
+      return by(['yo', 'sup', 'oh hey its u', 'hiii', 'yooo whats good', 'finally someone texts me']);
+    case 'how':
+      if (s.urges.length) return by(['cant talk. toilet. NOW', 'brb 🚽', 'bad. very bad. i gotta go']);
+      if (s.health < 40) return by(['not great man', 'i think im sick', 'everything hurts and i smell']);
+      if (s.belly < 30) return by(['starving', 'hungry. like really', 'i would eat the plant rn']);
+      if (s.fresh < 35) return by(['i smell like a gas station bathroom', 'kinda crusty ngl', 'the scientist put on a gas mask so']);
+      if (s.mood < 30) return by(['bored out of my mind', 'lonely tbh', 'meh. nobody calls me']);
+      return by(['im good!', 'chillin', 'living the dream (the dream is a toilet)', 'never better', 'pretty good actually']);
+    case 'poop':
+      if (s.urges.length) return by(['funny u should ask. brb', 'its happening. right now', 'dont come in']);
+      if (s.bowl >= BOWL_MAX) return by(['the toilet is full lol', 'it wont flush. it wont even try', 'theres a situation in the toilet']);
+      if (s.bowl) return by(['i didnt flush. on purpose', 'its a surprise for u', 'flushing is for quitters']);
+      if (s.poops.length) return by(['check the floor lol', 'i missed the toilet. a few times', 'dont step there']);
+      return by(['all clear down there', 'nothing to report', 'ask me later']);
+    case 'sorry':
+      return by(['its ok', 'apology accepted. for dorkitos', 'u good', 'i forgive u. this time']);
+    case 'mean':
+      return by(['wow ok', 'thats crazy coming from u', 'im telling the scientist', 'rude', 'say that to my face. oh wait. glass', 'ok but who feeds who']);
+    case 'game':
+      return hasFurniture(s, 'pc')
+        ? by(['im streaming rn. 3 viewers', 'cracked at this game btw', 'pc is my best friend. no offense', 'gaming. obviously'])
+        : by(['i dont even have a pc in here', 'buy me a pc and ill stream', 'i play rock paper scissors with myself']);
+    case 'money':
+      return s.coins >= 300
+        ? by(['ur rich. buy me stuff', 'that money could be dorkitos', 'ok mr money bags'])
+        : by(['we broke', 'ur broke lol', 'i could stream for coins if i had a pc']);
+    case 'moss':
+      return s.fresh < PINCH_BELOW
+        ? by(['dr moss has a gas mask on. rude', 'the scientist keeps coughing', 'she says i "violate protocols"'])
+        : by(['dr moss says hi', 'the scientist is watching me rn', 'shes ok. she takes a lot of notes']);
+    case 'bed':
+      return hasFurniture(s, 'bed')
+        ? by(['my bed is crusty and i love it', 'nap time', 'i sleep 14 hrs a day its fine'])
+        : by(['i sleep on the floor', 'no bed. just floor', 'the toilet is comfy enough']);
+    case 'war':
+      return by(['thats my guy', 'tell him he owes me dorkitos', 'he based me on himself and it shows', 'war is my hero']);
+    case 'ohio':
+      return by(['is this still ohio', 'everywhere is ohio if u think about it', 'the unit is in ohio i think']);
+    case 'bet':
+      return by(['i can fly now btw. fart powered', 'bet on me. i never crash (i always crash)', 'the poop plinko is rigged. by me', 'stop betting on me', 'i crossed the road. it was mostly trucks']);
+    case 'bye':
+      return by(['byeee', 'gn dont let the robot vacuum bite', 'ok bye forever (call me later)', 'later']);
+    case 'why':
+      return by(['because im hammy', 'idk ask the scientist', 'science', 'dont question it', 'thats classified']);
+    case 'yes':
+      return by(['bet', 'ok', 'cool', 'say less']);
+    case 'no':
+      return by(['ok then', 'fine', 'ur loss', 'wow']);
+    case 'ask':
+      return by(['maybe', 'idk', 'probably not', 'ask me after dorkitos', 'great question. next']);
     default:
       return 'k';
   }
@@ -725,26 +777,53 @@ export function hammyReplies(s: HammyState, text: string, now: number): void {
   markRead(s, now);
 }
 
-/** Words that steer a typed text to one of his canned answers, for when there's no brain to ask. */
+/**
+ * Words that steer what you type to one of his answers. First match wins,
+ * so the specific ones come before the catch-alls.
+ */
 const CANNED: readonly [RegExp, string][] = [
-  [/\b(ate|eat|food|hungry|dinner|lunch|snack|dorkitos?)\b/i, 'ate'],
+  [/\b(how (are|r) (you|u)|how u doin|hru|u good|you ok|u ok|how('?s| is) it going|how you feeling)\b/i, 'how'],
+  [/\b(poop|poo|toilet|bathroom|potty|pee|dookie|shit)\b/i, 'poop'],
+  [/\b(sorry|my bad|apologi[sz]e)\b/i, 'sorry'],
+  [/\b(stupid|dumb|idiot|ugly|loser|hate|sucks?|trash human|clown)\b/i, 'mean'],
+  [/\b(game|gaming|stream|streaming|pc|xbox|fortnite|minecraft)\b/i, 'game'],
+  [/\b(money|coins?|rich|broke|cash|pay)\b/i, 'money'],
+  [/\b(moss|scientist|doctor|dr|lab|intercom)\b/i, 'moss'],
+  [/\b(bed|tired|nap|sleepy)\b/i, 'bed'],
+  [/\bwar\b/i, 'war'],
+  [/\bohio\b/i, 'ohio'],
+  [/\b(bet|betting|gamble|casino|rocket|mines|plinko|crossing|arcade)\b/i, 'bet'],
+  [/\b(ate|eat|food|hungry|dinner|lunch|snack|dorkitos?|pizza)\b/i, 'ate'],
   [/\b(stink|smell|shower|wash|gross|nasty)\b/i, 'stink'],
   [/\b(love|miss|bestie|bro ❤️)\b/i, 'love'],
   [/\b(wyd|doing|up to)\b/i, 'wyd'],
   [/\b(fart|gas|toot)\b/i, 'fart'],
   [/\b(there yet|road ?trip|drive|driving)\b/i, 'there'],
   [/\b(unit|room|tank|cell|place)\b/i, 'tank'],
-  [/\b(lol|lmao|haha|😂)\b/i, 'lol'],
+  [/\b(lol|lmao|haha|😂)/i, 'lol'],
   [/\b(pic|photo|selfie|picture)\b/i, 'pic'],
   [/\b(proud|good job|nice)\b/i, 'proud'],
   [/\b(clean|flush|trash|tidy|mess)\b/i, 'clean'],
+  [/\b(bye|gn|good ?night|later|cya|ttyl)\b/i, 'bye'],
+  [/^\s*(hi+|hey+|yo+|sup|hello|hiya|wassup|whats up)\b/i, 'hi'],
   [/\b(up|awake|sleep)\b/i, 'up'],
+  [/^\s*why\b/i, 'why'],
+  [/^\s*(yes|yeah|yep|ya|ok|okay|sure)\b/i, 'yes'],
+  [/^\s*(no|nah|nope)\b/i, 'no'],
+  [/\?\s*$/, 'ask'],
 ];
 
-/** What he says back when nobody's there to think for him. */
-export function cannedReply(s: HammyState, said: string, roll: Roll = Math.random): string {
+/**
+ * His answer to anything you type or say, from his own lines: what you said
+ * picks the topic, what's going on in the unit picks the line. He tries not
+ * to say the same thing as one of his `recent` lines.
+ */
+export function cannedReply(s: HammyState, said: string, roll: Roll = Math.random, recent: readonly string[] = []): string {
   const hit = CANNED.find(([re]) => re.test(said));
-  return hit ? replyTo(hit[1], s, roll) : pick(SHRUG_REPLIES, roll);
+  const one = () => (hit ? replyTo(hit[1], s, roll) : pick(SHRUG_REPLIES, roll));
+  let reply = one();
+  for (let i = 0; i < 4 && recent.includes(reply); i++) reply = one();
+  return reply;
 }
 
 /**
@@ -761,27 +840,6 @@ export function pickCaught(s: HammyState, roll: Roll = Math.random): CaughtId {
 }
 
 export const caughtLine = (id: CaughtId, roll: Roll = Math.random): string => pick(CAUGHT[id].says, roll);
-
-/** What's going on in the unit, in a few lines, for him to talk about. */
-export function situation(s: HammyState, now: number, form: FormId): string {
-  const lines = [
-    `Today you are ${FORMS.find((f) => f.id === form)?.name ?? 'Cube Hammy'}.`,
-    `Belly: ${needWord('belly', s.belly)} (${Math.round(s.belly)}/100). Freshness: ${needWord('fresh', s.fresh)} (${Math.round(s.fresh)}/100). Mood: ${needWord('mood', s.mood)} (${Math.round(s.mood)}/100). Health: ${needWord('health', s.health)}.`,
-  ];
-  if (s.urges.length) lines.push('You have to poop right now.');
-  if (s.bowl >= BOWL_MAX) lines.push('The toilet is clogged with poop nobody flushed.');
-  else if (s.bowl) lines.push(`There's unflushed poop in the toilet (${s.bowl} ${s.bowl === 1 ? 'load' : 'loads'}). You did that.`);
-  if (s.poops.length) lines.push(`${s.poops.length} ${s.poops.length === 1 ? 'poop is' : 'poops are'} on the floor.`);
-  if (s.trash.length) lines.push(`${s.trash.length} ${s.trash.length === 1 ? 'piece of your trash is' : 'pieces of your trash are'} lying around (${[...new Set(s.trash.map((t) => t.kind))].join(', ')}).`);
-  if (s.orders.length) lines.push(`DoorDosh is on the way: ${s.orders.map((o) => FOOD_BY_ID[o.food].name).join(', ')}.`);
-  const has = s.furniture.map((f) => FURNITURE_BY_ID[f].name.toLowerCase());
-  lines.push(has.length ? `Your furniture: ${has.join(', ')}. The unit also has a toilet and a shower.` : 'The unit is bare: just a toilet and a shower. No bed, no chair, no PC.');
-  lines.push(`Your friend has ${Math.floor(s.coins)} Hammy coins.`);
-  if (s.fresh < PINCH_BELOW) lines.push('Dr. Moss is wearing a gas mask because of you.');
-  const ago = (now - s.bornAt) / 3_600_000;
-  lines.push(`You've been in the unit ${ago < 1 ? 'less than an hour' : `${Math.floor(ago)} hours`}${s.n > 1 ? `, and you're Hammy #${s.n} (the ones before you died)` : ''}.`);
-  return lines.join('\n');
-}
 
 export const canCall = (s: HammyState, now: number): boolean => isAlive(s) && now >= s.callReadyAt;
 

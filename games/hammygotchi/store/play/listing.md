@@ -14,7 +14,7 @@ Copy these into Play Console. Every field fits Google's limits.
 | App access | All functionality is available without special access |
 | Content rating | Answer the questionnaire: cartoon violence (slapstick only: a boxing glove on a spring and cartoon firecrackers, no blood or injury), crude humor (farts and poop), no gambling, no user content, no data sharing. Expect "Everyone 10+". |
 | Target audience | 13 and over (simplest review). Choosing younger ages adds Google's Families policy checks. |
-| Data safety | No data collected, no data shared. Data is not encrypted in transit because none is sent. (If you ship the optional "talk to him" feature, which only runs with the player's own Anthropic or ElevenLabs keys, declare messages and audio as shared with third parties for app functionality, encrypted in transit, optional.) |
+| Data safety | No data collected, no data shared. Data is not encrypted in transit because none is sent. |
 | Privacy policy URL | where you host `site/hammygotchi/privacy.html` |
 | Contact email | northfieldhemp@gmail.com |
 

@@ -10,6 +10,7 @@ import { CloudSave, localSave as makeLocalSave } from '@shared/storage';
 import {
   BOWL_MAX,
   CAUGHT,
+  CHILL_REPLIES,
   FIT_BY_ID,
   FOOD_BY_ID,
   FORM_BY_ID,
@@ -56,7 +57,6 @@ import {
   sendOwnText,
   sendText,
   shower,
-  situation,
   step,
   tidy,
   tidyAll,
@@ -70,7 +70,7 @@ import {
 import { HOME_LINES, payOut, placeBet, refundBet, type ArcadeGame } from './arcade';
 import type { ArcadeSession } from './arcadeview';
 import { TankScene, type ToiletResult } from './scene';
-import { ask, loadTalk, setTalkSound, speakLine, type Turn } from './talk';
+import { loadTalk, loadVoices, setTalkSound, speakLine } from './talk';
 import { setSound, sfx, unlock } from './sound';
 import { setVoice } from './voice';
 import { deserialize, newGame, serialize, type HammyState, type Poop } from './state';
@@ -114,8 +114,8 @@ class Game implements Controller {
   private formCache = { at: 0, form: 'cube' as FormId };
   /** He's working on an answer to what you typed. */
   thinking = false;
-  /** What's been said on the call that's on now. */
-  private callTurns: Turn[] = [];
+  /** What he's said on the call that's on now, so he doesn't repeat himself. */
+  private callLines: string[] = [];
 
   constructor(hot: HotData) {
     const saves = [hot.save, hot.native, localSave.load()]
@@ -151,6 +151,8 @@ class Game implements Controller {
       this.ui.showIntro();
     } else if (away) this.welcome(away);
     this.bind();
+    // So his first line is already in his voice.
+    void loadVoices();
     void clearReminders();
     if (!isNative) void this.connectCloud();
     requestAnimationFrame(this.frame);
@@ -437,10 +439,9 @@ class Game implements Controller {
     setTalkSound(on);
   }
 
-  /** The texts so far, for him to remember when he answers. */
-  private chatHistory(): Turn[] {
-    const now = Date.now();
-    return this.state.messages.filter((m) => !m.missed && m.at <= now).map((m) => ({ from: m.from, text: m.text }));
+  /** His last few texts, so he doesn't say the same thing twice in a row. */
+  private recentTexts(): string[] {
+    return this.state.messages.filter((m) => m.from === 'hammy' && !m.missed).slice(-6).map((m) => m.text);
   }
 
   private ring(): void {
@@ -458,7 +459,7 @@ class Game implements Controller {
   }
 
   private talk(incoming: boolean): void {
-    this.callTurns = [];
+    this.callLines = [];
     this.ui.showCall(incoming, (seconds) => {
       const { mood, coins } = endCall(this.state, seconds, Date.now(), incoming);
       this.ui.toast(`Call ended · +${Math.round(mood)} mood${coins ? ` · +${coins} coins` : ''}`);
@@ -529,33 +530,32 @@ class Game implements Controller {
     this.changed(true);
   }
 
-  /** You typed him something. He thinks about it (Claude, when there is one) and texts back. */
+  /** You typed him something. He's typing… for a moment, then texts back from his own lines. */
   say(text: string): void {
     const s = this.state;
     if (this.thinking) return;
-    const now = Date.now();
-    const history = this.chatHistory();
-    const counted = sendOwnText(s, text, now);
+    const counted = sendOwnText(s, text, Date.now());
     if (counted === null) return;
     sfx.send();
     this.shownMessages = this.visibleMessages();
     this.thinking = true;
     this.changed();
-    const about = situation(s, now, this.form) + (counted ? '' : '\nYour friend has been texting you a lot. You’re a bit over it.');
-    void ask(about, history, text.trim(), 'text').then((got) => {
+    const recent = this.recentTexts();
+    window.setTimeout(() => {
       this.thinking = false;
-      if (isAlive(this.state)) hammyReplies(this.state, got?.text ?? cannedReply(this.state, text), Date.now());
+      if (isAlive(this.state)) hammyReplies(this.state, counted ? cannedReply(this.state, text, Math.random, recent) : CHILL_REPLIES[Math.floor(Math.random() * CHILL_REPLIES.length)], Date.now());
       this.changed();
-    });
+    }, 1200 + Math.random() * 1600);
   }
 
-  /** On a call: you said something, and he answers (the call screen says it out loud). */
+  /** On a call: you said something, and after a beat he answers (the call screen says it out loud). */
   async callSay(text: string, signal: AbortSignal): Promise<string> {
-    const s = this.state;
-    const about = `${situation(s, Date.now(), this.form)}\nYou're on a phone call with your friend right now.`;
-    const got = await ask(about, this.callTurns, text, 'call', signal);
-    const reply = got?.text ?? cannedReply(s, text);
-    this.callTurns.push({ from: 'you', text }, { from: 'hammy', text: reply });
+    await new Promise<void>((resolve) => {
+      const t = window.setTimeout(resolve, 500 + Math.random() * 700);
+      signal.addEventListener('abort', () => (window.clearTimeout(t), resolve()), { once: true });
+    });
+    const reply = cannedReply(this.state, text, Math.random, this.callLines);
+    this.callLines = [...this.callLines.slice(-5), reply];
     return reply;
   }
 

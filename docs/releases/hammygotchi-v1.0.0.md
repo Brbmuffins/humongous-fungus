@@ -26,10 +26,10 @@ never flushes and leaves his trash everywhere.
   balloons, cream pies, a whoopee cushion, a magnet and firecrackers. Or just
   throw him around the unit.
 - His phone: he texts you, calls you and orders food for himself with your
-  coins. Text him anything, or talk to him on a call, and he answers in
-  character with Claude (on your claude.ai account in the browser version, or
-  your own Anthropic key in the app), out loud with ElevenLabs or the
-  device's voice.
+  coins. Text him anything, or talk to him on a call, and he answers from
+  his own lines about whatever's going on in the unit, out loud in the
+  device's voice (always the same one). It's all on the device: free, no
+  accounts, no keys.
 - Hammy's Arcade on his phone (browser version only), betting his coins:
   Fart Rocket (he rides his own fart past the plane, the moon and the
   aliens; bail out before he sneezes, hits a seagull or lands in Ohio),

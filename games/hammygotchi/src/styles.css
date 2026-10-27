@@ -1065,21 +1065,6 @@ button {
 .talk-status {
   font-size: 13px;
 }
-.keys {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px 14px;
-}
-.keys summary {
-  cursor: pointer;
-  font-weight: 700;
-}
-.keys[open] summary {
-  margin-bottom: 8px;
-}
-.keys .note {
-  margin-bottom: 8px;
-}
 .key-field {
   display: flex;
   flex-direction: column;

@@ -54,7 +54,6 @@ import {
   rotDone,
   sendOwnText,
   sendText,
-  situation,
   step,
   textOptions,
   tidy,
@@ -355,26 +354,36 @@ describe('talking to him yourself', () => {
     hammyReplies(s, 'boo', T0);
     expect(s.messages.some((m) => m.text === 'boo')).toBe(false);
   });
-  it('with nobody to think for him, he still answers something', () => {
+  it('answers whatever you type from his own lines', () => {
     const s = newGame(T0);
     s.belly = 10;
     expect(cannedReply(s, 'did you EAT today', half)).toMatch(/dorkitos|eat|dust/i);
     expect(SHRUG_REPLIES).toContain(cannedReply(s, 'qwzx', half));
+    expect(cannedReply(s, 'yo', half)).toMatch(/yo|sup|hey|hi|whats good|texts/i);
+    expect(cannedReply(s, 'why are you like this', half)).toMatch(/hammy|scientist|science|question|classified/i);
+    expect(cannedReply(s, 'tell war i said hi', half)).toMatch(/guy|war|dorkitos|himself/i);
   });
-  it('knows what is going on in the unit', () => {
+  it('answers from what is going on in the unit', () => {
     const s = newGame(T0);
     s.urges = [T0 + sec(30)];
+    expect(cannedReply(s, 'how are you', half)).toMatch(/toilet|brb|go/i);
+    s.urges = [];
     s.bowl = BOWL_MAX;
-    s.trash = [{ x: 0.2, up: false, kind: 'sock' }];
-    s.furniture = ['bed'];
-    const about = situation(s, T0 + hours(3), 'sub');
-    expect(about).toContain('Meatball sub');
-    expect(about).toContain('poop right now');
-    expect(about).toContain('clogged');
-    expect(about).toContain('1 piece of your trash is');
-    expect(about).toContain('bed');
-    expect(about).toContain('3 hours');
-    expect(situation(newGame(T0), T0, 'cube')).toContain('bare');
+    expect(cannedReply(s, 'did you poop', half)).toMatch(/full|flush|toilet/i);
+    s.bowl = 0;
+    s.furniture = [];
+    expect(cannedReply(s, 'wanna game', half)).toMatch(/pc|rock paper/i);
+    s.furniture = ['pc'];
+    expect(cannedReply(s, 'wanna game', half)).toMatch(/stream|game|pc|cracked/i);
+  });
+  it('tries not to say the same thing twice in a row', () => {
+    const s = newGame(T0);
+    const roll = (() => {
+      let i = 0;
+      return () => [0, 0, 0.6, 0.6][i++ % 4];
+    })();
+    const first = cannedReply(s, 'yo', roll);
+    expect(cannedReply(s, 'yo', roll, [first])).not.toBe(first);
   });
 });
 
