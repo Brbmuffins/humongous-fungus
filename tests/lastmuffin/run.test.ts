@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HOP, MAX_LEVEL, RUN_SECONDS, SLOTS, WEAPON_BY_ID, clockText, levelText, xpToNext, type EnemyId } from '../../games/lastmuffin/src/defs';
+import { HOP, MAX_LEVEL, PULSE_SECONDS, RUN_SECONDS, SLOTS, WEAPON_BY_ID, clockText, levelText, xpToNext, type EnemyId } from '../../games/lastmuffin/src/defs';
 import { Run, type Enemy, type Input } from '../../games/lastmuffin/src/run';
 
 const still: Input = { x: 0, y: 0, hop: false };
@@ -256,5 +256,90 @@ describe('a run', () => {
     expect(r.hpScale()).toBe(1);
     r.t = 600;
     expect(r.hpScale()).toBeCloseTo(2);
+  });
+});
+
+describe('automation', () => {
+  const sprinkle = (r: Run, x: number, y: number, value = 1) => r.pickups.push({ kind: 'xp', x, y, value, pulled: false });
+
+  it('Sous Chef helpers fetch sprinkles you are nowhere near', () => {
+    const r = run();
+    sprinkle(r, 200, 0);
+    play(r, 3);
+    expect(r.xp).toBe(0);
+    const c = run();
+    c.passives.push({ id: 'chef', level: 1 });
+    sprinkle(c, 200, 0);
+    sprinkle(c, -150, 120);
+    for (let i = 0; i < 300 && c.pickups.length; i++) c.step(1 / 60, still);
+    expect(c.chefs).toHaveLength(1);
+    expect(c.pickups).toHaveLength(0);
+    expect(c.xp).toBe(2);
+    // Level 5: three helpers.
+    c.passives[0].level = 5;
+    c.step(1 / 60, still);
+    expect(c.chefs).toHaveLength(3);
+  });
+  it('helpers stay within reach of you, and leave pie tins to you', () => {
+    const c = run();
+    c.passives.push({ id: 'chef', level: 1 });
+    sprinkle(c, 900, 0, 7);
+    c.pickups.push({ kind: 'chest', x: 150, y: 0, value: 1, pulled: false });
+    play(c, 3);
+    expect(c.pickups.some((p) => p.kind === 'xp' && p.value === 7)).toBe(true);
+    expect(c.pickups.some((p) => p.kind === 'chest')).toBe(true);
+  });
+  it('the Fridge Magnet pulls every sprinkle on the floor in, every so often', () => {
+    const r = run({ pantry: { pulse: 3 } });
+    r.hp = r.stats.maxHp = 1e9;
+    expect(r.stats.pulse).toBe(PULSE_SECONDS[3]);
+    for (let i = 0; i < 6; i++) sprinkle(r, 300 + i * 40, -200, 50);
+    play(r, PULSE_SECONDS[3] - 1);
+    expect(r.pickups.filter((p) => p.value === 50)).toHaveLength(6);
+    play(r, 5);
+    expect(r.pickups.filter((p) => p.value === 50)).toHaveLength(0);
+    expect(run().stats.pulse).toBe(0);
+  });
+  it('more pickup range pulls pickups in faster', () => {
+    const near = run();
+    const far = run({ pantry: { magnet: 3 } });
+    for (const r of [near, far]) {
+      r.pickups.push({ kind: 'xp', x: 60, y: 0, value: 1, pulled: true });
+      r.step(0.05, still);
+    }
+    expect(far.pickups.length ? far.pickups[0].x : 0).toBeLessThan(near.pickups[0].x);
+  });
+  it('Auto-Hop dodges a pest about to touch you, unless it is switched off', () => {
+    const r = run({ pantry: { autohop: 1 } });
+    place(r, 'raccoon', 30, 0);
+    r.step(1 / 60, still);
+    expect(r.hp).toBe(100);
+    for (let i = 0; i < 12; i++) r.step(1 / 60, still);
+    // It hopped away from the raccoon.
+    expect(r.x).toBeLessThan(-HOP.distance * 0.8);
+    const off = run({ pantry: { autohop: 1 }, autoHop: false });
+    place(off, 'raccoon', 30, 0);
+    for (let i = 0; i < 20; i++) off.step(1 / 60, still);
+    expect(off.hp).toBeLessThan(100);
+    expect(run().stats.autoHop).toBe(false);
+  });
+  it('the Recipe Book finishes evolutions first, then levels what you have', () => {
+    const r = run();
+    r.weapons[0].level = 4;
+    r.offers = [
+      { type: 'passive', id: 'batter', level: 1 },
+      { type: 'passive', id: 'yeast', level: 1 },
+      { type: 'weapon', id: 'pin', level: 1 },
+    ];
+    expect(r.autoChoice()).toBe(1);
+    r.offers = [
+      { type: 'weapon', id: 'pin', level: 1 },
+      { type: 'weapon', id: 'blaster', level: 5 },
+      { type: 'passive', id: 'batter', level: 1 },
+    ];
+    expect(r.autoChoice()).toBe(1);
+    r.offers = [{ type: 'snack' }, { type: 'milk' }];
+    r.hp = 20;
+    expect(r.autoChoice()).toBe(1);
   });
 });

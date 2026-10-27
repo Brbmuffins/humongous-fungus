@@ -34,7 +34,7 @@ export const HOP = { cooldown: 3.5, distance: 92, seconds: 0.18, safe: 0.32 };
 // Weapons
 
 export type WeaponId = 'blaster' | 'knives' | 'burst' | 'coffee' | 'pin' | 'sprinkles' | 'whisk' | 'frosting';
-export type PassiveId = 'batter' | 'mitts' | 'sugar' | 'powder' | 'yeast' | 'top' | 'preserve' | 'bonk';
+export type PassiveId = 'batter' | 'mitts' | 'sugar' | 'powder' | 'yeast' | 'top' | 'preserve' | 'bonk' | 'chef';
 
 /**
  * How a weapon behaves:
@@ -319,7 +319,15 @@ export const PASSIVES: readonly PassiveDef[] = [
   { id: 'top', name: 'Muffin Top', each: '+25% pickup range', per: 0.25, color: '#b5793d' },
   { id: 'preserve', name: 'Preservatives', each: '+0.25 health a second', per: 0.25, color: '#7cc8ff' },
   { id: 'bonk', name: 'Big Bonk', each: '+5% chance to BONK (triple damage)', per: 0.05, color: '#ffd34d' },
+  { id: 'chef', name: 'Sous Chef', each: 'Helper cupcakes fetch sprinkles and crumbs for you: more of them, and faster, every level', per: 1, color: '#ff9ac4' },
 ];
+
+/** Sous Chef at each level: how many helpers, how fast they fly, how far from you they'll go. */
+export const CHEF = {
+  helpers: [1, 1, 2, 2, 3],
+  speed: [200, 260, 280, 340, 380],
+  reach: [240, 300, 320, 380, 440],
+};
 
 export const PASSIVE_BY_ID = Object.fromEntries(PASSIVES.map((p) => [p.id, p])) as Record<PassiveId, PassiveDef>;
 
@@ -471,7 +479,7 @@ export const MUFFIN_BY_ID = Object.fromEntries(MUFFINS.map((m) => [m.id, m])) as
 // ---------------------------------------------------------------------------
 // The Pantry: upgrades bought with crumbs between runs, kept forever.
 
-export type PantryId = 'might' | 'health' | 'armor' | 'speed' | 'magnet' | 'growth' | 'greed' | 'cooldown' | 'reroll' | 'revive';
+export type PantryId = 'might' | 'health' | 'armor' | 'speed' | 'magnet' | 'growth' | 'greed' | 'cooldown' | 'reroll' | 'revive' | 'pulse' | 'autopick' | 'autohop';
 
 export interface PantryDef {
   id: PantryId;
@@ -492,7 +500,14 @@ export const PANTRY: readonly PantryDef[] = [
   { id: 'cooldown', name: 'Preheated Oven', each: '3% shorter cooldowns', per: 0.03, prices: [150, 320, 600] },
   { id: 'reroll', name: 'Second Opinion', each: '+1 reroll a run', per: 1, prices: [120, 280, 500] },
   { id: 'revive', name: 'Day-Old Discount', each: 'Come back once a run, at half health', per: 1, prices: [800] },
+  // Automation: less to do, more to watch.
+  { id: 'pulse', name: 'Fridge Magnet', each: 'Every sprinkle on the floor comes to you, every 60s, then 40s, then 25s', per: 1, prices: [150, 350, 600] },
+  { id: 'autopick', name: 'Recipe Book', each: 'Level-ups and pie tins pick for themselves, so the night never stops (you can turn it off)', per: 1, prices: [300] },
+  { id: 'autohop', name: 'Auto-Hop', each: 'Hops out of the way by itself when a pest is about to touch you (you can turn it off)', per: 1, prices: [400] },
 ];
+
+/** Fridge Magnet: seconds between pulls, by level. */
+export const PULSE_SECONDS = [0, 60, 40, 25];
 
 export const PANTRY_BY_ID = Object.fromEntries(PANTRY.map((p) => [p.id, p])) as Record<PantryId, PantryDef>;
 

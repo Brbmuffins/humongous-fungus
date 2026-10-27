@@ -5,11 +5,11 @@ import '@fontsource/rubik/latin-700.css';
 import './styles.css';
 
 import { CloudSave, localSave as makeLocalSave } from '@shared/storage';
-import { ENEMY_BY_ID, MUFFIN_BY_ID, PANTRY_BY_ID, WEAPON_BY_ID, WIN_CRUMBS, type EnemyId, type MuffinId, type PantryId } from './defs';
+import { ENEMY_BY_ID, MUFFIN_BY_ID, PANTRY_BY_ID, PASSIVE_BY_ID, WEAPON_BY_ID, WIN_CRUMBS, type EnemyId, type MuffinId, type PantryId } from './defs';
 import { Controls } from './input';
-import { bankRun, bankUnbanked, buyPantry, deserialize, newMeta, pick, serialize, unlock, type MetaState } from './meta';
+import { autoPicking, bankRun, bankUnbanked, buyPantry, deserialize, newMeta, pick, serialize, unlock, type MetaState } from './meta';
 import { buzz, isNative, nativeSave, onAppState } from './native';
-import { Run, type RunEvent } from './run';
+import { Run, type Offer, type RunEvent } from './run';
 import { setSound, sfx, suspend, unlock as unlockAudio } from './sound';
 import { UI, type Controller, type Screen } from './ui';
 import { View } from './view';
@@ -219,6 +219,9 @@ class Game implements Controller {
           sfx.chest();
           buzz.success();
           break;
+        case 'pulse':
+          sfx.pulse();
+          break;
         case 'revive':
           sfx.levelUp();
           this.ui.warn('Day-old discount: back on your feet!', 2500);
@@ -239,18 +242,39 @@ class Game implements Controller {
     }
   }
 
-  /** A run that stopped for something gets its screen. */
+  /** A run that stopped for something gets its screen (or the Recipe Book handles it). */
   private afterStep(run: Run): void {
+    if (autoPicking(this.meta)) this.autoPick(run);
     if (run.state === 'levelup') this.ui.show('levelup');
     else if (run.state === 'chest') this.ui.show('chest');
     else if (run.state === 'won') this.ui.show('sunrise');
+  }
+
+  /** The Recipe Book picks level-ups and opens pie tins, and says what it did. */
+  private autoPick(run: Run): void {
+    const said: string[] = [];
+    const name = (o: Offer) =>
+      o.type === 'weapon' ? `${WEAPON_BY_ID[o.id].name} ${o.level}` : o.type === 'passive' ? `${PASSIVE_BY_ID[o.id].name} ${o.level}` : o.type === 'snack' ? 'a snack' : 'milk';
+    for (let guard = 0; guard < 50 && (run.state === 'levelup' || run.state === 'chest'); guard++) {
+      if (run.state === 'levelup') {
+        const o = run.offers[run.autoChoice()];
+        run.choose(run.offers.indexOf(o));
+        said.push(name(o));
+      } else {
+        const ch = run.chest!;
+        if (ch.evolved) said.push(`${WEAPON_BY_ID[ch.evolved].evolved.name}!`);
+        else said.push(...ch.upgrades.map(name));
+        run.closeChest();
+      }
+    }
+    if (said.length) this.ui.warn(`📖 ${said.join(' · ')}`, 2000);
   }
 
   // -------------------------------------------------------------------------
   // Controller
 
   start(): void {
-    const run = new Run({ muffin: this.meta.muffin, pantry: this.meta.pantry, seed: Date.now() % 2147483647 });
+    const run = new Run({ muffin: this.meta.muffin, pantry: this.meta.pantry, seed: Date.now() % 2147483647, autoHop: this.meta.autoHop });
     run.view = this.view.worldView;
     this.run = run;
     this.ended = null;
@@ -362,6 +386,26 @@ class Game implements Controller {
   show(screen: Screen): void {
     if (screen === 'title' || screen === 'select' || screen === 'pantry' || screen === 'records') this.ended = null;
     this.ui.show(screen);
+  }
+
+  toggleAutoPick(): void {
+    this.meta.autoPick = !this.meta.autoPick;
+    this.save();
+    const run = this.run;
+    // Turned on from the level-up screen: pick this one too.
+    if (run && autoPicking(this.meta) && (run.state === 'levelup' || run.state === 'chest')) {
+      this.autoPick(run);
+      this.resume();
+      return;
+    }
+    this.ui.show(this.ui.current);
+  }
+
+  toggleAutoHop(): void {
+    this.meta.autoHop = !this.meta.autoHop;
+    if (this.run) this.run.setAutoHop(this.meta.autoHop);
+    this.save();
+    this.ui.show(this.ui.current);
   }
 
   toggleSound(): void {

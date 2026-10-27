@@ -2,7 +2,7 @@
 // weapon, and the bits that are only for show (crumbs flying, damage numbers,
 // BONK!). Sprites are drawn once per size into little canvases and reused.
 import { ENEMY_BY_ID, MUFFIN_BY_ID, PLAYER, WEAPON_BY_ID, type EnemyId, type MuffinId } from './defs';
-import { INK, drawBerry, drawChest, drawCrumb, drawEnemy, drawKnife, drawMagnet, drawMilk, drawMuffin, drawPin, drawSprinkle, drawToast, type MuffinFace } from './draw';
+import { INK, drawBerry, drawChef, drawChest, drawCrumb, drawEnemy, drawKnife, drawMagnet, drawMilk, drawMuffin, drawPin, drawSprinkle, drawToast, type MuffinFace } from './draw';
 import type { Controls } from './input';
 import type { Run, RunEvent } from './run';
 
@@ -266,6 +266,9 @@ export class View {
         case 'revive':
           this.flashes.push({ kind: 'ring', x: run.x, y: run.y, r: 220, angle: 0, w: 0, h: 0, born: t, evolved: false });
           break;
+        case 'pulse':
+          this.flashes.push({ kind: 'ring', x: run.x, y: run.y, r: 320, angle: 0, w: 0, h: 0, born: t, evolved: true });
+          break;
         case 'boss':
           this.shake = 6;
           break;
@@ -387,6 +390,12 @@ export class View {
       const color = w.evolved ? WEAPON_BY_ID.knives.evolved.color : WEAPON_BY_ID.knives.color;
       const img = this.sprite(`knife:${color}:${Math.round(s)}`, s, s * 1.2, (cc, ss) => drawKnife(cc, ss, color));
       for (const k of run.orbitPositions(w)) this.blit(img, k.x, k.y, false, k.a + Math.PI / 2);
+    }
+
+    // Sous Chef helpers, and whatever they're carrying.
+    if (run.chefs.length) {
+      const img = this.sprite(`chef:${frame}`, 11.5, 18, (cc, ss) => drawChef(cc, ss, frame));
+      for (const ch of run.chefs) this.blit(img, ch.x, ch.y + Math.sin(t * 0.008 + ch.phase) * 2, (ch.target?.x ?? run.x) < ch.x);
     }
 
     this.drawFlashes(t);
@@ -539,7 +548,8 @@ export class View {
       }
       if (age > 0.6) return false;
       const k = age / 0.6;
-      c.strokeStyle = `rgba(255,211,77,${1 - k})`;
+      // A Fridge Magnet pull is mint; a revive is butter yellow.
+      c.strokeStyle = f.evolved ? `rgba(94,224,176,${1 - k})` : `rgba(255,211,77,${1 - k})`;
       c.lineWidth = 6;
       c.beginPath();
       c.arc(f.x, f.y, f.r * k, 0, TAU);

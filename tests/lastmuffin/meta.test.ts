@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bankRun, bankUnbanked, buyPantry, canUnlock, deserialize, newMeta, pantryCost, pick, serialize, unlock } from '../../games/lastmuffin/src/meta';
+import { autoPicking, bankRun, bankUnbanked, buyPantry, canUnlock, deserialize, newMeta, pantryCost, pick, serialize, unlock } from '../../games/lastmuffin/src/meta';
 import type { RunSummary } from '../../games/lastmuffin/src/run';
 
 const summary = (patch: Partial<RunSummary> = {}): RunSummary => ({ muffin: 'blueberry', seconds: 200, level: 12, kills: 300, crumbs: 40, won: false, bosses: 1, weapons: [], ...patch });
@@ -82,5 +82,21 @@ describe('after a run', () => {
     expect(bankUnbanked(m)).toBe(33);
     expect(m.crumbs).toBe(33);
     expect(m.unbanked).toBe(0);
+  });
+});
+
+describe('automation settings', () => {
+  it('the Recipe Book only picks once bought, and can be switched off', () => {
+    const m = newMeta(0);
+    expect(autoPicking(m)).toBe(false);
+    m.crumbs = 300;
+    expect(buyPantry(m, 'autopick')).toBe(true);
+    expect(autoPicking(m)).toBe(true);
+    m.autoPick = false;
+    expect(autoPicking(m)).toBe(false);
+    const back = deserialize(serialize(m))!;
+    expect(back.autoPick).toBe(false);
+    expect(back.autoHop).toBe(true);
+    expect(back.pantry.autopick).toBe(1);
   });
 });

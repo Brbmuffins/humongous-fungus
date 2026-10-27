@@ -59,6 +59,11 @@ Baking Powder (+10% weapon size), Yeast (7% shorter cooldowns), Muffin Top
 (+25% pickup range), Preservatives (+0.25 health a second) and **Big Bonk**
 (+5% chance to BONK).
 
+**Sous Chef** is the ninth passive: helper cupcakes with chef hats fly out,
+grab the nearest sprinkle or crumb within reach of you and it's yours, no
+walking needed. One helper at level 1, three at level 5, and they fly
+faster and farther each level. They leave pie tins for you.
+
 ### BONK
 
 Every hit has a chance (3% to start) to be a BONK: triple damage, a huge
@@ -103,14 +108,30 @@ armor, speed, pickup range, sprinkles, crumbs, cooldowns, rerolls and one
 revive a run (Day-Old Discount: back at half health, everything nearby
 knocked away).
 
+## Automation
+
+Combat is already automatic. These take care of the rest, so a night can be
+mostly steering:
+
+| | How you get it | What it does |
+|---|---|---|
+| Sous Chef | Passive, while leveling up | Helpers fetch sprinkles and crumbs for you |
+| Muffin Top, Sticky Fingers | Passive; Pantry | Bigger pickup range; pickups also fly to you faster the bigger it is |
+| Fridge Magnet | Pantry: 150, 350, 600 | Every sprinkle on the floor comes to you, every 60, then 40, then 25 seconds |
+| Recipe Book | Pantry: 300 | Level-ups and pie tins pick for themselves (finishing evolutions first, then leveling what you have), so the night never pauses. A toast says what it took. Switch it off in Pause, the Pantry or Records |
+| Auto-Hop | Pantry: 400 | Hops away by itself when a pest or a slice of toast is about to touch you, whenever the hop is ready. Can be switched off too |
+
 ## Balance
 
 `scripts/lastmuffin-sim.ts` has a bot that kites the swarm, grabs sprinkles
-and picks weapon upgrades first play whole nights
-(`npx tsx scripts/lastmuffin-sim.ts blueberry 6 2`). Roughly: with no Pantry
+and picks the way the Recipe Book does play whole nights
+(`npx tsx scripts/lastmuffin-sim.ts blueberry 6 2`; add `auto` for the
+Fridge Magnet and Auto-Hop). Roughly: with no Pantry
 upgrades, most nights end between 5 and 10 minutes and one in six to one in
 three reaches sunrise; with every Pantry upgrade at level 2, about a third
-do; at level 4, all of them. (It's a poor player with melee weapons: it runs
+do; at level 4, all of them. The Fridge Magnet and Auto-Hop on their own raise the
+level a night reaches and about double the sunrises, without making it a
+given. (It's a poor player with melee weapons: it runs
 away from everything, so the Whisk and Hot Coffee look worse than they are.) A night brings home 30 to 400 crumbs, so the first few
 Pantry levels and muffins come within a handful of nights.
 

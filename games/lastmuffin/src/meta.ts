@@ -38,6 +38,9 @@ export interface MetaState {
   evolved: WeaponId[];
   met: EnemyId[];
   sound: boolean;
+  /** Automation settings, for when the Pantry has them. */
+  autoPick: boolean;
+  autoHop: boolean;
   updatedAt: number;
 }
 
@@ -56,6 +59,8 @@ export function newMeta(now: number): MetaState {
     evolved: [],
     met: [],
     sound: true,
+    autoPick: true,
+    autoHop: true,
     updatedAt: now,
   };
 }
@@ -94,6 +99,8 @@ export function deserialize(raw: string): MetaState | null {
   m.evolved = Array.isArray(d.evolved) ? [...new Set(d.evolved.filter((x): x is WeaponId => typeof x === 'string' && weapons.has(x)))] : [];
   m.met = Array.isArray(d.met) ? [...new Set(d.met.filter((x): x is EnemyId => typeof x === 'string' && enemies.has(x)))] : [];
   m.sound = d.sound !== false;
+  m.autoPick = d.autoPick !== false;
+  m.autoHop = d.autoHop !== false;
   return m;
 }
 
@@ -135,6 +142,9 @@ export function unlock(m: MetaState, id: MuffinId): boolean {
   m.muffins.push(id);
   return true;
 }
+
+/** Is the Recipe Book bought and switched on? */
+export const autoPicking = (m: MetaState): boolean => m.pantry.autopick > 0 && m.autoPick;
 
 export function pick(m: MetaState, id: MuffinId): boolean {
   if (!m.muffins.includes(id)) return false;

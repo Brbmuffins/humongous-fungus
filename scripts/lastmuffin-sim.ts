@@ -1,14 +1,19 @@
 // Last Muffin Standing balance sim: a bot that kites the swarm and grabs
 // sprinkles plays whole nights, and this prints how each one went.
-//   npx tsx scripts/lastmuffin-sim.ts [muffin] [nights] [pantry level for everything]
-//   npx tsx scripts/lastmuffin-sim.ts blueberry 6 2
+//   npx tsx scripts/lastmuffin-sim.ts [muffin] [nights] [pantry level for everything] [auto]
+//   npx tsx scripts/lastmuffin-sim.ts blueberry 6 2 auto
 import { RUN_SECONDS, type MuffinId } from '../games/lastmuffin/src/defs';
-import { Run, type Input, type Offer } from '../games/lastmuffin/src/run';
+import { Run, type Input } from '../games/lastmuffin/src/run';
 
 const muffin = (process.argv[2] ?? 'blueberry') as MuffinId;
 const seeds = Number(process.argv[3] ?? 5);
 const pl = Number(process.argv[4] ?? 0);
-const pantry = pl ? { might: pl, health: pl, armor: Math.min(3, pl), speed: Math.min(3, pl), magnet: Math.min(3, pl), growth: pl, cooldown: Math.min(3, pl) } : {};
+const auto = process.argv[5] === 'auto';
+const pantry = {
+  ...(pl ? { might: pl, health: pl, armor: Math.min(3, pl), speed: Math.min(3, pl), magnet: Math.min(3, pl), growth: pl, cooldown: Math.min(3, pl) } : {}),
+  // With "auto", the automation upgrades too: Fridge Magnet, Auto-Hop.
+  ...(auto ? { pulse: 3, autohop: 1 } : {}),
+};
 
 function bot(r: Run, t: number): Input {
   let ax = 0, ay = 0;
@@ -44,15 +49,9 @@ function bot(r: Run, t: number): Input {
   return { x: mx || Math.cos(t * 0.3), y: my || Math.sin(t * 0.3), hop: close < 16 };
 }
 
+/** Picks the way the Recipe Book does. */
 function choose(r: Run): void {
-  const score = (o: Offer) => {
-    if (o.type === 'weapon') return r.weapons.some((w) => w.id === o.id) ? 10 + o.level : 8;
-    if (o.type === 'passive') return (r.weapons.length >= 3 ? 9 : 5) + o.level;
-    return 1;
-  };
-  let bi = 0;
-  r.offers.forEach((o, i) => { if (score(o) > score(r.offers[bi])) bi = i; });
-  r.choose(bi);
+  r.choose(r.autoChoice());
 }
 
 const results: string[] = [];

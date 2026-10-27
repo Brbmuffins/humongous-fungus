@@ -926,6 +926,11 @@ button {
   display: flex;
   flex-direction: column;
 }
+.toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
 @media (max-height: 640px) {
   .hero {

@@ -4,6 +4,7 @@
 // sim rely on that). The view reads this state and the events `step` returns.
 import { mulberry32 } from '@shared/rng';
 import {
+  CHEF,
   CHEST_CRUMBS,
   ENEMY_BY_ID,
   EVENTS,
@@ -20,6 +21,7 @@ import {
   PASSIVE_BY_ID,
   PASSIVES,
   PLAYER,
+  PULSE_SECONDS,
   RUN_SECONDS,
   SLOTS,
   WAVES,
@@ -40,6 +42,8 @@ export interface RunSetup {
   muffin: MuffinId;
   pantry: Partial<Record<PantryId, number>>;
   seed: number;
+  /** Use Auto-Hop if the Pantry has it (a setting; on unless turned off). */
+  autoHop?: boolean;
 }
 
 /** The muffin's numbers for this run: muffin perks, Pantry and passives. */
@@ -56,6 +60,18 @@ export interface Stats {
   greed: number;
   regen: number;
   bonk: number;
+  /** Seconds between Fridge Magnet pulls (0: none). */
+  pulse: number;
+  autoHop: boolean;
+}
+
+/** A Sous Chef helper, flying out for pickups. */
+export interface Chef {
+  x: number;
+  y: number;
+  target: Pickup | null;
+  /** For hovering around you when there's nothing to fetch. */
+  phase: number;
 }
 
 export interface Enemy {
@@ -175,6 +191,7 @@ export type RunEvent =
   | { type: 'bossDown'; enemy: EnemyId }
   | { type: 'warning'; text: string }
   | { type: 'chest' }
+  | { type: 'pulse' }
   | { type: 'revive' }
   | { type: 'win' }
   | { type: 'dead' };
@@ -246,6 +263,7 @@ export class Run {
   stats: Stats;
 
   enemies: Enemy[] = [];
+  chefs: Chef[] = [];
   shots: Shot[] = [];
   puddles: Puddle[] = [];
   pickups: Pickup[] = [];
@@ -254,6 +272,8 @@ export class Run {
   view = { w: 480, h: 860 };
 
   private uid = 1;
+  private nextPulse = 0;
+  private wantsAutoHop: boolean;
   private spawnDebt = 0;
   private nextEvent = 0;
   private grid = new Map<number, Enemy[]>();
@@ -263,11 +283,13 @@ export class Run {
     this.muffin = setup.muffin;
     this.pantry = setup.pantry;
     this.rnd = mulberry32(setup.seed);
+    this.wantsAutoHop = setup.autoHop !== false;
     const m = MUFFIN_BY_ID[setup.muffin];
     this.weapons.push(this.newWeapon(m.weapon));
     if (m.passive) this.passives.push({ id: m.passive, level: 1 });
     this.stats = this.computeStats();
     this.hp = this.stats.maxHp;
+    this.nextPulse = this.stats.pulse;
     this.rerolls = this.pantryLevel('reroll');
     this.revives = this.pantryLevel('revive');
   }
@@ -299,6 +321,8 @@ export class Run {
       greed: 1 + q('greed'),
       regen: p('preserve'),
       bonk: PLAYER.bonk + (b.bonk ?? 0) + p('bonk'),
+      pulse: PULSE_SECONDS[this.pantryLevel('pulse')] ?? 0,
+      autoHop: this.wantsAutoHop !== false && this.pantryLevel('autohop') > 0,
     };
   }
 
@@ -318,6 +342,12 @@ export class Run {
 
   private newWeapon(id: WeaponId): WeaponSlot {
     return { id, level: 1, evolved: false, readyAt: this.t + 0.4, angle: 0, damage: 0, kills: 0 };
+  }
+
+  /** Switch Auto-Hop on or off mid-run (only does anything if the Pantry has it). */
+  setAutoHop(on: boolean): void {
+    this.wantsAutoHop = on;
+    this.stats = this.computeStats();
   }
 
   // -------------------------------------------------------------------------
@@ -354,6 +384,8 @@ export class Run {
     this.useWeapons(dt);
     this.moveShots(dt);
     this.tickPuddles();
+    this.pulse();
+    this.sendChefs(dt);
     this.collect(dt);
     this.enemies = this.enemies.filter((e) => !e.dead);
     if (!this.overtime && this.t >= RUN_SECONDS && this.state === 'playing') {
@@ -378,12 +410,13 @@ export class Run {
       this.fx = ix / l;
       this.fy = iy / l;
     }
-    if (input.hop && this.t >= this.hopReadyAt) {
+    const auto = !input.hop && this.t >= this.hopReadyAt ? this.dodge() : null;
+    if ((input.hop || auto) && this.t >= this.hopReadyAt) {
       this.hopUntil = this.t + HOP.seconds;
       this.hopReadyAt = this.t + HOP.cooldown;
       this.safeUntil = Math.max(this.safeUntil, this.t + HOP.safe);
-      this.hopX = this.fx;
-      this.hopY = this.fy;
+      this.hopX = auto ? auto[0] : this.fx;
+      this.hopY = auto ? auto[1] : this.fy;
       this.events.push({ type: 'hop' });
     }
     if (this.t < this.hopUntil) {
@@ -394,6 +427,29 @@ export class Run {
       this.x += ix * this.stats.speed * dt;
       this.y += iy * this.stats.speed * dt;
     }
+  }
+
+  /**
+   * Auto-Hop: a pest (or a slice of toast) about to touch you, and which way
+   * is away from it. Null when nothing's that close.
+   */
+  private dodge(): [number, number] | null {
+    if (!this.stats.autoHop) return null;
+    let best: [number, number] | null = null;
+    let bestGap = 8;
+    const check = (x: number, y: number, r: number) => {
+      const dx = this.x - x;
+      const dy = this.y - y;
+      const d = Math.hypot(dx, dy) || 1;
+      const gap = d - r - PLAYER.radius;
+      if (gap < bestGap) {
+        bestGap = gap;
+        best = [dx / d, dy / d];
+      }
+    };
+    for (const e of this.enemies) if (!e.dead && this.t >= e.contactAt) check(e.x, e.y, e.def.radius);
+    for (const sh of this.shots) if (sh.kind === 'toast') check(sh.x, sh.y, sh.r);
+    return best;
   }
 
   // -------------------------------------------------------------------------
@@ -1001,16 +1057,75 @@ export class Run {
   // -------------------------------------------------------------------------
   // Pickups and levels
 
+  /** Fridge Magnet: every so often, every sprinkle on the floor comes to you. */
+  private pulse(): void {
+    if (!this.stats.pulse || this.t < this.nextPulse) return;
+    this.nextPulse = this.t + this.stats.pulse;
+    let n = 0;
+    for (const p of this.pickups) {
+      if (p.kind === 'xp' && !p.pulled) {
+        p.pulled = true;
+        n++;
+      }
+    }
+    if (n) this.events.push({ type: 'pulse' });
+  }
+
+  /** Sous Chef: helpers fly out, grab the nearest sprinkle or crumb, and it's yours. */
+  private sendChefs(dt: number): void {
+    const level = this.passiveLevel('chef');
+    const want = level ? CHEF.helpers[level - 1] : 0;
+    while (this.chefs.length < want) this.chefs.push({ x: this.x, y: this.y, target: null, phase: this.rnd() * TAU });
+    if (!want) return;
+    const speed = CHEF.speed[level - 1];
+    const reach = CHEF.reach[level - 1];
+    for (const c of this.chefs) {
+      if (c.target && (Number.isNaN(c.target.x) || !this.pickups.includes(c.target))) c.target = null;
+      if (!c.target) {
+        let best: Pickup | null = null;
+        let bd = Infinity;
+        for (const p of this.pickups) {
+          if (p.kind === 'chest' || p.pulled || this.chefs.some((o) => o.target === p)) continue;
+          if ((p.x - this.x) ** 2 + (p.y - this.y) ** 2 > reach * reach) continue;
+          const d = (p.x - c.x) ** 2 + (p.y - c.y) ** 2;
+          if (d < bd) {
+            bd = d;
+            best = p;
+          }
+        }
+        c.target = best;
+      }
+      // Off to the pickup, or back to hover beside you.
+      c.phase += dt * 2;
+      const tx = c.target ? c.target.x : this.x + Math.cos(c.phase) * 34;
+      const ty = c.target ? c.target.y : this.y - 26 + Math.sin(c.phase * 1.3) * 8;
+      const dx = tx - c.x;
+      const dy = ty - c.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const step = Math.min(d, speed * dt);
+      c.x += (dx / d) * step;
+      c.y += (dy / d) * step;
+      if (c.target && d < 10) {
+        this.take(c.target);
+        c.target.x = NaN;
+        c.target = null;
+      }
+    }
+  }
+
   private collect(dt: number): void {
     const magnet = this.stats.magnet;
     const grab = PLAYER.radius + 10;
+    // Pickups fly to you faster the farther you can reach.
+    const pull = Math.max(260, this.stats.speed * 2.2) * Math.sqrt(magnet / PLAYER.magnet);
     for (const p of this.pickups) {
+      if (Number.isNaN(p.x)) continue;
       const dx = this.x - p.x;
       const dy = this.y - p.y;
       const d = Math.hypot(dx, dy) || 1;
       if (!p.pulled && (d < magnet || (p.kind === 'chest' && d < 60))) p.pulled = true;
       if (p.pulled) {
-        const v = Math.max(260, this.stats.speed * 2.2) * dt;
+        const v = pull * dt;
         const step = Math.min(d, v);
         p.x += (dx / d) * step;
         p.y += (dy / d) * step;
@@ -1110,6 +1225,35 @@ export class Run {
         this.hp = Math.min(this.stats.maxHp, this.hp + MILK_HEAL);
         break;
     }
+  }
+
+  /**
+   * Which offer the Recipe Book would pick: whatever finishes an evolution,
+   * then levels for weapons you have, then new weapons, then passives.
+   */
+  autoChoice(): number {
+    const owns = (id: WeaponId) => this.weapons.find((w) => w.id === id);
+    const score = (o: Offer): number => {
+      if (o.type === 'weapon') {
+        const w = owns(o.id);
+        if (!w) return this.weapons.length < 4 ? 70 : 30;
+        const ready = o.level === MAX_LEVEL && this.passiveLevel(WEAPON_BY_ID[o.id].evolvesWith) > 0;
+        return 100 + o.level * 2 + (ready ? 50 : 0);
+      }
+      if (o.type === 'passive') {
+        const feeds = this.weapons.filter((w) => !w.evolved && WEAPON_BY_ID[w.id].evolvesWith === o.id);
+        if (o.level === 1 && feeds.some((w) => w.level >= 4)) return 120;
+        const base = o.level === 1 ? 35 : 50;
+        return base + (feeds.length ? 10 : 0) + (o.id === 'chef' || o.id === 'top' ? 4 : 0);
+      }
+      if (o.type === 'milk') return this.hp < this.stats.maxHp / 2 ? 10 : 1;
+      return 2;
+    };
+    let best = 0;
+    this.offers.forEach((o, i) => {
+      if (score(o) > score(this.offers[best])) best = i;
+    });
+    return best;
   }
 
   /** Pick one of the offers. */

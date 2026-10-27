@@ -48,6 +48,8 @@ export interface Controller {
   giveUp(): void;
   show(screen: Screen): void;
   toggleSound(): void;
+  toggleAutoPick(): void;
+  toggleAutoHop(): void;
   eraseSave(): void;
 }
 
@@ -67,6 +69,9 @@ function icon(kind: 'weapon' | 'passive', id: WeaponId | PassiveId, size: number
   }
   return canvas;
 }
+
+/** Pantry upgrades that do things for you, listed on their own. */
+const AUTOMATION: readonly PantryId[] = ['pulse', 'autopick', 'autohop'];
 
 function crumbsTag(n: number): HTMLElement {
   return h('span', { class: 'crumbs-tag' }, h('span', { class: 'crumb-dot', 'aria-hidden': 'true' }), fmt(n));
@@ -261,20 +266,32 @@ export class UI {
     );
   }
 
+  /** On/off switches for what the Pantry has automated. */
+  private automationToggles(): HTMLElement | null {
+    const m = this.c.meta;
+    const rows: HTMLElement[] = [];
+    const sw = (label: string, on: boolean, onclick: () => void) =>
+      h('button', { class: 'toggle', type: 'button', role: 'switch', 'aria-checked': String(on), onclick }, h('span', null, label), h('span', { class: 'toggle-state' }, on ? 'On' : 'Off'));
+    if (m.pantry.autopick) rows.push(sw('Recipe Book picks level-ups', m.autoPick, () => this.c.toggleAutoPick()));
+    if (m.pantry.autohop) rows.push(sw('Auto-Hop', m.autoHop, () => this.c.toggleAutoHop()));
+    return rows.length ? h('div', { class: 'toggles' }, ...rows) : null;
+  }
+
   private pantry(): HTMLElement {
     const m = this.c.meta;
     const list = h('div', { class: 'pantry' });
+    const auto = h('div', { class: 'pantry' });
     for (const p of PANTRY) {
       const level = m.pantry[p.id];
       const cost = pantryCost(m, p.id);
       const pips = h('span', { class: 'pips', 'aria-label': `Level ${level} of ${p.prices.length}` }, ...p.prices.map((_, i) => h('span', { class: `pip${i < level ? ' on' : ''}` })));
-      list.append(
+      (AUTOMATION.includes(p.id) ? auto : list).append(
         h(
           'div',
           { class: 'pantry-row' },
           h('span', { class: 'pantry-main' }, h('span', { class: 'pantry-name' }, p.name), h('span', { class: 'pantry-each' }, p.each), pips),
           cost === null
-            ? h('span', { class: 'maxed' }, 'Maxed')
+            ? h('span', { class: 'maxed' }, p.prices.length === 1 ? 'Owned' : 'Maxed')
             : h('button', { class: `buy${m.crumbs >= cost ? ' can' : ''}`, type: 'button', disabled: m.crumbs < cost, onclick: () => this.c.buy(p.id) }, crumbsTag(cost)),
         ),
       );
@@ -285,6 +302,10 @@ export class UI {
       h('div', { class: 'panel-head' }, this.btn('‹ Back', () => this.c.show('title'), 'btn-link'), h('h2', null, 'The Pantry'), h('span', { class: 'panel-crumbs' }, crumbsTag(m.crumbs))),
       h('p', { class: 'note' }, 'Crumbs you bring home buy these. They last forever and help every muffin.'),
       list,
+      h('h3', null, 'Automation'),
+      h('p', { class: 'note' }, 'Less to do, more to watch. The Sous Chef passive, found while leveling up, fetches sprinkles for you too.'),
+      auto,
+      this.automationToggles(),
     );
   }
 
@@ -334,6 +355,7 @@ export class UI {
       pests,
       h('h3', null, 'Settings'),
       h('button', { class: 'toggle', type: 'button', role: 'switch', 'aria-checked': String(m.sound), onclick: () => this.c.toggleSound() }, h('span', null, 'Sound'), h('span', { class: 'toggle-state' }, m.sound ? 'On' : 'Off')),
+      this.automationToggles(),
       erase,
     );
   }
@@ -362,6 +384,7 @@ export class UI {
         this.btn(`Reroll (${run.rerolls})`, () => this.c.reroll(), 'btn btn-quiet', false),
         this.btn('Skip: +10 health', () => this.c.skip(), 'btn btn-quiet'),
       ),
+      this.c.meta.pantry.autopick ? this.btn('📖 Let the Recipe Book pick from now on', () => this.c.toggleAutoPick(), 'btn-link') : null,
     );
   }
 
@@ -425,6 +448,7 @@ export class UI {
       run.passives.length ? h('p', { class: 'passives-line' }, ...run.passives.map((p) => h('span', null, icon('passive', p.id, 18), `${PASSIVE_BY_ID[p.id].name} ${p.level}`))) : null,
       this.btn('Keep going', () => this.c.resume(), 'btn btn-big', true),
       h('div', { class: 'confirm-row' }, this.btn(`Sound: ${m.sound ? 'on' : 'off'}`, () => this.c.toggleSound(), 'btn btn-quiet'), this.btn('Give up', () => this.c.giveUp(), 'btn btn-quiet')),
+      this.automationToggles(),
     );
   }
 

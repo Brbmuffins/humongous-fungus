@@ -655,6 +655,45 @@ export function drawKnife(c: Ctx, s: number, color = '#d8dde6'): void {
   fillStroke(c, '#f2e2a8', 0.08, s);
 }
 
+/** A Sous Chef helper: a little pink cupcake in a chef's hat, with wings. */
+export function drawChef(c: Ctx, s: number, frame: number): void {
+  c.lineJoin = 'round';
+  // Wings.
+  c.globalAlpha = 0.75;
+  for (const k of [-1, 1]) {
+    ellipse(c, k * s * 0.75, -s * (frame % 2 ? 0.1 : 0.35), s * 0.45, s * 0.22, k * (frame % 2 ? 0.3 : -0.3));
+    fillStroke(c, '#eef4ff', 0.08, s);
+  }
+  c.globalAlpha = 1;
+  // Liner and frosting.
+  c.beginPath();
+  c.moveTo(-s * 0.55, 0);
+  c.lineTo(s * 0.55, 0);
+  c.lineTo(s * 0.4, s * 0.6);
+  c.lineTo(-s * 0.4, s * 0.6);
+  c.closePath();
+  fillStroke(c, '#7cc8ff', 0.1, s);
+  c.beginPath();
+  c.moveTo(-s * 0.65, s * 0.02);
+  c.bezierCurveTo(-s * 0.7, -s * 0.5, s * 0.7, -s * 0.5, s * 0.65, s * 0.02);
+  c.closePath();
+  fillStroke(c, '#ff9ac4', 0.1, s);
+  // The hat.
+  c.beginPath();
+  c.roundRect(-s * 0.28, -s * 0.62, s * 0.56, s * 0.28, s * 0.06);
+  fillStroke(c, '#ffffff', 0.08, s);
+  for (const [x, y, r] of [
+    [-0.22, -0.8, 0.2],
+    [0.2, -0.8, 0.2],
+    [0, -0.95, 0.24],
+  ]) {
+    ellipse(c, x * s, y * s, r * s, r * s);
+    fillStroke(c, '#ffffff', 0.08, s);
+  }
+  eye(c, -s * 0.18, s * 0.25, s * 0.09, 0.3);
+  eye(c, s * 0.2, s * 0.25, s * 0.09, 0.3);
+}
+
 /** A weapon's little picture for menus and the HUD. */
 export function drawWeaponIcon(c: Ctx, id: WeaponId, s: number, evolved: boolean, color: string): void {
   switch (id) {

@@ -141,6 +141,13 @@ export const sfx = {
     const a = ready('hop', 100);
     if (a) tone(a, 'sine', 220, 660, 0, 0.14, 0.14);
   },
+  /** The Fridge Magnet pulling every sprinkle in. */
+  pulse(): void {
+    const a = ready('pulse', 500);
+    if (!a) return;
+    tone(a, 'sine', 300, 1200, 0, 0.35, 0.1);
+    hiss(a, 0, 0.3, 2500, 0.06);
+  },
   milk(): void {
     const a = ready('milk', 100);
     if (a) [660, 880].forEach((f, i) => tone(a, 'sine', f, f * 1.05, i * 0.08, 0.14, 0.1));
