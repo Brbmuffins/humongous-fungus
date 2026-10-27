@@ -22,25 +22,19 @@ export const MAX_TARGET = 1000;
 export const REFILL_COINS = 500;
 export const REFILL_SECONDS = 30;
 
-/** Multipliers that get a shout and a jingle on the way up. */
+/** Multipliers that get a shout and a jingle on the way up. (The shouts are the theme's: src/themes.) */
 export const MILESTONES: readonly number[] = [2, 5, 10, 25, 50, 100, 250, 500, 1000];
-export const MILESTONE_NAMES: Readonly<Record<number, string>> = {
-  2: 'SUGAR HIGH',
-  5: 'ZOOMIES',
-  10: 'I CAN SEE SOUNDS',
-  25: 'RAINBOW MODE',
-  50: 'TIME IS FAKE',
-  100: 'PURE SUGAR',
-  250: 'SWEET SINGULARITY',
-  500: 'BEYOND SWEET',
-  1000: 'GALAXY BRAIN',
-};
+
+/** The look the game opens with. */
+export const DEFAULT_THEME = 'sugar';
 
 /** Rounds kept for the history strip and the fairness panel. */
 export const HISTORY = 30;
 
 // ---------------------------------------------------------------------------
 // The crowd: everyone else at the table. Made up, and betting made-up coins.
+// These are the Sugar theme's names; every theme brings its own list of the
+// same length (src/themes), so a table plays the same whichever is picked.
 
 export const BOT_NAMES: readonly string[] = [
   'WaffleKing',

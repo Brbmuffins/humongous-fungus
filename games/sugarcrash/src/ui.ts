@@ -3,12 +3,17 @@
 // stats, fairness and how-to-play cards.
 import { h, setText } from '@shared/dom';
 import { HOUSE_EDGE, MIN_BET, REFILL_COINS, START_COINS } from './defs';
-import type { Bet } from './game';
+import type { Bet, Phase } from './game';
 import { profit, type RoundRecord, type Save } from './meta';
 import { fmtX } from './scene';
+import { THEMES, type Theme } from './themes';
 
 export interface Controller {
   readonly save: Save;
+  /** The look in use. */
+  readonly theme: Theme;
+  /** Pick a look (a theme id); it's remembered on this device. */
+  setTheme(id: string): void;
   /** The big button. */
   act(): void;
   setBet(amount: number): void;
@@ -52,6 +57,10 @@ export class Ui {
   private liveEl = document.getElementById('live')!;
   private modal = document.getElementById('modal')!;
   private soundBtn = document.getElementById('sound-btn')!;
+  private themesEl = document.getElementById('themes')!;
+  private logoIcon = document.getElementById('logo-icon')!;
+  private logoA = document.getElementById('logo-a')!;
+  private logoB = document.getElementById('logo-b')!;
   private rows = new Map<string, { li: HTMLElement; out: HTMLElement }>();
   private shownCoins = -1;
   private coinFx = 0;
@@ -114,8 +123,59 @@ export class Ui {
     this.modal.addEventListener('click', (e) => {
       if (e.target === this.modal) this.closeModal();
     });
+    this.buildThemes();
+    this.syncTheme();
     this.syncSound();
     this.syncHistory(true);
+  }
+
+  // -------------------------------------------------------------------------
+  // The look
+
+  /** The picker: one chip per theme, a radio group (arrow keys move between them). */
+  private buildThemes(): void {
+    const chips = THEMES.map((t) =>
+      h(
+        'button',
+        { class: 'theme-chip', type: 'button', role: 'radio', 'aria-checked': 'false', 'aria-label': t.name, title: `${t.name}: ${t.blurb}`, 'data-theme': t.id },
+        h('span', { class: 'tc-icon', 'aria-hidden': 'true' }, t.icon),
+        h('span', { class: 'tc-label' }, t.chip),
+      ),
+    );
+    this.themesEl.replaceChildren(...chips);
+    this.themesEl.addEventListener('click', (e) => {
+      const id = (e.target as HTMLElement).closest<HTMLElement>('[data-theme]')?.dataset.theme;
+      if (id) this.c.setTheme(id);
+    });
+    this.themesEl.addEventListener('keydown', (e) => {
+      const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      const i = THEMES.findIndex((t) => t.id === this.c.theme.id);
+      const next = THEMES[(i + d + THEMES.length) % THEMES.length];
+      this.c.setTheme(next.id);
+      this.themesEl.querySelector<HTMLElement>(`[data-theme="${next.id}"]`)?.focus();
+    });
+  }
+
+  /** Show the active theme: its colors, wordmark and the picker's state. */
+  syncTheme(): void {
+    const t = this.c.theme;
+    const root = document.documentElement;
+    for (const [k, v] of Object.entries(t.css)) root.style.setProperty(k, v);
+    root.dataset.theme = t.id;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t.themeColor);
+    document.title = t.logo.join(' ');
+    setText(this.logoA, t.logo[0]);
+    setText(this.logoB, t.logo[1]);
+    this.logoIcon.className = t.logoIcon ? 'logo-emoji' : 'logo-donut';
+    setText(this.logoIcon, t.logoIcon ?? '');
+    this.logoA.parentElement!.setAttribute('aria-label', t.logo.join(' '));
+    for (const b of this.themesEl.querySelectorAll<HTMLElement>('[data-theme]')) {
+      const on = b.dataset.theme === t.id;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+    }
   }
 
   get modalOpen(): boolean {
@@ -183,7 +243,7 @@ export class Ui {
         break;
       case 'broke':
         setText(this.actionMain, 'Out of coins');
-        setText(this.actionSub, `Grandma is slipping you ${n(REFILL_COINS)} · ${Math.ceil(state.seconds)}s`);
+        setText(this.actionSub, `${this.c.theme.refill.who} is slipping you ${n(REFILL_COINS)} · ${Math.ceil(state.seconds)}s`);
         break;
     }
   }
@@ -208,6 +268,14 @@ export class Ui {
     const ref = after ? this.rows.get(after.who)!.li : null;
     this.rowsEl.insertBefore(li, ref);
     this.syncTotals(bets);
+  }
+
+  /** The crowd got new names (a theme change): lay the whole table out again, as it stood. */
+  syncRows(bets: readonly Bet[], phase: Phase): void {
+    this.resetRows();
+    for (const b of bets) this.addRow(b, bets);
+    for (const b of bets) if (b.cashedAt !== null) this.cashed(b);
+    if (phase === 'crashed') this.finish(bets);
   }
 
   removeRow(who: string, bets: readonly Bet[]): void {
@@ -285,18 +353,19 @@ export class Ui {
     this.modal.replaceChildren();
   }
 
-  private ok(label = 'Back to the rush', primary = false): HTMLButtonElement {
+  private ok(label = this.c.theme.help.back, primary = false): HTMLButtonElement {
     return h('button', { class: `ok${primary ? ' primary' : ''}`, type: 'button', onclick: () => this.closeModal() }, label);
   }
 
   showHelp(first: boolean): void {
+    const t = this.c.theme;
     this.open(
-      h('p', { class: 'eyebrow' }, first ? 'Grab a snack' : 'How to play'),
+      h('p', { class: 'eyebrow' }, first ? t.help.eyebrow : 'How to play'),
       h('h2', null, 'Cash out before you crash'),
-      h('p', null, 'Every round our muffin kid eats a whole bag of candy and the sugar rush starts: the multiplier climbs from 1.00×, faster and faster. At some point the sugar crash hits. Cash out before it does and you win your bet times the multiplier. Wait too long and you get nothing but a nap.'),
+      h('p', null, t.help.story),
       h('p', null, 'Bet during the countdown. Hit Cash out (or the space bar) during the rush, or set an auto cash out and it pays the moment it gets there. Missed the countdown? Your bet goes on the next round.'),
       h('p', null, `Some rounds go past 100×. About 2 in 100 crash right at 1.00×. Over time the house keeps ${Math.round(HOUSE_EDGE * 100)}%, whatever you do: no system beats it.`),
-      h('p', null, `Play money only: you start with ${n(START_COINS)} coins, and Grandma slips you ${n(REFILL_COINS)} more if you go broke. Coins can’t be bought, won for real or cashed out. Everyone else at the table is made up.`),
+      h('p', null, `Play money only: you start with ${n(START_COINS)} coins, and ${t.refill.who} slips you ${n(REFILL_COINS)} more if you go broke. Coins can’t be bought, won for real or cashed out. Everyone else at the table is made up.`),
       this.ok(first ? 'Let’s go' : 'Got it', true),
     );
   }
@@ -320,7 +389,7 @@ export class Ui {
         row('Biggest win', st.biggestWin ? `+${n(st.biggestWin)}` : '—', st.biggestWin ? 'pos' : ''),
         row('Best cash out', st.bestCashout ? `${fmtX(st.bestCashout)}×` : '—'),
         row('Highest crash seen', st.highestCrash ? `${fmtX(st.highestCrash)}×` : '—'),
-        row('Coins from Grandma', n(st.refills)),
+        row(this.c.theme.refill.stat, n(st.refills)),
       ),
       this.ok(),
       h(

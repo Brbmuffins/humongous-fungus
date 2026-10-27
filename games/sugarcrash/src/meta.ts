@@ -2,7 +2,7 @@
 // the rounds you've seen. One JSON save. A bet stays in its round even if you
 // leave: come back and it's settled the way the round went (paid if your auto
 // cash-out was at or under the crash, lost if not).
-import { HISTORY, MAX_BET, MAX_TARGET, MIN_BET, MIN_TARGET, REFILL_COINS, REFILL_SECONDS, START_COINS } from './defs';
+import { DEFAULT_THEME, HISTORY, MAX_BET, MAX_TARGET, MIN_BET, MIN_TARGET, REFILL_COINS, REFILL_SECONDS, START_COINS } from './defs';
 import { cents } from './fair';
 import { payoutFor, type Bet, type Table } from './game';
 
@@ -15,6 +15,8 @@ export interface Settings {
   bet: number;
   auto: number;
   autoOn: boolean;
+  /** The look you picked (a theme id): your own, remembered on this device. */
+  theme: string;
 }
 
 export interface Stats {
@@ -58,7 +60,7 @@ export interface Save {
   pending: Pending | null;
   /** A bet for the next round, placed while one was flying. */
   queued: { amount: number; target: number | null } | null;
-  /** Broke: when Grandma's coins land. */
+  /** Broke: when the refill (Grandma's coins, in the Sugar theme) lands. */
   refillAt: number | null;
   /** The next round's number. */
   nextRound: number;
@@ -72,7 +74,7 @@ export function newSave(now: number): Save {
     createdAt: now,
     updatedAt: now,
     coins: START_COINS,
-    settings: { sound: true, haptics: true, bet: 100, auto: 2, autoOn: false },
+    settings: { sound: true, haptics: true, bet: 100, auto: 2, autoOn: false, theme: DEFAULT_THEME },
     stats: noStats(),
     history: [],
     pending: null,
@@ -197,7 +199,7 @@ export function settleLeft(s: Save): number | null {
 export const broke = (s: Save): boolean => s.coins < MIN_BET && !s.pending && !s.queued;
 
 /**
- * Grandma's coins: once you're broke they're on the way, and land REFILL_SECONDS
+ * The refill (Grandma's coins, whoever slips them to you in your theme): once you're broke they're on the way, and land REFILL_SECONDS
  * later. Returns true when it just landed.
  */
 export function tickRefill(s: Save, now: number): boolean {
@@ -253,6 +255,7 @@ export function loadSave(raw: string | null): Save | null {
       bet: clampBet(num(set.bet, base.settings.bet), MAX_BET),
       auto: clampTarget(num(set.auto, base.settings.auto)),
       autoOn: set.autoOn === true,
+      theme: typeof set.theme === 'string' && /^[a-z][a-z0-9-]{0,23}$/.test(set.theme) ? set.theme : DEFAULT_THEME,
     },
     stats: {
       rounds: Math.floor(stat('rounds')),

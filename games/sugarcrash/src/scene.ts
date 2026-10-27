@@ -1,12 +1,12 @@
-// The sugar rush, on screen: a candy-colored monitor with the sugar line
-// climbing across it, donuts, candy, soda cans and lollipops flying past
-// faster the higher it goes, and our muffin kid riding the tip, vibrating
-// harder, eyes spinning, sweating sprinkles. On a crash the line plunges, the
-// kid flops over asleep and the color drains out for a beat. Everything is
-// drawn here; the table decides what happens.
-import { GROWTH, MILESTONE_NAMES } from './defs';
+// The rush, on screen: a monitor with the multiplier line climbing across it,
+// axes that stretch to keep the tip in view, the character riding the tip and
+// the crash plunge. This is the part every theme shares. What's behind the
+// line, the character and its crash, the colors, shouts and gauge come from
+// the active theme (src/themes); the table decides what happens.
+import { GROWTH } from './defs';
 import { multiplierAt, timeFor } from './fair';
 import type { Phase } from './game';
+import { TAU, clamp, ease, fitText, pick, type Frame, type PKind, type Puff, type RiderFrame, type Theme, type ThemeScene } from './themes/kit';
 
 export interface SkyView {
   phase: Phase;
@@ -19,8 +19,6 @@ export interface SkyView {
   you: { amount: number; cashedAt: number | null; payout: number } | null;
 }
 
-type Treat = 'donut' | 'candy' | 'soda' | 'lolly' | 'gummy';
-
 interface Particle {
   x: number;
   y: number;
@@ -30,21 +28,10 @@ interface Particle {
   born: number;
   life: number;
   color: string;
-  kind: 'sprinkle' | 'coin' | 'wrapper' | 'z' | 'spark';
+  kind: PKind;
   spin: number;
   gravity: number;
-}
-
-interface Flyer {
-  kind: Treat;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  rot: number;
-  spin: number;
-  s: number;
-  hue: number;
+  text: string;
 }
 
 interface Pop {
@@ -61,14 +48,6 @@ interface Pin {
   you: boolean;
 }
 
-const TAU = Math.PI * 2;
-const ease = (k: number): number => {
-  const x = Math.min(1, Math.max(0, k));
-  return x * x * (3 - 2 * x);
-};
-const CANDY = ['#ff5fa2', '#5ff2c4', '#ffe45c', '#9b7bff', '#5cc8ff', '#ff9b3d'];
-const pick = <T>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)];
-
 /** A multiplier for show: 1.00, 12.34, 123.4, 1234. */
 export function fmtX(m: number): string {
   if (m < 100) return (Math.floor(m * 100 + 1e-9) / 100).toFixed(2);
@@ -76,33 +55,21 @@ export function fmtX(m: number): string {
   return Math.floor(m).toLocaleString('en-US');
 }
 
-/** Mint, then lemon, orange, bubblegum and grape as the rush builds. */
-export function heat(m: number): string {
-  const stops: [number, [number, number, number]][] = [
-    [1, [95, 242, 196]],
-    [2, [255, 228, 92]],
-    [5, [255, 155, 61]],
-    [10, [255, 95, 162]],
-    [50, [155, 123, 255]],
-  ];
-  const lm = Math.log(Math.max(1, m));
-  for (let i = 1; i < stops.length; i++) {
-    const [a, ca] = stops[i - 1];
-    const [b, cb] = stops[i];
-    if (m <= b) {
-      const k = (lm - Math.log(a)) / (Math.log(b) - Math.log(a));
-      return `rgb(${ca.map((v, j) => Math.round(v + (cb[j] - v) * k)).join(',')})`;
-    }
+/** Small text with a dark edge, so it reads over a bright backdrop too. */
+function edged(c: CanvasRenderingContext2D, text: string, x: number, y: number, edge: string | null): void {
+  if (edge) {
+    c.save();
+    c.lineJoin = 'round';
+    c.lineWidth = 2.5;
+    c.strokeStyle = edge;
+    c.strokeText(text, x, y);
+    c.restore();
   }
-  return 'rgb(155,123,255)';
+  c.fillText(text, x, y);
 }
-
-/** The flavor readout in the corner: sugar, in made-up units, climbing with the rush. */
-export const sugarLevel = (m: number): number => Math.round(90 + (m - 1) * 62);
 
 const NICE = [0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 25000, 50000, 100000];
 const NICE_T = [2, 5, 10, 15, 20, 30, 60, 120, 300, 600];
-const TREATS: readonly Treat[] = ['donut', 'candy', 'soda', 'lolly', 'gummy'];
 
 export class Sky {
   private c: CanvasRenderingContext2D;
@@ -110,8 +77,7 @@ export class Sky {
   private H = 0;
   private dpr = 1;
   private last = 0;
-  private sparkles: { x: number; y: number; r: number; tw: number; layer: number }[] = [];
-  private flyers: Flyer[] = [];
+  private scene: ThemeScene;
   private parts: Particle[] = [];
   private pops: Pop[] = [];
   private pins: Pin[] = [];
@@ -119,22 +85,31 @@ export class Sky {
   private yMax = 2;
   private shake = 0;
   private flash = 0;
-  private flashColor = '255,95,162';
+  private flashColor: string;
   private crashAt = -1e9;
+  private crashVariant = 0;
   private launchAt = -1e9;
   private dir = 0;
-  private nextSweat = 0;
-  private nextFlyer = 0;
-  private nextZ = 0;
   private readonly calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   private tip = { x: 0, y: 0 };
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    private theme: Theme,
+  ) {
     this.c = canvas.getContext('2d')!;
-    let seed = 7;
-    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    for (let i = 0; i < 70; i++) this.sparkles.push({ x: rnd(), y: rnd(), r: 0.8 + rnd() * 1.6, tw: rnd() * TAU, layer: i % 3 });
+    this.scene = theme.scene();
+    this.flashColor = theme.ink.flashMilestone;
     this.resize();
+  }
+
+  /** Switch the look: a fresh backdrop and character, and no leftover bursts. */
+  setTheme(theme: Theme): void {
+    this.theme = theme;
+    this.scene = theme.scene();
+    this.parts = [];
+    this.pops = [];
+    this.flash = 0;
   }
 
   resize(): void {
@@ -160,9 +135,9 @@ export class Sky {
   }
 
   milestone(m: number): void {
-    this.pops.push({ text: MILESTONE_NAMES[m] ?? `${m}×`, born: this.last, color: heat(m) });
+    this.pops.push({ text: this.theme.milestones[m] ?? `${m}×`, born: this.last, color: this.theme.heat(m) });
     this.flash = 0.25;
-    this.flashColor = '255,228,92';
+    this.flashColor = this.theme.ink.flashMilestone;
     this.burst(this.tip.x, this.tip.y, this.calm ? 8 : 30, 380);
   }
 
@@ -171,7 +146,7 @@ export class Sky {
     if (this.pins.filter((p) => !p.you).length > 6) this.pins.splice(this.pins.findIndex((p) => !p.you), 1);
     if (!you) return;
     this.flash = 0.35;
-    this.flashColor = '95,242,196';
+    this.flashColor = this.theme.ink.flashCash;
     const n = this.calm ? 6 : 24;
     for (let i = 0; i < n; i++) {
       const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
@@ -181,31 +156,33 @@ export class Sky {
     for (let i = 0; i < (this.calm ? 4 : 14); i++) {
       const a = Math.random() * TAU;
       const sp = 120 + Math.random() * 200;
-      this.puff(this.tip.x, this.tip.y, Math.cos(a) * sp, Math.sin(a) * sp - 120, 'wrapper', 1400 + Math.random() * 600, 4 + Math.random() * 3, pick(CANDY), 260);
+      this.puff(this.tip.x, this.tip.y, Math.cos(a) * sp, Math.sin(a) * sp - 120, 'flutter', 1400 + Math.random() * 600, 4 + Math.random() * 3, pick(this.theme.fx.confetti), 260);
     }
   }
 
-  crash(): void {
+  /** The round crashed. `variant` picks which of the theme's crashes plays. */
+  crash(variant = 0): void {
+    this.crashVariant = variant;
     this.crashAt = this.last;
     this.shake = this.calm ? 0 : 0.7;
     this.flash = 0.5;
-    this.flashColor = '255,77,97';
+    this.flashColor = this.theme.ink.flashCrash;
     this.burst(this.tip.x, this.tip.y, this.calm ? 6 : 26, 200);
   }
 
-  /** Sprinkles everywhere. */
+  /** The theme's burst of confetti, sparks or whatever it throws. */
   private burst(x: number, y: number, n: number, speed: number): void {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * TAU;
       const sp = speed * (0.3 + Math.random() * 0.7);
-      this.puff(x, y, Math.cos(a) * sp, Math.sin(a) * sp - 60, 'sprinkle', 900 + Math.random() * 600, 2.5 + Math.random() * 1.5, pick(CANDY), 520);
+      this.puff(x, y, Math.cos(a) * sp, Math.sin(a) * sp - 60, this.theme.fx.burst, 900 + Math.random() * 600, 2.5 + Math.random() * 1.5, pick(this.theme.fx.confetti), 520);
     }
   }
 
-  private puff(x: number, y: number, vx: number, vy: number, kind: Particle['kind'], life: number, r: number, color: string, gravity = 0): void {
-    this.parts.push({ x, y, vx, vy, kind, life, r, color, born: this.last, spin: (Math.random() - 0.5) * 14, gravity });
+  private puff: Puff = (x, y, vx, vy, kind, life, r, color, gravity = 0, text = '') => {
+    this.parts.push({ x, y, vx, vy, kind, life, r, color, born: this.last, spin: (Math.random() - 0.5) * 14, gravity, text });
     if (this.parts.length > 420) this.parts.splice(0, this.parts.length - 420);
-  }
+  };
 
   // -------------------------------------------------------------------------
   // Drawing
@@ -214,7 +191,8 @@ export class Sky {
     const dt = Math.min(0.05, Math.max(0, (now - (this.last || now)) / 1000));
     this.last = now;
     const c = this.c;
-    const { W, H } = this;
+    const { W, H, theme } = this;
+    const ink = theme.ink;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
     const flying = v.phase === 'flying';
@@ -236,15 +214,24 @@ export class Sky {
     const X = (t: number) => gx0 + (t / this.xMax) * (gx1 - gx0);
     const Y = (m: number) => gy1 - ((m - 1) / (this.yMax - 1)) * (gy1 - gy0);
 
+    // Which way the line is heading, smoothed: the scenery slides against it.
+    if (flying) {
+      const dx = (gx1 - gx0) / this.xMax;
+      const dy = (GROWTH * mTip * (gy1 - gy0)) / (this.yMax - 1);
+      this.dir += (Math.atan2(-dy, dx) - this.dir) * Math.min(1, dt * 10);
+    }
+    const frame: Frame = { c, W, H, now, dt, phase: v.phase, m: mTip, dir: this.dir, calm: this.calm, puff: this.puff };
+
     this.shake = Math.max(0, this.shake - dt * 2.2);
     const sk = this.shake * this.shake * 12;
     c.save();
     if (sk > 0.1) c.translate((Math.random() - 0.5) * sk, (Math.random() - 0.5) * sk);
 
-    this.drawRoom(c, dt, now, v, mTip);
+    this.scene.backdrop(frame);
+    this.drawGauge(c, v, now, mTip);
     this.drawGrid(c, gx0, gx1, gy0, gy1, X, Y);
 
-    // The sugar line, and on a crash, the plunge.
+    // The line, and on a crash, the plunge.
     const plunge = crashed ? ease((now - this.crashAt) / 450) : 0;
     const tipX = X(tTip);
     const tipY = Y(mTip);
@@ -264,8 +251,8 @@ export class Sky {
       c.lineTo(X(0), gy1);
       c.closePath();
       const fill = c.createLinearGradient(0, tipY, 0, gy1);
-      fill.addColorStop(0, crashed ? 'rgba(255,77,97,0.28)' : 'rgba(255,95,162,0.26)');
-      fill.addColorStop(1, crashed ? 'rgba(255,77,97,0.02)' : 'rgba(95,242,196,0.03)');
+      fill.addColorStop(0, crashed ? ink.crashFillTop : ink.fillTop);
+      fill.addColorStop(1, crashed ? ink.crashFillBottom : ink.fillBottom);
       c.fillStyle = fill;
       c.fill();
       c.restore();
@@ -277,16 +264,16 @@ export class Sky {
       }
       c.lineJoin = 'round';
       c.lineCap = 'round';
-      c.strokeStyle = crashed ? 'rgba(255,77,97,0.25)' : 'rgba(255,170,220,0.25)';
+      c.strokeStyle = crashed ? 'rgba(255,77,97,0.25)' : ink.glow;
       c.lineWidth = 11;
       c.stroke();
-      c.strokeStyle = crashed ? '#ff4d61' : heat(mTip);
+      c.strokeStyle = crashed ? ink.lose : theme.heat(mTip);
       c.lineWidth = 3.5;
       c.stroke();
       if (flying) {
         // The live reading pulses at the tip, like a monitor.
         const pulse = 0.5 + 0.5 * Math.sin(now * 0.012);
-        c.fillStyle = heat(mTip);
+        c.fillStyle = theme.heat(mTip);
         c.globalAlpha = 0.35 + pulse * 0.4;
         c.beginPath();
         c.arc(tipX, tipY, 6 + pulse * 5, 0, TAU);
@@ -297,47 +284,22 @@ export class Sky {
 
     this.drawPins(c, X, Y, now);
 
-    // Our kid: bouncing on a donut before the rush, riding the line, or flat out asleep.
+    // The character: waiting on the pad before the rush, riding the line, or the crash.
     const s = Math.max(15, Math.min(28, Math.min(W, H) * 0.055));
-    if (flying) {
-      const dx = (gx1 - gx0) / this.xMax;
-      const dy = (GROWTH * mTip * (gy1 - gy0)) / (this.yMax - 1);
-      this.dir += (Math.atan2(-dy, dx) - this.dir) * Math.min(1, dt * 10);
-    }
-    let kx: number;
-    let ky: number;
-    if (v.phase === 'betting') {
-      kx = X(0) + s * 0.9;
-      ky = Y(1) - s * 1.05 - Math.abs(Math.sin(now * 0.008)) * s * 0.35;
-      drawDonut(c, X(0) + s * 0.9, Y(1) - s * 0.05, s * 0.9, 0, 0);
-      drawKid(c, kx, ky, s, now, 1, 'pad', 0);
-    } else if (flying) {
-      kx = tipX;
-      ky = tipY - s * 0.85;
-      const shake = this.calm ? 0 : s * Math.min(0.16, 0.04 * Math.log2(mTip));
-      kx += (Math.random() - 0.5) * shake * 2;
-      ky += (Math.random() - 0.5) * shake * 2;
-      drawKid(c, kx, ky, s, now, mTip, 'ride', this.dir * 0.25);
-      // Sweating sprinkles, faster the higher it gets.
-      if (!this.calm && now > this.nextSweat) {
-        this.nextSweat = now + Math.max(30, 260 / Math.max(1, Math.log2(mTip) + 0.5));
-        const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
-        this.puff(kx + Math.cos(a) * s * 0.6, ky - s * 0.5, Math.cos(a) * 90, Math.sin(a) * 120 - 40, 'sprinkle', 800 + Math.random() * 400, 2.5 + Math.random() * 1.2, pick(CANDY), 520);
-      }
-    } else {
-      // Flop: down with the line, then over on its side, asleep.
-      const fallX = tipX + (gx1 - tipX) * 0.04 * plunge;
-      const fallY = tipY + (gy1 - tipY) * plunge;
-      kx = fallX;
-      ky = fallY - s * 0.55;
-      const over = ease((now - this.crashAt - 350) / 350);
-      drawKid(c, kx, ky, s, now, 1, 'asleep', (Math.PI / 2) * over);
-      if (now - this.crashAt > 700 && now > this.nextZ) {
-        this.nextZ = now + 650;
-        this.puff(kx + s * 0.4, ky - s * 0.6, 16 + Math.random() * 10, -36, 'z', 1800, 9 + Math.random() * 5, '#d9d2ff', 0);
-      }
-    }
-    this.tip = { x: kx, y: ky };
+    const rf: RiderFrame = {
+      ...frame,
+      tipX,
+      tipY,
+      padX: X(0),
+      padY: Y(1),
+      floorY: gy1,
+      rightX: gx1,
+      s,
+      variant: this.crashVariant % theme.crashes.length,
+      since: crashed ? Math.max(0, (now - this.crashAt) / 1000) : 0,
+      plunge,
+    };
+    this.tip = this.scene.rider(rf);
 
     this.drawParticles(c, dt, now);
     this.drawReadout(c, v, now);
@@ -351,7 +313,7 @@ export class Sky {
       c.fillStyle = `rgba(128,128,128,${drain * 0.85})`;
       c.fillRect(0, 0, W, H);
       c.restore();
-      c.fillStyle = `rgba(10,6,20,${drain * 0.25})`;
+      c.fillStyle = `rgba(${ink.drain},${drain * 0.25})`;
       c.fillRect(0, 0, W, H);
     }
     this.flash = Math.max(0, this.flash - dt * 2.5);
@@ -361,98 +323,28 @@ export class Sky {
     }
   }
 
-  /** How much of the color is gone right now (0..1), for the page around the sky. */
+  /** Is the color draining out of the picture right now (the page around it follows)? */
   drained(now: number, phase: Phase): boolean {
     return phase === 'crashed' && now - this.crashAt < 1100;
   }
 
-  private drawRoom(c: CanvasRenderingContext2D, dt: number, now: number, v: SkyView, m: number): void {
-    const { W, H } = this;
-    const g = c.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#1a0b2c');
-    g.addColorStop(0.6, '#230f3a');
-    g.addColorStop(1, '#2c1243');
-    c.fillStyle = g;
-    c.fillRect(0, 0, W, H);
-    // Candy-colored bokeh, drifting.
-    const t = this.last * 0.00005;
-    for (const [x, y, r, col] of [
-      [0.2 + Math.sin(t) * 0.05, 0.25, 0.5, 'rgba(255,95,162,0.13)'],
-      [0.85, 0.7 + Math.cos(t * 1.3) * 0.05, 0.45, 'rgba(95,242,196,0.08)'],
-      [0.6 + Math.cos(t * 0.7) * 0.06, 0.15, 0.3, 'rgba(255,228,92,0.06)'],
-    ] as const) {
-      const ng = c.createRadialGradient(x * W, y * H, 0, x * W, y * H, r * Math.max(W, H));
-      ng.addColorStop(0, col);
-      ng.addColorStop(1, 'rgba(0,0,0,0)');
-      c.fillStyle = ng;
-      c.fillRect(0, 0, W, H);
-    }
-    // Sparkles, and treats streaming past faster as the rush builds.
-    const flying = v.phase === 'flying';
-    const speed = flying ? 50 + Math.min(320, Math.log(m) * 110) : 10;
-    const vx = flying ? -Math.cos(this.dir) * speed : -speed * 0.6;
-    const vy = flying ? -Math.sin(this.dir) * speed : speed * 0.3;
-    for (const sp of this.sparkles) {
-      const f = [0.3, 0.6, 1][sp.layer];
-      sp.x = (((sp.x + (vx * f * dt) / W) % 1) + 1) % 1;
-      sp.y = (((sp.y + (vy * f * dt) / H) % 1) + 1) % 1;
-      const a = 0.25 + 0.35 * Math.sin(this.last * 0.003 + sp.tw);
-      if (a <= 0.02) continue;
-      c.strokeStyle = `rgba(255,230,250,${a})`;
-      c.lineWidth = 1;
-      const x = sp.x * W;
-      const y = sp.y * H;
-      c.beginPath();
-      c.moveTo(x - sp.r * 1.6, y);
-      c.lineTo(x + sp.r * 1.6, y);
-      c.moveTo(x, y - sp.r * 1.6);
-      c.lineTo(x, y + sp.r * 1.6);
-      c.stroke();
-    }
-    // Treats.
-    const want = flying ? Math.min(14, 3 + Math.floor(Math.log2(m) * 3)) : 3;
-    if (this.flyers.length < want && now > this.nextFlyer) {
-      this.nextFlyer = now + (flying ? Math.max(120, 700 / Math.max(1, Math.log2(m) + 1)) : 1500);
-      const s = Math.max(10, Math.min(24, Math.min(W, H) * 0.045)) * (0.7 + Math.random() * 0.7);
-      // Come in from the side the treats are heading away from.
-      const len = Math.hypot(vx, vy) || 1;
-      const ux = vx / len;
-      const uy = vy / len;
-      let x: number;
-      let y: number;
-      if (Math.abs(ux) > Math.abs(uy)) {
-        x = ux < 0 ? W + s * 2 : -s * 2;
-        y = Math.random() * H;
-      } else {
-        x = Math.random() * W;
-        y = uy < 0 ? H + s * 2 : -s * 2;
-      }
-      this.flyers.push({ kind: pick(TREATS), x, y, vx: 0, vy: 0, rot: Math.random() * TAU, spin: (Math.random() - 0.5) * 2, s, hue: Math.floor(Math.random() * CANDY.length) });
-    }
-    this.flyers = this.flyers.filter((f) => {
-      const depth = f.s / 24;
-      f.x += vx * (0.6 + depth) * dt;
-      f.y += vy * (0.6 + depth) * dt;
-      f.rot += f.spin * dt * (flying ? 1 + Math.log2(m) * 0.4 : 0.4);
-      c.globalAlpha = 0.55 + depth * 0.35;
-      drawTreat(c, f.kind, f.x, f.y, f.s, f.rot, CANDY[f.hue]);
-      c.globalAlpha = 1;
-      return f.x > -f.s * 3 && f.x < W + f.s * 3 && f.y > -f.s * 3 && f.y < H + f.s * 3;
-    });
-    // The sugar readout, monitor style.
-    const level = v.phase === 'betting' ? 90 : sugarLevel(v.phase === 'crashed' ? 1 : m);
+  /** The made-up gauge in the corner, monitor style. */
+  private drawGauge(c: CanvasRenderingContext2D, v: SkyView, now: number, m: number): void {
+    const ink = this.theme.ink;
+    const level = this.theme.readout.level(v.phase === 'flying' ? m : 1);
     c.font = "700 11px 'IBM Plex Mono', monospace";
     c.textAlign = 'left';
     c.textBaseline = 'middle';
     const blink = Math.sin(now * 0.008) > 0;
-    c.fillStyle = v.phase === 'crashed' ? '#ff4d61' : '#5ff2c4';
+    c.fillStyle = v.phase === 'crashed' ? ink.lose : ink.win;
     c.beginPath();
     c.arc(14, 15, 3.2, 0, TAU);
     if (blink || v.phase !== 'flying') c.fill();
-    c.fillText(`SUGAR ${level} mg/dL ${v.phase === 'flying' ? '▲' : v.phase === 'crashed' ? '▼' : '–'}`, 22, 15.5);
+    edged(c, `${this.theme.readout.text(level)} ${v.phase === 'flying' ? '▲' : v.phase === 'crashed' ? '▼' : '–'}`, 22, 15.5, ink.edge ? ink.outline : null);
   }
 
   private drawGrid(c: CanvasRenderingContext2D, gx0: number, gx1: number, gy0: number, gy1: number, X: (t: number) => number, Y: (m: number) => number): void {
+    const { grid, label } = this.theme.ink;
     const span = this.yMax - 1;
     const step = NICE.find((n) => span / n <= 4.5) ?? NICE[NICE.length - 1];
     c.font = "600 11px 'IBM Plex Mono', monospace";
@@ -462,14 +354,14 @@ export class Sky {
     for (let m = 1; m <= this.yMax + 1e-9; m += step) {
       const y = Y(m);
       if (y < gy0 - 4) break;
-      c.strokeStyle = m === 1 ? 'rgba(255,170,220,0.35)' : 'rgba(255,170,220,0.11)';
+      c.strokeStyle = m === 1 ? `rgba(${grid},0.35)` : `rgba(${grid},0.11)`;
       c.setLineDash(m === 1 ? [] : [3, 5]);
       c.beginPath();
       c.moveTo(gx0, y);
       c.lineTo(gx1, y);
       c.stroke();
-      c.fillStyle = 'rgba(255,210,235,0.7)';
-      c.fillText(`${+m.toFixed(2)}×`, gx0 - 6, y);
+      c.fillStyle = `rgba(${label},0.7)`;
+      edged(c, `${+m.toFixed(2)}×`, gx0 - 6, y, this.theme.ink.edge ? this.theme.ink.outline : null);
       if (step >= span) break;
     }
     c.setLineDash([]);
@@ -478,17 +370,18 @@ export class Sky {
     c.textBaseline = 'top';
     for (let t = tStep; t <= this.xMax; t += tStep) {
       const x = X(t);
-      c.strokeStyle = 'rgba(255,170,220,0.07)';
+      c.strokeStyle = `rgba(${grid},0.07)`;
       c.beginPath();
       c.moveTo(x, gy0);
       c.lineTo(x, gy1);
       c.stroke();
-      c.fillStyle = 'rgba(255,210,235,0.55)';
-      c.fillText(`${t}s`, x, gy1 + 8);
+      c.fillStyle = `rgba(${label},0.55)`;
+      edged(c, `${t}s`, x, gy1 + 8, this.theme.ink.edge ? this.theme.ink.outline : null);
     }
   }
 
   private drawPins(c: CanvasRenderingContext2D, X: (t: number) => number, Y: (m: number) => number, now: number): void {
+    const ink = this.theme.ink;
     let stack = 0;
     for (const p of this.pins) {
       const age = (now - p.born) / 1000;
@@ -497,7 +390,7 @@ export class Sky {
       const x = X(timeFor(p.m));
       const y = Y(p.m);
       c.globalAlpha = a;
-      c.fillStyle = p.you ? '#5ff2c4' : '#ffffff';
+      c.fillStyle = p.you ? ink.pinYou : '#ffffff';
       c.beginPath();
       c.arc(x, y, p.you ? 5 : 3, 0, TAU);
       c.fill();
@@ -506,11 +399,11 @@ export class Sky {
       const w = c.measureText(label).width + 12;
       const ly = y - 18 - (p.you ? 6 : (stack++ % 3) * 16) - Math.min(10, age * 8);
       const lx = Math.min(this.W - w - 6, Math.max(6, x - w / 2));
-      c.fillStyle = p.you ? 'rgba(31,170,120,0.95)' : 'rgba(40,18,62,0.85)';
+      c.fillStyle = p.you ? ink.pinYouBg : ink.pinBotBg;
       c.beginPath();
       c.roundRect(lx, ly - 9, w, 18, 9);
       c.fill();
-      c.fillStyle = p.you ? '#042117' : '#d6fff0';
+      c.fillStyle = p.you ? ink.pinYouText : ink.pinBotText;
       c.textAlign = 'center';
       c.textBaseline = 'middle';
       c.fillText(label, lx + w / 2, ly + 0.5);
@@ -524,12 +417,12 @@ export class Sky {
       if (age >= 1) return false;
       p.vy += p.gravity * dt;
       p.vx *= Math.exp(-dt * 0.6);
-      p.vy *= Math.exp(-dt * (p.kind === 'z' ? 0 : 0.3));
+      p.vy *= Math.exp(-dt * (p.kind === 'text' ? 0 : 0.3));
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       const a = 1 - age;
       c.globalAlpha = a;
-      if (p.kind === 'sprinkle') {
+      if (p.kind === 'stick') {
         c.save();
         c.translate(p.x, p.y);
         c.rotate(p.spin * age * 2);
@@ -551,8 +444,8 @@ export class Sky {
         c.beginPath();
         c.ellipse(p.x, p.y - 0.5, p.r * 0.75 * Math.max(0.2, sq), p.r * 0.75, 0, 0, TAU);
         c.fill();
-      } else if (p.kind === 'wrapper') {
-        // A candy wrapper, crinkling as it tumbles.
+      } else if (p.kind === 'flutter') {
+        // A scrap of wrapper, ticket or paper, crinkling as it tumbles.
         c.save();
         c.translate(p.x, p.y);
         c.rotate(p.spin * age);
@@ -568,12 +461,33 @@ export class Sky {
         c.closePath();
         c.fill();
         c.restore();
-      } else if (p.kind === 'z') {
+      } else if (p.kind === 'text') {
         c.font = `900 italic ${Math.round(p.r * (1 + age * 0.6))}px Rubik, sans-serif`;
         c.fillStyle = p.color;
         c.textAlign = 'center';
         c.textBaseline = 'middle';
-        c.fillText('z', p.x, p.y);
+        c.fillText(p.text, p.x, p.y);
+      } else if (p.kind === 'drop') {
+        // A teardrop, pointing the way it's moving.
+        c.save();
+        c.translate(p.x, p.y);
+        c.rotate(Math.atan2(p.vy, p.vx) + Math.PI / 2);
+        c.fillStyle = p.color;
+        c.beginPath();
+        c.moveTo(0, -p.r * 1.6);
+        c.quadraticCurveTo(p.r * 1.1, -p.r * 0.1, 0, p.r);
+        c.quadraticCurveTo(-p.r * 1.1, -p.r * 0.1, 0, -p.r * 1.6);
+        c.fill();
+        c.restore();
+      } else if (p.kind === 'flame') {
+        const r = p.r * (1.3 - age * 0.5);
+        const g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+        g.addColorStop(0, p.color);
+        g.addColorStop(1, 'rgba(255,60,0,0)');
+        c.fillStyle = g;
+        c.beginPath();
+        c.arc(p.x, p.y, r, 0, TAU);
+        c.fill();
       } else {
         c.fillStyle = p.color;
         c.beginPath();
@@ -586,17 +500,18 @@ export class Sky {
   }
 
   private drawReadout(c: CanvasRenderingContext2D, v: SkyView, now: number): void {
-    const { W, H } = this;
+    const { W, H, theme } = this;
+    const ink = theme.ink;
     const cx = W / 2;
     const cy = H * 0.4;
     const big = Math.round(Math.min(W * 0.17, H * 0.24, 112));
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     const glowText = (text: string, y: number, size: number, color: string, weight = '900 italic') => {
-      c.font = `${weight} ${size}px Rubik, sans-serif`;
+      const px = fitText(c, text, (p) => `${weight} ${p}px Rubik, sans-serif`, size, W * 0.94);
       c.lineJoin = 'round';
-      c.lineWidth = Math.max(4, size * 0.1);
-      c.strokeStyle = 'rgba(20,6,30,0.7)';
+      c.lineWidth = Math.max(4, px * 0.1);
+      c.strokeStyle = ink.outline;
       c.strokeText(text, cx, y);
       c.fillStyle = color;
       c.fillText(text, cx, y);
@@ -604,8 +519,8 @@ export class Sky {
 
     if (v.phase === 'betting') {
       c.font = '800 13px Rubik, sans-serif';
-      c.fillStyle = 'rgba(255,210,235,0.85)';
-      c.fillText('SUGAR RUSH IN', cx, cy - big * 0.42);
+      c.fillStyle = ink.caption;
+      edged(c, theme.launchLabel, cx, cy - big * 0.42, ink.edge ? ink.outline : null);
       glowText(`${v.countdown.toFixed(1)}s`, cy + 4, Math.round(big * 0.72), '#ffffff');
       const bw = Math.min(260, W * 0.6);
       const k = Math.max(0, Math.min(1, v.countdown / 6));
@@ -614,20 +529,21 @@ export class Sky {
       c.roundRect(cx - bw / 2, cy + big * 0.48, bw, 6, 3);
       c.fill();
       const bar = c.createLinearGradient(cx - bw / 2, 0, cx + bw / 2, 0);
-      bar.addColorStop(0, '#5ff2c4');
-      bar.addColorStop(0.5, '#ffe45c');
-      bar.addColorStop(1, '#ff5fa2');
+      bar.addColorStop(0, ink.bar[0]);
+      bar.addColorStop(0.5, ink.bar[1]);
+      bar.addColorStop(1, ink.bar[2]);
       c.fillStyle = bar;
       c.beginPath();
       c.roundRect(cx - bw / 2, cy + big * 0.48, bw * k, 6, 3);
       c.fill();
       c.font = '600 12px Rubik, sans-serif';
-      c.fillStyle = 'rgba(255,210,235,0.75)';
-      c.fillText(v.you ? `You're in for ${v.you.amount.toLocaleString('en-US')}. Cash out before you crash.` : 'Place your bets. Cash out before you crash.', cx, cy + big * 0.48 + 22);
+      c.fillStyle = ink.caption;
+      edged(c, v.you ? `You're in for ${v.you.amount.toLocaleString('en-US')}. Cash out before you crash.` : 'Place your bets. Cash out before you crash.', cx, cy + big * 0.48 + 22, ink.edge ? ink.outline : null);
       return;
     }
 
     if (v.phase === 'crashed') {
+      const crash = theme.crashes[this.crashVariant % theme.crashes.length];
       const since = (now - this.crashAt) / 1000;
       const drop = (1 - ease(since / 0.4)) * -big * 0.4;
       const wob = Math.sin(since * 9) * Math.max(0, 1 - since) * 0.06;
@@ -635,16 +551,23 @@ export class Sky {
       c.translate(cx, cy + drop);
       c.rotate(wob);
       c.translate(-cx, -cy);
-      glowText('SUGAR CRASH', cy - big * 0.3, Math.round(Math.min(big * 0.56, W * 0.12)), '#ff4d61');
-      glowText(`@ ${fmtX(v.crash)}×`, cy + big * 0.36, Math.round(big * 0.48), '#ffd0d6');
+      glowText(crash.title, cy - big * 0.3, Math.round(Math.min(big * 0.56, W * 0.12)), ink.crashTitle);
+      glowText(`@ ${fmtX(v.crash)}×`, cy + big * 0.36, Math.round(big * 0.48), ink.crashSub);
       c.restore();
       c.font = "800 14px 'IBM Plex Mono', monospace";
       if (v.you && v.you.cashedAt === null) {
-        c.fillStyle = '#ff4d61';
-        c.fillText(`−${v.you.amount.toLocaleString('en-US')}`, cx, cy + big * 0.86);
+        c.fillStyle = ink.lose;
+        edged(c, `−${v.you.amount.toLocaleString('en-US')}`, cx, cy + big * 0.86, ink.edge ? ink.outline : null);
       } else if (v.you) {
-        c.fillStyle = '#5ff2c4';
-        c.fillText(`You got out at ${fmtX(v.you.cashedAt!)}× · +${(v.you.payout - v.you.amount).toLocaleString('en-US')}`, cx, cy + big * 0.86);
+        c.fillStyle = ink.win;
+        edged(c, `You got out at ${fmtX(v.you.cashedAt!)}× · +${(v.you.payout - v.you.amount).toLocaleString('en-US')}`, cx, cy + big * 0.86, ink.edge ? ink.outline : null);
+      }
+      if (crash.caption && H >= 250) {
+        c.globalAlpha = clamp((since - 0.3) / 0.4);
+        c.font = '700 italic 12px Rubik, sans-serif';
+        c.fillStyle = ink.caption;
+        edged(c, crash.caption, cx, cy + big * 0.86 + 20, ink.edge ? ink.outline : null);
+        c.globalAlpha = 1;
       }
       return;
     }
@@ -655,16 +578,16 @@ export class Sky {
     const size = Math.round(big * (sinceLaunch < 0.3 ? 0.8 + sinceLaunch * 0.66 : 1));
     c.save();
     c.translate((Math.random() - 0.5) * jit, (Math.random() - 0.5) * jit);
-    glowText(`${fmtX(v.m)}×`, cy, size, heat(v.m));
+    glowText(`${fmtX(v.m)}×`, cy, size, theme.heat(v.m));
     c.restore();
     if (v.you) {
       c.font = "800 14px 'IBM Plex Mono', monospace";
       if (v.you.cashedAt === null) {
-        c.fillStyle = '#ffe45c';
-        c.fillText(`Cash out ${Math.floor((v.you.amount * Math.floor(v.m * 100 + 1e-9)) / 100).toLocaleString('en-US')}`, cx, cy + big * 0.62);
+        c.fillStyle = ink.cash;
+        edged(c, `Cash out ${Math.floor((v.you.amount * Math.floor(v.m * 100 + 1e-9)) / 100).toLocaleString('en-US')}`, cx, cy + big * 0.62, ink.edge ? ink.outline : null);
       } else {
-        c.fillStyle = '#5ff2c4';
-        c.fillText(`Cashed out at ${fmtX(v.you.cashedAt)}× · +${(v.you.payout - v.you.amount).toLocaleString('en-US')}`, cx, cy + big * 0.62);
+        c.fillStyle = ink.win;
+        edged(c, `Cashed out at ${fmtX(v.you.cashedAt)}× · +${(v.you.payout - v.you.amount).toLocaleString('en-US')}`, cx, cy + big * 0.62, ink.edge ? ink.outline : null);
       }
     }
     // Milestone shouts.
@@ -673,13 +596,12 @@ export class Sky {
       if (age > 1.6) continue;
       const k = ease(age / 0.25);
       c.globalAlpha = Math.min(1, (1.6 - age) / 0.5);
-      const size = Math.round(Math.min(W * 0.075, 30) * (0.6 + k * 0.4));
       c.save();
       c.translate(cx, cy - big * 0.78 - age * 12);
       c.rotate(Math.sin(age * 14) * 0.05);
-      c.font = `900 italic ${size}px Rubik, sans-serif`;
+      fitText(c, p.text, (px) => `900 italic ${px}px Rubik, sans-serif`, Math.round(Math.min(W * 0.075, 30) * (0.6 + k * 0.4)), W * 0.92);
       c.lineWidth = 5;
-      c.strokeStyle = 'rgba(20,6,30,0.75)';
+      c.strokeStyle = ink.outline;
       c.strokeText(p.text, 0, 0);
       c.fillStyle = p.color;
       c.fillText(p.text, 0, 0);
@@ -687,299 +609,4 @@ export class Sky {
       c.globalAlpha = 1;
     }
   }
-}
-
-/** A donut: the launch pad. */
-export function drawDonut(c: CanvasRenderingContext2D, x: number, y: number, s: number, rot: number, hue: number): void {
-  c.save();
-  c.translate(x, y);
-  c.rotate(rot);
-  c.scale(1, 0.42);
-  c.fillStyle = '#d9954a';
-  c.beginPath();
-  c.arc(0, 0, s, 0, TAU);
-  c.arc(0, 0, s * 0.38, 0, TAU, true);
-  c.fill('evenodd');
-  c.fillStyle = hue ? CANDY[hue % CANDY.length] : '#ff8cc2';
-  c.beginPath();
-  c.arc(0, -s * 0.12, s * 0.86, 0, TAU);
-  c.arc(0, -s * 0.12, s * 0.42, 0, TAU, true);
-  c.fill('evenodd');
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * TAU;
-    const r = s * (0.55 + (i % 3) * 0.1);
-    c.strokeStyle = CANDY[(i + 1) % CANDY.length];
-    c.lineWidth = s * 0.08;
-    c.beginPath();
-    c.moveTo(Math.cos(a) * r, Math.sin(a) * r - s * 0.12);
-    c.lineTo(Math.cos(a + 0.18) * r, Math.sin(a + 0.18) * r - s * 0.12);
-    c.stroke();
-  }
-  c.restore();
-}
-
-/** One of the treats that fly past. */
-function drawTreat(c: CanvasRenderingContext2D, kind: Treat, x: number, y: number, s: number, rot: number, color: string): void {
-  c.save();
-  c.translate(x, y);
-  c.rotate(rot);
-  c.lineJoin = 'round';
-  switch (kind) {
-    case 'donut': {
-      c.fillStyle = '#d9954a';
-      c.beginPath();
-      c.arc(0, 0, s * 0.6, 0, TAU);
-      c.arc(0, 0, s * 0.22, 0, TAU, true);
-      c.fill('evenodd');
-      c.fillStyle = color;
-      c.beginPath();
-      c.arc(0, 0, s * 0.52, 0, TAU);
-      c.arc(0, 0, s * 0.26, 0, TAU, true);
-      c.fill('evenodd');
-      c.lineWidth = Math.max(1, s * 0.06);
-      c.lineCap = 'round';
-      for (let i = 0; i < 7; i++) {
-        const a = (i / 7) * TAU;
-        c.strokeStyle = CANDY[(i + 2) % CANDY.length];
-        c.beginPath();
-        c.moveTo(Math.cos(a) * s * 0.38, Math.sin(a) * s * 0.38);
-        c.lineTo(Math.cos(a + 0.25) * s * 0.4, Math.sin(a + 0.25) * s * 0.4);
-        c.stroke();
-      }
-      break;
-    }
-    case 'candy': {
-      c.fillStyle = color;
-      c.beginPath();
-      c.ellipse(0, 0, s * 0.38, s * 0.28, 0, 0, TAU);
-      c.fill();
-      for (const d of [-1, 1]) {
-        c.beginPath();
-        c.moveTo(d * s * 0.32, 0);
-        c.lineTo(d * s * 0.7, -s * 0.24);
-        c.lineTo(d * s * 0.62, 0);
-        c.lineTo(d * s * 0.7, s * 0.24);
-        c.closePath();
-        c.fill();
-      }
-      c.strokeStyle = 'rgba(255,255,255,0.7)';
-      c.lineWidth = Math.max(1, s * 0.06);
-      c.beginPath();
-      c.moveTo(-s * 0.15, -s * 0.22);
-      c.lineTo(s * 0.05, s * 0.24);
-      c.moveTo(s * 0.12, -s * 0.24);
-      c.lineTo(s * 0.28, s * 0.14);
-      c.stroke();
-      break;
-    }
-    case 'soda': {
-      const w = s * 0.5;
-      const h = s * 0.9;
-      c.fillStyle = color;
-      c.beginPath();
-      c.roundRect(-w / 2, -h / 2, w, h, w * 0.18);
-      c.fill();
-      c.fillStyle = '#d7dde6';
-      c.fillRect(-w / 2, -h / 2, w, h * 0.12);
-      c.fillRect(-w / 2, h / 2 - h * 0.1, w, h * 0.1);
-      c.fillStyle = 'rgba(255,255,255,0.85)';
-      c.beginPath();
-      c.ellipse(0, 0, w * 0.32, h * 0.16, 0, 0, TAU);
-      c.fill();
-      c.fillStyle = 'rgba(255,255,255,0.35)';
-      c.fillRect(-w * 0.32, -h * 0.32, w * 0.12, h * 0.6);
-      break;
-    }
-    case 'lolly': {
-      c.strokeStyle = '#f4f0ea';
-      c.lineWidth = Math.max(1.5, s * 0.08);
-      c.beginPath();
-      c.moveTo(0, s * 0.1);
-      c.lineTo(0, s * 0.85);
-      c.stroke();
-      c.fillStyle = color;
-      c.beginPath();
-      c.arc(0, -s * 0.15, s * 0.42, 0, TAU);
-      c.fill();
-      c.strokeStyle = 'rgba(255,255,255,0.8)';
-      c.lineWidth = Math.max(1, s * 0.07);
-      c.beginPath();
-      for (let i = 0; i < 40; i++) {
-        const a = i * 0.45;
-        const r = (i / 40) * s * 0.38;
-        const px = Math.cos(a) * r;
-        const py = -s * 0.15 + Math.sin(a) * r;
-        if (i === 0) c.moveTo(px, py);
-        else c.lineTo(px, py);
-      }
-      c.stroke();
-      break;
-    }
-    case 'gummy': {
-      c.fillStyle = color;
-      c.globalAlpha *= 0.9;
-      c.beginPath();
-      c.arc(0, -s * 0.28, s * 0.2, 0, TAU);
-      c.arc(-s * 0.18, -s * 0.44, s * 0.09, 0, TAU);
-      c.arc(s * 0.18, -s * 0.44, s * 0.09, 0, TAU);
-      c.ellipse(0, s * 0.1, s * 0.27, s * 0.32, 0, 0, TAU);
-      c.arc(-s * 0.26, -s * 0.02, s * 0.09, 0, TAU);
-      c.arc(s * 0.26, -s * 0.02, s * 0.09, 0, TAU);
-      c.arc(-s * 0.16, s * 0.42, s * 0.11, 0, TAU);
-      c.arc(s * 0.16, s * 0.42, s * 0.11, 0, TAU);
-      c.fill();
-      break;
-    }
-  }
-  c.restore();
-}
-
-/**
- * Our muffin kid: a striped liner with a face, a frosted top with sprinkles
- * and a cherry, and little arms. `m` drives how wired it is: wider eyes, then
- * spinning ones; a bigger grin, then the tongue; arms up. Asleep: eyes shut.
- */
-export function drawKid(c: CanvasRenderingContext2D, x: number, y: number, s: number, t: number, m: number, mode: 'pad' | 'ride' | 'asleep', tilt: number): void {
-  const wired = Math.min(1, Math.log2(Math.max(1, m)) / Math.log2(10));
-  c.save();
-  c.translate(x, y);
-  c.rotate(tilt);
-  c.strokeStyle = '#2a0f2e';
-  c.lineWidth = Math.max(1.4, s * 0.07);
-  c.lineJoin = 'round';
-  c.lineCap = 'round';
-  // Arms: down on the pad and asleep, up and waving on the ride.
-  const up = mode === 'ride' ? 0.4 + wired * 0.6 : 0;
-  for (const side of [-1, 1]) {
-    const wave = mode === 'ride' ? Math.sin(t * (0.01 + wired * 0.03) + side) * 0.35 : 0;
-    const a = side * (Math.PI / 2 + 0.5 - up * 1.4 + wave);
-    c.beginPath();
-    c.moveTo(side * s * 0.5, s * 0.15);
-    c.lineTo(side * s * 0.5 + Math.sin(a) * s * 0.55 * side, s * 0.15 - Math.cos(a) * s * 0.55);
-    c.stroke();
-  }
-  // The liner, striped.
-  c.fillStyle = '#ffffff';
-  c.beginPath();
-  c.moveTo(-s * 0.62, -s * 0.05);
-  c.lineTo(s * 0.62, -s * 0.05);
-  c.lineTo(s * 0.46, s * 0.72);
-  c.lineTo(-s * 0.46, s * 0.72);
-  c.closePath();
-  c.fill();
-  c.save();
-  c.clip();
-  c.fillStyle = '#ff8cc2';
-  for (let i = -4; i <= 4; i += 2) {
-    c.beginPath();
-    c.moveTo(i * s * 0.14 - s * 0.07, -s * 0.05);
-    c.lineTo(i * s * 0.14 + s * 0.07, -s * 0.05);
-    c.lineTo(i * s * 0.1 + s * 0.05, s * 0.72);
-    c.lineTo(i * s * 0.1 - s * 0.05, s * 0.72);
-    c.closePath();
-    c.fill();
-  }
-  c.restore();
-  c.stroke();
-  // The top: frosting over a muffin dome, with sprinkles and a cherry.
-  c.fillStyle = '#c9803d';
-  c.beginPath();
-  c.ellipse(0, -s * 0.12, s * 0.72, s * 0.5, 0, Math.PI, TAU);
-  c.closePath();
-  c.fill();
-  c.stroke();
-  c.fillStyle = '#ffd3ec';
-  c.beginPath();
-  c.moveTo(-s * 0.66, -s * 0.16);
-  for (let i = 0; i <= 6; i++) {
-    const px = -s * 0.66 + (i / 6) * s * 1.32;
-    c.quadraticCurveTo(px - s * 0.11, -s * (0.05 + (i % 2) * 0.08), px, -s * 0.16);
-  }
-  c.ellipse(0, -s * 0.16, s * 0.66, s * 0.44, 0, 0, Math.PI, true);
-  c.closePath();
-  c.fill();
-  c.stroke();
-  c.lineWidth = Math.max(1.2, s * 0.06);
-  for (let i = 0; i < 8; i++) {
-    const a = Math.PI + 0.35 + (i / 7) * (Math.PI - 0.7);
-    const r = s * (0.22 + (i % 3) * 0.1);
-    c.strokeStyle = CANDY[i % CANDY.length];
-    c.beginPath();
-    c.moveTo(Math.cos(a) * r, -s * 0.2 + Math.sin(a) * r * 0.75);
-    c.lineTo(Math.cos(a + 0.2) * r, -s * 0.2 + Math.sin(a + 0.2) * r * 0.75);
-    c.stroke();
-  }
-  c.strokeStyle = '#2a0f2e';
-  c.lineWidth = Math.max(1.2, s * 0.05);
-  c.beginPath();
-  c.moveTo(0, -s * 0.62);
-  c.quadraticCurveTo(s * 0.08, -s * 0.8, s * 0.18, -s * 0.84);
-  c.stroke();
-  c.fillStyle = '#ff3355';
-  c.beginPath();
-  c.arc(0, -s * 0.6, s * 0.12, 0, TAU);
-  c.fill();
-  c.stroke();
-  // The face, on the liner.
-  const ey = s * 0.2;
-  const ex = s * 0.2;
-  c.fillStyle = '#2a0f2e';
-  if (mode === 'asleep') {
-    c.lineWidth = Math.max(1.4, s * 0.06);
-    for (const side of [-1, 1]) {
-      c.beginPath();
-      c.arc(side * ex, ey, s * 0.09, 0.2, Math.PI - 0.2);
-      c.stroke();
-    }
-    c.beginPath();
-    c.arc(0, s * 0.46, s * 0.06, 0, TAU);
-    c.stroke();
-  } else {
-    const r = s * (0.1 + wired * 0.06);
-    for (const side of [-1, 1]) {
-      c.fillStyle = '#ffffff';
-      c.beginPath();
-      c.arc(side * ex, ey, r, 0, TAU);
-      c.fill();
-      c.stroke();
-      if (m >= 5) {
-        // Spinning spiral eyes.
-        c.strokeStyle = '#2a0f2e';
-        c.lineWidth = Math.max(1, s * 0.035);
-        c.beginPath();
-        const spin = t * (0.008 + wired * 0.02) * side;
-        for (let i = 0; i < 22; i++) {
-          const a = spin + i * 0.55;
-          const rr = (i / 22) * r * 0.9;
-          const px = side * ex + Math.cos(a) * rr;
-          const py = ey + Math.sin(a) * rr;
-          if (i === 0) c.moveTo(px, py);
-          else c.lineTo(px, py);
-        }
-        c.stroke();
-        c.lineWidth = Math.max(1.4, s * 0.07);
-      } else {
-        c.fillStyle = '#2a0f2e';
-        c.beginPath();
-        c.arc(side * ex + s * 0.02, ey + s * 0.01, r * (0.5 - wired * 0.15), 0, TAU);
-        c.fill();
-      }
-    }
-    // The grin, bigger as it gets wired; the tongue past 10×.
-    const gw = s * (0.16 + wired * 0.12);
-    c.fillStyle = '#6a1638';
-    c.beginPath();
-    c.moveTo(-gw, s * 0.4);
-    c.quadraticCurveTo(0, s * (0.48 + wired * 0.18), gw, s * 0.4);
-    c.closePath();
-    c.fill();
-    c.stroke();
-    if (m >= 10) {
-      c.fillStyle = '#ff6b9e';
-      c.beginPath();
-      c.ellipse(s * 0.04, s * (0.52 + wired * 0.08), s * 0.07, s * 0.09, 0.2, 0, TAU);
-      c.fill();
-    }
-  }
-  c.restore();
 }

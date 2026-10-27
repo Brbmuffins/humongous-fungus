@@ -6,7 +6,7 @@ Three mobile games that share one codebase.
 |---|---|---|
 | **Humongous Fungus** | Idle game: you are a mycelium network growing a terrarium in real time, even while the game is closed | `games/fungus` |
 | **Sporemonger** | Trading game: buy and sell goods on a live market in a mushroom town, before they rot | `games/sporemonger` |
-| **Sugar Crash** | A crash game for play money: a sugar rush multiplier climbs until it crashes, and you cash out before it does. Provably fair rounds, a table of made-up players, auto cash-out | `games/sugarcrash` |
+| **Sugar Crash** | A crash game for play money: a multiplier climbs until it crashes, and you cash out before it does. Provably fair rounds, a table of made-up players, auto cash-out, and five picks of look (Sugar Rush, Hot Wing Challenge, Grandma's Balloons, Shopping Cart Hill, Espresso Intern) | `games/sugarcrash` |
 
 ## Branches
 
@@ -64,7 +64,7 @@ audience on Google Play: see [docs/sugarcrash.md](docs/sugarcrash.md).
 | `games/*/tools/` | Renders each game's app icon, launch screen and Play feature graphic |
 | `games/sporemonger/src/` | Sporemonger rules (`game.ts`), content (`defs.ts`), banner art (`scene.ts`), screens (`ui.ts`) and phone features with price-move reminders (`native.ts`) |
 | `games/sporemonger/ios`, `android` | Native app projects (Capacitor) |
-| `games/sugarcrash/src/` | Sugar Crash: provably fair crash points (`fair.ts`), the round table and the crowd (`game.ts`), your coins, bets and saves (`meta.ts`), numbers and names (`defs.ts`), the sugar rush on screen (`scene.ts`), controls and cards (`ui.ts`) |
+| `games/sugarcrash/src/` | Sugar Crash: provably fair crash points (`fair.ts`), the round table and the crowd (`game.ts`), your coins, bets and saves (`meta.ts`), numbers and names (`defs.ts`), the chart and shouts on screen (`scene.ts`), controls and cards (`ui.ts`), sounds (`sound.ts`); one file per look in `themes/` (`sugar`, `wings`, `balloons`, `cart`, `espresso`: art, colors, words, crowd, sound) |
 | `shared/market.ts` | Live market engine: seeded price walk, moods, trades, rot |
 | `shared/chart.ts` | Live price chart with crosshair readout |
 | `shared/storage.ts` | Local save, plus an optional per-player cloud copy when hosted as an artifact |

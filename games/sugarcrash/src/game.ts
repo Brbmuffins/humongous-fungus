@@ -53,8 +53,15 @@ export class Table {
   private joining: { at: number; bet: Bet }[] = [];
   private nextMilestone = 0;
   private waiting = false;
+  /** Who the crowd is this round: the active theme's made-up names. */
+  names: readonly string[] = BOT_NAMES;
 
-  constructor(round: RoundSpec, private roll: Roll) {
+  constructor(
+    round: RoundSpec,
+    private roll: Roll,
+    names: readonly string[] = BOT_NAMES,
+  ) {
+    this.names = names;
     this.round = round;
     this.begin(round);
   }
@@ -67,7 +74,24 @@ export class Table {
     this.bets = [];
     this.nextMilestone = 0;
     this.waiting = false;
-    this.joining = crowd(this.roll).sort((a, b) => a.at - b.at);
+    this.joining = crowd(this.roll, this.names).sort((a, b) => a.at - b.at);
+  }
+
+  /**
+   * Swap the crowd's names for another list of the same length, keeping their
+   * bets and cash-outs: a theme change mid-round renames the table, nothing else.
+   */
+  setNames(names: readonly string[]): void {
+    const swap = new Map(this.names.map((n, i) => [n, names[i]] as const));
+    const rename = (b: Bet) => {
+      const to = swap.get(b.who);
+      if (to && !b.you) b.who = to;
+    };
+    if (names.length === this.names.length) {
+      this.bets.forEach(rename);
+      this.joining.forEach((j) => rename(j.bet));
+    }
+    this.names = names;
   }
 
   /** The multiplier right now. */
@@ -159,9 +183,9 @@ export class Table {
 }
 
 /** Everyone else at the table this round: who, how much, where they bail, and when they sit down. */
-export function crowd(roll: Roll): { at: number; bet: Bet }[] {
+export function crowd(roll: Roll, from: readonly string[] = BOT_NAMES): { at: number; bet: Bet }[] {
   const n = CROWD_MIN + Math.floor(roll() * (CROWD_MAX - CROWD_MIN + 1));
-  const names = [...BOT_NAMES];
+  const names = [...from];
   for (let i = names.length - 1; i > 0; i--) {
     const j = Math.floor(roll() * (i + 1));
     [names[i], names[j]] = [names[j], names[i]];

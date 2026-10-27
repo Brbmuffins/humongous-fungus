@@ -6,8 +6,8 @@ faster, until the sugar crash hits at a point nobody can know in advance. Bet
 before the rush, cash out during it, and you win your bet times the multiplier
 at that moment. Still in when it crashes and the bet is gone.
 
-Play money only. You start with 1,000 coins, Grandma slips you 500 more when
-you're broke, and that's the only way coins come in: they can't be bought, won
+Play money only. You start with 1,000 coins, Grandma (or whoever your theme
+has) slips you 500 more when you're broke, and that's the only way coins come in: they can't be bought, won
 for real or cashed out. Everyone else at the table is made up. It's a game
 about the feeling of hanging on one second too long, not a casino.
 
@@ -94,7 +94,11 @@ to 100, sometimes 1,000 to 5,000). Where they cash out: 45% play it safe
 (20–200×). Their cash-outs pop up on the line and turn their row green; when
 it crashes, everyone still in goes red.
 
-## On screen (`src/scene.ts`)
+## On screen (`src/scene.ts`, `src/themes/`)
+
+This section describes the default Sugar theme; the other looks are under
+[Themes](#themes). The line chart, axes, plunge, pins and shouts are shared;
+each theme draws its own backdrop and rider.
 
 - A candy-colored monitor: dashed pink grid lines, × on the left, seconds
   along the bottom, both stretching smoothly to keep the tip about three
@@ -129,13 +133,61 @@ heartbeat that speeds up (78 bpm at the start, about 190 by 10×); a soda can
 cracking open at the start; a sparkly arpeggio at each milestone; a candy
 wrapper crinkle and a ka-ching when you cash out; and for the crash, a
 deflating wah-wah-wah-waaah and then a snore. A sound toggle in the toolbar.
+That is the Sugar theme; each other theme sets its own whine, heartbeat,
+launch sound, milestone jingle and crash sounds (a sizzle, a honk, a zap…).
+
+## Themes
+
+A theme picker (a chip row in the header; on phones only the active chip shows
+its name) switches the look of the whole game. It changes the words, the
+pictures and the sounds and nothing else: the rules, the fairness panel, crash
+points, betting, auto cash-out, wallet and history are the same in every
+theme, and a seeded table plays out identically in all of them (a test checks
+this). The choice is each player's own and is the `settings.theme` id in the
+one save (so it follows the cloud copy too). Sugar is the default; an unknown
+or damaged id falls back to it.
+
+| Theme | Rider | Gauge | Ends with | Refill |
+| --- | --- | --- | --- | --- |
+| **Sugar Rush** (`sugar`) | the muffin kid on a candy high | SUGAR mg/dL | the sugar crash | Grandma |
+| **Hot Wing Challenge** (`wings`) | a guy at a wing-eating contest in a sports bar, flames growing behind him | SCOVILLE SHU | burnt out, milk time or sauce coma | Big Tony |
+| **Grandma's Balloons** (`balloons`) | Grandma on a bunch of party balloons, rooftops to birds to planes to space | ALTITUDE ft | a pigeon pop, a power line or letting go to wave; she lands in a pool, haystack or trampoline | Grandma |
+| **Shopping Cart Hill** (`cart`) | a kid in a helmet in a shopping cart on an endless hill, the sky going warp-speed magenta | SPEED MPH | a curb, a parked car or a goose; lands in a bush, leaf pile or cereal boxes | Sample Lady Sue |
+| **Espresso Intern** (`espresso`) | an office intern, the clock spinning, emails and cups flying | HEART RATE (shots and BPM) | a heart flutter faint, spilling the pot on the boss or a keyboard nap | Gary in Accounting |
+
+One file per theme in `src/themes/`. `kit.ts` holds the `Theme` contract and
+the shared helpers (`Streamer` for scenery that streams past, shapes, color
+helpers); `index.ts` lists the themes (`THEMES`, `themeById`). A theme is:
+
+- Data: id, name, chip label and icon, logo words, page colors (a set of CSS
+  custom properties applied on the page root, the same keys in every theme),
+  canvas ink, the line's heat colors, the milestone shouts (one for each
+  multiplier in `MILESTONES`), the readout (label, a `level(m)` formula that
+  only goes up, and its text), the crash name and the crash variants (a shout,
+  a caption and a crash sound each), the crowd (a list of made-up names as long
+  as `BOT_NAMES`), the refill line and the help-card words.
+- A sound profile: the whine's wave and pitch, the heartbeat, the launch sound
+  and the milestone jingle's timbre and notes. Crash and launch sounds are
+  picked by name from the synthesizer in `sound.ts` (wah, sizzle, glug,
+  splat, pop, zap, tumble, honk, faint, spill, clack; can, sizzle, whoosh,
+  rattle, grind).
+- A scene: `backdrop(frame)` draws what is behind the line, and `rider(frame)`
+  draws the character (on the pad before the rush, at the tip during it, and
+  the crash after) and returns where it is. Everything is drawn procedurally
+  on the canvas: no image files, nothing downloaded.
+
+Which crash variant plays is picked at random for show only; it never touches
+the sealed crash point. Switching theme in the middle of a round renames the
+crowd in place (`Table.setNames`), without touching any bet or result. To add
+a theme, write `src/themes/<id>.ts` and add it to `THEMES`; the tests loop over
+whatever themes exist.
 
 ## Your account (`src/meta.ts`)
 
 Coins, the bet you have riding, the bet queued for the next round, your
-settings (bet, auto cash-out on or off and its target, sound), stats (rounds,
+settings (bet, auto cash-out on or off and its target, sound, theme), stats (rounds,
 wins, wagered, paid back, biggest win, best cash-out, the highest crash
-you've seen, coins from Grandma) and the last 30 rounds. One JSON save in
+you've seen, coins from your theme's refill) and the last 30 rounds. One JSON save in
 local storage, on the phone in Preferences, and, as a claude.ai page, a
 private copy per player in the artifact's database. A damaged save is
 repaired field by field. Stats has a Start over button.

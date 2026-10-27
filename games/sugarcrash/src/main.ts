@@ -33,7 +33,8 @@ import {
 } from './meta';
 import { buzz, isNative, nativeSave, onAppState } from './native';
 import { Sky, fmtX } from './scene';
-import { setSound, sfx, suspend, unlock } from './sound';
+import { setProfile, setSound, sfx, suspend, unlock } from './sound';
+import { themeById, type Theme } from './themes';
 import { Ui, type ActionState, type Controller } from './ui';
 
 const localSave = makeLocalSave('sugarcrash.save.v1');
@@ -54,6 +55,8 @@ type Sealed = Omit<RoundSpec, 'id'>;
 
 class Game implements Controller {
   save: Save;
+  /** The look in use: the saved choice, kept in step with the save. */
+  theme: Theme;
   private table: Table | null = null;
   private sky: Sky;
   private ui: Ui;
@@ -77,12 +80,14 @@ class Game implements Controller {
     this.hadSave = loaded !== null;
     this.save = loaded ?? newSave(Date.now());
     setSound(this.save.settings.sound);
-    this.sky = new Sky(this.canvas);
+    this.theme = themeById(this.save.settings.theme);
+    setProfile(this.theme.sound);
+    this.sky = new Sky(this.canvas, this.theme);
     this.ui = new Ui(this);
     const p = this.save.pending;
     const left = settleLeft(this.save);
     if (p && left !== null) {
-      this.ui.toast(left ? `Your bet from last time cashed out at ${fmtX(p.target!)}×: +${(left - p.amount).toLocaleString('en-US')}` : `Your bet from last time sugar-crashed at ${fmtX(p.crash)}×.`, 4500);
+      this.ui.toast(left ? `Your bet from last time cashed out at ${fmtX(p.target!)}×: +${(left - p.amount).toLocaleString('en-US')}` : `Your bet from last time ${this.theme.crashedVerb} at ${fmtX(p.crash)}×.`, 4500);
       this.persist(true);
     }
     if (!loaded) this.ui.showHelp(true);
@@ -120,7 +125,7 @@ class Game implements Controller {
     this.starved = false;
     const spec: RoundSpec = { id: this.save.nextRound++, ...sealed };
     if (this.table) this.table.begin(spec);
-    else this.table = new Table(spec, this.roll);
+    else this.table = new Table(spec, this.roll, this.theme.crowd);
     this.sky.newRound();
     this.ui.resetRows();
     this.lastBeep = -1;
@@ -158,7 +163,8 @@ class Game implements Controller {
     }
     if (tickRefill(this.save, Date.now())) {
       sfx.refill();
-      this.ui.toast(`Grandma slipped you ${REFILL_COINS.toLocaleString('en-US')} coins. “Don’t spend it all on candy.”`, 4500);
+      const { who, quip } = this.theme.refill;
+      this.ui.toast(`${who} slipped you ${REFILL_COINS.toLocaleString('en-US')} coins. “${quip}”`, 4500);
       this.persist(true);
     }
     this.ui.update(this.actionState(), now);
@@ -193,11 +199,13 @@ class Game implements Controller {
         break;
       case 'crash': {
         const lost = crashed(this.save, t);
-        sfx.crash();
-        this.sky.crash();
+        // Which of the theme's crashes plays is just for show: the crash point was sealed before the round.
+        const variant = Math.floor(Math.random() * this.theme.crashes.length);
+        sfx.crash(this.theme.crashes[variant].sound);
+        this.sky.crash(variant);
         this.ui.finish(t.bets);
         this.ui.syncHistory();
-        this.ui.announce(`Sugar crash at ${fmtX(e.at)} times.${lost ? ` You lost ${lost}.` : ''}`);
+        this.ui.announce(`${this.theme.crashName} at ${fmtX(e.at)} times.${lost ? ` You lost ${lost}.` : ''}`);
         if (lost) buzz.bad();
         else buzz.heavy();
         this.persist(true);
@@ -303,6 +311,28 @@ class Game implements Controller {
     this.persist();
   }
 
+  setTheme(id: string): void {
+    const t = themeById(id);
+    if (t.id === this.theme.id && this.save.settings.theme === t.id) return;
+    this.save.settings.theme = t.id;
+    this.applyTheme(t);
+    this.persist(true);
+  }
+
+  /** Switch the look: the picture, colors, words, sounds and the crowd's names. The round carries on untouched. */
+  private applyTheme(t: Theme): void {
+    this.theme = t;
+    this.sky.setTheme(t);
+    setProfile(t.sound);
+    this.ui.syncTheme();
+    const table = this.table;
+    if (table) {
+      table.setNames(t.crowd);
+      this.ui.syncRows(table.bets, table.phase);
+    }
+    this.ui.announce(`Look: ${t.name}.`);
+  }
+
   toggleSound(): void {
     unlock();
     this.save.settings.sound = !this.save.settings.sound;
@@ -314,9 +344,10 @@ class Game implements Controller {
   reset(): void {
     const t = this.table;
     if (t?.yours && t.phase === 'betting') cancelBet(this.save, t);
-    const sound = this.save.settings.sound;
+    const { sound, theme } = this.save.settings;
     this.save = newSave(Date.now());
     this.save.settings.sound = sound;
+    this.save.settings.theme = theme;
     localSave.clear();
     nativeSave.clear();
     this.ui.toast('Fresh start: 1,000 coins.');
@@ -396,9 +427,10 @@ class Game implements Controller {
       const left = settleLeft(remote);
       this.save = remote;
       setSound(remote.settings.sound);
+      if (remote.settings.theme !== this.theme.id) this.applyTheme(themeById(remote.settings.theme));
       this.ui.syncSound();
       this.ui.syncHistory();
-      if (p && left !== null) this.ui.toast(left ? `Your bet from last time cashed out at ${fmtX(p.target!)}×.` : `Your bet from last time sugar-crashed at ${fmtX(p.crash)}×.`);
+      if (p && left !== null) this.ui.toast(left ? `Your bet from last time cashed out at ${fmtX(p.target!)}×.` : `Your bet from last time ${this.theme.crashedVerb} at ${fmtX(p.crash)}×.`);
       this.persist();
     } else this.persist(true);
   }
