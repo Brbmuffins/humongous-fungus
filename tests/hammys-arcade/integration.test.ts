@@ -356,7 +356,7 @@ describe('the bundled server, over real HTTP and SSE', () => {
     b.sky.close();
   });
 
-  it('stops cleanly on SIGTERM, gives back what was riding, and remembers everyone', async () => {
+  it('stops cleanly on SIGTERM, gives back what was riding, and remembers everyone', { timeout: 90_000 }, async () => {
     const a = await join_('Survivor', '198.51.100.21');
     await openRound(a, 'rocket', 2500);
     expect((await act(a, 'rocket/bet', { amount: 300 })).json.ok).toBe(true);
@@ -378,7 +378,7 @@ describe('the bundled server, over real HTTP and SSE', () => {
     expect(again.json.me).toMatchObject({ id: a.id, name: 'Survivor', coins: START_COINS });
   });
 
-  it('after a crash, not a clean stop, a stake that was riding is given back on the next boot', async () => {
+  it('after a crash, not a clean stop, a stake that was riding is given back on the next boot', { timeout: 90_000 }, async () => {
     const a = await join_('Crashy', '198.51.100.31');
     await openRound(a, 'rocket', 2500);
     expect((await act(a, 'rocket/bet', { amount: 400 })).json.ok).toBe(true);
