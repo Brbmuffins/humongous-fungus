@@ -33,11 +33,29 @@ export const ROWS = 3;
 export const MAX_WIN = 5000;
 
 /** One in this many spins Hammy sneezes and launches an orb of his own. */
-export const SNEEZE_ONE_IN = 80;
+export const SNEEZE_ONE_IN = 50;
 /** Orbs on the grid it takes to launch the multiplier orb. */
 export const ORB_TRIGGER = 2;
 /** Bounces for each ball. */
 export const ORB_HITS = 3;
+
+/**
+ * How loud a win is. Under the bet it's not a win (the readout stays quiet, no
+ * jingle, no shake); from the bet up it escalates.
+ */
+export interface WinTier {
+  min: number;
+  label: string;
+  color: string;
+}
+export const WIN_TIERS: readonly WinTier[] = [
+  { min: 250, label: 'HAMMY WIN', color: '#7be8ff' },
+  { min: 50, label: 'HUGE WIN', color: '#ff7bd5' },
+  { min: 10, label: 'BIG WIN', color: '#ffa63d' },
+  { min: 1, label: 'WIN', color: '#ffd34d' },
+];
+/** The tier a multiple of the bet reaches, or null when it's under the bet. */
+export const tierOf = (mult: number): WinTier | null => WIN_TIERS.find((t) => mult >= t.min) ?? null;
 
 // Symbols -------------------------------------------------------------------
 
@@ -54,15 +72,15 @@ export interface SymbolDef {
 
 /** Cheapest first, then the wild and the orb. */
 export const SYMBOLS: readonly SymbolDef[] = [
-  { id: 'dorkito', ch: 'D', name: 'Dorkito', pays: [4, 12, 36] },
-  { id: 'pizza', ch: 'P', name: 'Pizza box', pays: [4, 12, 40] },
-  { id: 'sneaker', ch: 'S', name: 'Sneaker', pays: [5, 16, 52] },
-  { id: 'tp', ch: 'T', name: 'Toilet paper', pays: [5, 18, 60] },
-  { id: 'clipboard', ch: 'C', name: 'Dr. Moss’s clipboard', pays: [11, 36, 180] },
-  { id: 'grandma', ch: 'G', name: 'Grandma', pays: [20, 80, 450] },
-  { id: 'vacuum', ch: 'V', name: 'Robot vacuum', pays: [34, 135, 900] },
-  { id: 'toilet', ch: 'L', name: 'The toilet', pays: [54, 240, 1800] },
-  { id: 'hammy', ch: 'H', name: 'Cube Hammy', pays: [100, 470, 4500] },
+  { id: 'dorkito', ch: 'D', name: 'Dorkito', pays: [8, 16, 50] },
+  { id: 'pizza', ch: 'P', name: 'Pizza box', pays: [8, 16, 50] },
+  { id: 'sneaker', ch: 'S', name: 'Sneaker', pays: [20, 36, 120] },
+  { id: 'tp', ch: 'T', name: 'Toilet paper', pays: [20, 40, 140] },
+  { id: 'clipboard', ch: 'C', name: 'Dr. Moss’s clipboard', pays: [22, 50, 220] },
+  { id: 'grandma', ch: 'G', name: 'Grandma', pays: [24, 64, 320] },
+  { id: 'vacuum', ch: 'V', name: 'Robot vacuum', pays: [28, 84, 1200] },
+  { id: 'toilet', ch: 'L', name: 'The toilet', pays: [34, 100, 2500] },
+  { id: 'hammy', ch: 'H', name: 'Cube Hammy', pays: [80, 400, 25600] },
   { id: 'wild', ch: 'W', name: 'Meatball sub (wild)', pays: null },
   { id: 'orb', ch: 'O', name: 'Multiplier orb', pays: null },
 ];
@@ -76,11 +94,11 @@ export const SYMBOL_BY_ID = Object.fromEntries(SYMBOLS.map((s) => [s.id, s])) as
  * 4 only.
  */
 export const STRIPS: readonly string[] = [
-  'DTPVCDSPTLDCPGSH',
-  'DTHPVCSWDTPSGDCTPVLSWDOTCPSG',
-  'LSDTGOPSCVDTWHPSDTCGPSVDTWPC',
-  'VPWCSDTPGSLCDTOVPWSDTHCPGSDT',
-  'LSDPTGHCDSPVTDPC',
+  'LPCDSPLSCDVPGCHSLPDT',
+  'HSTPGOTVGWDCVTGDVLTG',
+  'SCHVLPDGSPVGWLDPTVOD',
+  'TVDSLGPTCDPTCHDOWGPS',
+  'DCPGTLDSVPTDGSTDHCPS',
 ];
 
 // Paylines ------------------------------------------------------------------
@@ -131,13 +149,14 @@ export interface OrbEffect {
 
 /** What a bounce can do to the spin's win. */
 export const ORB_EFFECTS: readonly OrbEffect[] = [
-  { op: 'add', value: 0.5, weight: 34 },
-  { op: 'add', value: 1, weight: 28 },
-  { op: 'add', value: 2, weight: 7 },
-  { op: 'add', value: 3, weight: 1 },
-  { op: 'mul', value: 2, weight: 22 },
-  { op: 'mul', value: 3, weight: 3 },
-  { op: 'mul', value: 5, weight: 1 },
+  { op: 'add', value: 0.25, weight: 3800 },
+  { op: 'add', value: 0.5, weight: 2000 },
+  { op: 'add', value: 1, weight: 400 },
+  { op: 'mul', value: 2, weight: 900 },
+  { op: 'mul', value: 3, weight: 300 },
+  { op: 'mul', value: 5, weight: 120 },
+  { op: 'mul', value: 10, weight: 35 },
+  { op: 'mul', value: 25, weight: 4 },
 ];
 
 export const ORB_WEIGHT = ORB_EFFECTS.reduce((s, e) => s + e.weight, 0);

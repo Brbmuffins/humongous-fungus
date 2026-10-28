@@ -6,7 +6,7 @@
 import './slots.css';
 import { h, setDisabled, setText } from '@shared/dom';
 import { fmt } from '@shared/format';
-import { BetPicker, Choice, DISPLAY_FONT, Ledger, UI_FONT, arcadeCard, bubble, fairRoll, fitCanvas, loud, pick, x2, type ArcadeHost, type ArcadeScreen, type ArcadeSession } from './arcadeview';
+import { BetPicker, Choice, DISPLAY_FONT, Ledger, UI_FONT, arcadeCard, fairRoll, fitCanvas, loud, pick, x2, type ArcadeHost, type ArcadeScreen, type ArcadeSession } from './arcadeview';
 import { isAlive } from './alive';
 import { defaultLook, drawHammy, type Face } from './hammy';
 import { buzz } from './haptics';
@@ -17,6 +17,7 @@ import {
   REELS,
   ROWS,
   SLOTS_BIG,
+  tierOf,
   SLOTS_BROKE,
   SLOTS_DRY,
   SLOTS_NEAR,
@@ -73,6 +74,46 @@ const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-re
 
 /** A win at least this big stops an auto-spin. */
 const AUTO_STOP_AT = 20;
+/**
+ * Hammy's speech bubble, wrapped to fit the space between him and the readout
+ * (`left` to `right`, centred on `midY`, no taller than `maxH`). It shrinks the
+ * writing before it would ever run into either neighbour.
+ */
+function wrappedBubble(c: CanvasRenderingContext2D, text: string, left: number, right: number, midY: number, maxH: number): void {
+  const room = Math.max(40, right - left);
+  for (let size = 14; size >= 8; size -= 1) {
+    c.font = `700 ${size}px ${UI_FONT}`;
+    const pad = size * 0.6;
+    const lines: string[] = [];
+    let cur = '';
+    for (const word of text.split(' ')) {
+      const next = cur ? `${cur} ${word}` : word;
+      if (cur && c.measureText(next).width > room - pad * 2) {
+        lines.push(cur);
+        cur = word;
+      } else cur = next;
+    }
+    lines.push(cur);
+    const lh = size * 1.2;
+    const bh = lines.length * lh + pad * 1.1;
+    const bw = Math.max(...lines.map((l) => c.measureText(l).width)) + pad * 2;
+    if (size > 8 && (bh > maxH || bw > room)) continue;
+    const bx = left;
+    const by = midY - bh / 2;
+    c.fillStyle = '#fffaf0';
+    c.strokeStyle = '#2b1400';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.roundRect(bx, by, Math.min(bw, room), bh, Math.min(bh / 2, size * 1.1));
+    c.fill();
+    c.stroke();
+    c.fillStyle = '#2b1400';
+    c.textAlign = 'left';
+    c.textBaseline = 'middle';
+    lines.forEach((l, i) => c.fillText(l, bx + pad, by + pad * 0.55 + lh * (i + 0.5) + 1));
+    return;
+  }
+}
 const AUTO_OPTIONS = [0, 10, 25, 50] as const;
 const TAU = Math.PI * 2;
 
@@ -375,8 +416,8 @@ export class SlotsApp implements ArcadeScreen {
     const nearMiss = isNearMiss(sp);
     if (nearMiss) at(tl.reelsEnd, () => Math.random() < 0.6 && this.say(pick(SLOTS_NEAR), 1800));
     tl.lines.forEach((l, i) => {
-      at(l.t0, () => setText(this.status, `${LINES[l.win.line].name}: ${l.win.count} × ${symbolName(l.win.symbol)}`), true);
-      at(l.t0 + 0.25, () => (l.win.mult >= 1 ? sfx.ding() : sfx.coin()));
+      at(l.t0, () => setText(this.status, `${l.win.count} × ${symbolName(l.win.symbol)} on the ${LINES[l.win.line].name} line`), true);
+      if (sp.mult >= 1) at(l.t0 + 0.25, () => (l.win.mult >= 1 ? sfx.ding() : sfx.coin()));
       if (i === tl.lines.length - 1 && l.win.mult >= 5) at(l.t1 - 0.2, () => this.shakeBy(Math.min(10, 3 + l.win.mult / 5)));
     });
     if (tl.orb && sp.feature) {
@@ -419,20 +460,27 @@ export class SlotsApp implements ArcadeScreen {
       tl.end - 0.4,
       () => {
         const m = sp.mult;
-        if (m >= 10) {
+        const tier = tierOf(m);
+        const W = this.lay();
+        if (tier && tier.min >= 10) {
+          // BIG 10x, HUGE 50x, HAMMY 250x: each a notch louder.
+          const notch = tier.min >= 250 ? 2 : tier.min >= 50 ? 1 : 0;
           sfx.kaching();
-          sfx.fart(1.1);
+          sfx.fart(1.1 + notch * 0.2);
           buzz.success();
-          this.shakeBy(Math.min(16, 8 + m / 20));
-          this.burst(this.lay().W / 2, this.lay().y0 + this.lay().winH / 2, Math.min(70, 16 + m), '#ffd34d', true);
-          this.setFace('joy', 2);
-          this.say(m >= AUTO_STOP_AT ? pick(SLOTS_BIG) : pick(SLOTS_WIN), 2400);
-        } else if (m >= 1) {
+          this.shakeBy(10 + notch * 4);
+          this.burst(W.W / 2, W.y0 + W.winH / 2, 30 + notch * 35, tier.color, true);
+          if (notch >= 1) window.setTimeout(() => this.burst(W.W / 2, W.y0 + W.winH * 0.3, 40, '#ffffff', true), 350);
+          this.setFace('joy', 2 + notch);
+          this.say(notch >= 1 ? pick(SLOTS_BIG) : pick(SLOTS_WIN), 2400);
+        } else if (tier) {
           sfx.kaching();
           this.setFace('joy', 1.2);
           if (Math.random() < 0.6) this.say(pick(SLOTS_WIN), 1800);
         } else if (m > 0) {
-          sfx.coin();
+          // Under the bet: a little of it back, said quietly. No jingle, no shake, no cheering.
+          this.dry = 0;
+          return;
         } else {
           this.dry++;
           if (this.dry >= 3 && Math.random() < 0.7) {
@@ -462,10 +510,12 @@ export class SlotsApp implements ArcadeScreen {
     if (r.sp.feature) {
       const f = r.sp.feature;
       setText(this.status, `The orb took ${x2(f.base)} to ${x2(mult)}: ${fmt(won)} back for ${fmt(r.bet)}${r.sp.capped ? ' (the top win, which is as high as it goes)' : ''}.`);
+    } else if (won > 0 && mult < 1) {
+      setText(this.status, `${fmt(won)} back for ${fmt(r.bet)}.`);
     } else if (won > 0) {
       setText(this.status, `${r.sp.wins.length} ${r.sp.wins.length === 1 ? 'line' : 'lines'} paid ${x2(mult)}: ${fmt(won)} back for ${fmt(r.bet)}.`);
     } else {
-      setText(this.status, mult > 0 ? `${x2(mult)}: not even a coin back for ${fmt(r.bet)}.` : `Nothing this time. ${fmt(r.bet)} gone.`);
+      setText(this.status, `Nothing this time. ${fmt(r.bet)} gone.`);
     }
     this.picker.lock(false);
     if (this.host.state.coins < this.picker.amount && this.host.state.coins < 1) {
@@ -719,7 +769,7 @@ export class SlotsApp implements ArcadeScreen {
     }
 
     // The winning line drawing itself.
-    if (cur && live) this.drawLine(c, L, cur, e, t);
+    if (cur && live) this.drawLine(c, L, cur, e, t, r.sp.mult < 1);
 
     // The orb.
     if (live && r && tl?.orb && r.sp.feature) this.drawOrb(c, L, r, e, t);
@@ -789,30 +839,62 @@ export class SlotsApp implements ArcadeScreen {
       look.face = before ? 'shock' : 'joy';
     }
     drawHammy(c, hx, hy, hr, look, t);
-    if (this.bubbleLine && now < this.bubbleLine.until) bubble(c, this.bubbleLine.text, hx + hr * 1.1, hy - hr * 0.3, Math.max(10, Math.min(15, L.W * 0.036)), L.W);
 
-    // The readout: what this spin is worth so far.
+    // Three columns that never overlap: Hammy, his speech bubble, and the readout on the right.
+    const gridW = REELS * L.cs + (REELS - 1) * L.gap;
+    const right = L.x0 + gridW;
     const v = r ? (live ? this.valueAt(r, e) : this.resting) : 0;
-    const cx = L.x0 + (REELS * L.cs + (REELS - 1) * L.gap) * 0.62;
-    if (r && (v > 0 || live)) {
-      const size = Math.max(16, Math.min(38, Ta * 0.42, L.W * 0.1));
-      const vy = Ta * 0.5 + size * 0.05;
-      const label = orbOn ? 'ORB' : live && v > 0 ? 'WIN' : v > 0 ? 'WON' : '';
-      const pulse = 1 + (orbOn ? Math.sin(now / 90) * 0.04 : 0);
-      if (label) loud(c, label, cx, Math.max(8, vy - size * 0.78), Math.max(10, size * 0.38), orbOn ? '#7be8ff' : '#ffd34d', UI_FONT);
-      if (v > 0) {
-        loud(c, x2(v), cx, vy, size * pulse, orbOn ? '#c8f4ff' : v >= 10 ? '#ffd34d' : '#fff7e0', DISPLAY_FONT);
-        c.globalAlpha = 0.85;
-        loud(c, `${fmt(Math.floor(r.bet * v * 1.0000001))} coins`, cx, vy + size * 0.72, Math.max(10, size * 0.32), '#ffe9a8', UI_FONT);
+    const showReadout = !!r && (v > 0 || live);
+    const rw = gridW * 0.4;
+    const rcx = right - rw / 2;
+    const bubbleLeft = hx + hr * 1.2;
+    const bubbleRight = showReadout ? right - rw - 6 : right;
+    const speaking = !!this.bubbleLine && now < this.bubbleLine.until;
+    if (speaking) wrappedBubble(c, this.bubbleLine!.text, bubbleLeft, bubbleRight, Ta * 0.5, Ta - 4);
+
+    if (showReadout && r) {
+      const quiet = r.sp.mult < 1 && !orbOn;
+      const fit = (text: string, size: number) => Math.min(size, (rw - 4) / (text.length * 0.6));
+      if (quiet && v <= 0) {
+        // Nothing counted yet: leave the readout empty.
+      } else if (quiet) {
+        // Under the bet: a few coins back, shown small and neutral. Not a win.
+        const coins = `${fmt(Math.floor(r.bet * v * 1.0000001))} back`;
+        const size = fit(coins, Math.max(14, Math.min(22, Ta * 0.26)));
+        loud(c, coins, rcx, Ta * 0.5 - size * 0.2, size, '#cbc5dc', UI_FONT);
+        c.globalAlpha = 0.75;
+        loud(c, x2(v), rcx, Ta * 0.5 + size * 0.85, Math.max(10, size * 0.62), '#9d97b3', UI_FONT);
         c.globalAlpha = 1;
+      } else {
+        const tier = tierOf(v);
+        const hammy = !orbOn && !!tier && tier.min >= 250;
+        const color = orbOn ? '#c8f4ff' : hammy ? `hsl(${(now / 6) % 360} 100% 70%)` : tier ? tier.color : '#fff7e0';
+        const label = orbOn ? 'ORB' : tier ? (live || tier.min >= 10 ? tier.label : 'WON') : '';
+        const base = Math.max(16, Math.min(38, Ta * 0.42, L.W * 0.1));
+        const size = fit(x2(v), base * (tier && tier.min >= 50 && !orbOn ? 1.12 : 1));
+        const vy = Ta * 0.5 + size * 0.1;
+        const pulse = 1 + (orbOn ? Math.sin(now / 90) * 0.04 : tier && tier.min >= 10 ? Math.sin(now / 110) * 0.05 : 0);
+        if (label) {
+          const ls = fit(label, Math.max(10, base * 0.38));
+          loud(c, label, rcx, Math.max(ls * 0.6, vy - size * 0.78), ls, orbOn ? '#7be8ff' : tier ? tier.color : '#ffd34d', UI_FONT);
+        }
+        if (v > 0) {
+          loud(c, x2(v), rcx, vy, size * pulse, color, DISPLAY_FONT);
+          const coins = `${fmt(Math.floor(r.bet * v * 1.0000001))} coins`;
+          c.globalAlpha = 0.85;
+          loud(c, coins, rcx, vy + size * 0.72, fit(coins, Math.max(10, size * 0.32)), '#ffe9a8', UI_FONT);
+          c.globalAlpha = 1;
+        }
       }
-    } else {
-      loud(c, 'HAMMY SLOTS', cx, Ta * 0.5, Math.max(14, Math.min(30, L.W * 0.075)), '#ffd34d', DISPLAY_FONT);
+    } else if (!speaking) {
+      const mid = (bubbleLeft + right) / 2;
+      const title = 'HAMMY SLOTS';
+      loud(c, title, mid, Ta * 0.5, Math.min(Math.max(14, Math.min(30, L.W * 0.075)), (right - bubbleLeft - 4) / (title.length * 0.62)), '#ffd34d', DISPLAY_FONT);
     }
   }
 
   /** A payline glowing across the reels, symbol by symbol, its multiplier climbing as it goes. */
-  private drawLine(c: CanvasRenderingContext2D, L: ReturnType<SlotsApp['lay']>, cur: { win: LineWin; t0: number; t1: number }, e: number, t: number): void {
+  private drawLine(c: CanvasRenderingContext2D, L: ReturnType<SlotsApp['lay']>, cur: { win: LineWin; t0: number; t1: number }, e: number, t: number, quiet: boolean): void {
     const pts = cur.win.cells.map(([a, b]) => this.cell(a, b));
     const travel = (cur.t1 - cur.t0) * 0.65;
     const p = clamp01((e - cur.t0) / travel);
@@ -822,7 +904,7 @@ export class SlotsApp implements ArcadeScreen {
     const i = Math.min(pts.length - 2, Math.floor(seg));
     const f = seg - i;
     const head = pts.length > 1 ? { x: pts[i].x + (pts[i + 1].x - pts[i].x) * f, y: pts[i].y + (pts[i + 1].y - pts[i].y) * f } : pts[0];
-    const col = lineColor(cur.win.line);
+    const col = quiet ? '#b9b3cf' : lineColor(cur.win.line);
     c.save();
     c.globalAlpha = fade;
     c.lineCap = 'round';

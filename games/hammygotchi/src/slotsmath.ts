@@ -103,7 +103,7 @@ export interface Analysis {
   capChance: number;
   /** The most it can pay, as a multiple of the bet. */
   maxWin: number;
-  /** The chance a spin pays at least 10×, 100× and 1000× the bet. */
+  /** The chance a spin pays at least 1×, 10×, 50× (huge), 100×, 250× (Hammy win) and 1000× the bet. */
   atLeast: Record<number, number>;
   /** The standard deviation of a spin's payout, in bets. */
   sd: number;
@@ -119,7 +119,7 @@ export function analyse(): Analysis {
     return d;
   };
   const sneezeP = 1 / SNEEZE_ONE_IN;
-  const thresholds = [1, 10, 100, 1000];
+  const thresholds = [1, 10, 50, 100, 250, 1000];
   const atLeast: Record<number, number> = Object.fromEntries(thresholds.map((t) => [t, 0]));
   let rtp = 0;
   let rtpLines = 0;

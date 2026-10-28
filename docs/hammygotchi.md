@@ -278,7 +278,7 @@ crypto random numbers.
   5 reels by 3 rows, 20 zig-zag paylines, 3 or more matching symbols from
   the left with the sub-Hammy as the wild, and a multiplier orb that
   pinballs across the grid (adds line bets or multiplies the win; its values
-  are decided by the rules first). Max win 5,000×. RTP 99.006%, proven by
+  are decided by the rules first). Quiet under the bet, louder at WIN, BIG (10×), HUGE (50×) and HAMMY (250×). Max win 5,000×. RTP 99.003%, proven by
   walking every reel combination (`scripts/slots-analysis.ts`). The rules take a
   random source, so they can run on a server later. Details in
   [hammys-arcade.md](hammys-arcade.md).

@@ -79,12 +79,12 @@ is an image file.
   the multiplier counting up.
 - **Bets**: the bet is split over the 20 lines (`bet / 20` each), so wins are
   counted in line bets and shown as multiples of the whole bet.
-- **The multiplier orb**: two or more orb symbols on the grid, or a 1-in-80
+- **The multiplier orb**: two or more orb symbols on the grid, or a 1-in-50
   sneeze (which adds one ball, unless the orbs went off anyway), launch a ball
   for each orb that landed. Each ball pinballs across the grid for 3 bounces,
   and each bounce has a value drawn up front from a table in `slots.ts`
-  (`ORB_EFFECTS`): add 0.5, 1, 2 or 3 bets, or multiply the running win by 2,
-  3 or 5. A spin with no line win still pays what the orb adds. Everything
+  (`ORB_EFFECTS`): add ¼, ½ or 1 bet, or multiply the running win by 2,
+  3, 5, 10 or 25. A spin with no line win still pays what the orb adds. Everything
   the orb does is decided by the rules before the view starts drawing; the
   view only plays it back.
 - **Voice**: Hammy has lines for starting, wins, big wins, the orb, a sneeze,
@@ -93,23 +93,38 @@ is an image file.
   20x or more, or when you can't cover the bet), a turbo toggle (kept in the
   page's prefs) and a tap to skip the animation. Leaving mid-spin pays the
   spin that was already decided, so a round never gets lost.
-- **Payback**: RTP 99.006%, proven exactly, not by sampling.
-  `slotsmath.ts` walks all 5,619,712 combinations of reel stops and works out
+- **Pay table** (`SYMBOLS` in `slots.ts`, in line bets, for 3, 4 and 5 in a
+  row; 20 line bets is the whole bet): Dorkito 8/16/50, pizza 8/16/50,
+  sneaker 20/36/120, toilet paper 20/40/140, clipboard 22/50/220, Grandma
+  24/64/320, vacuum 28/84/1,200, toilet 34/100/2,500, Cube Hammy 80/400/25,600
+  (five Cubes is 1,280x the bet). The reels (`STRIPS`) are 20 symbols each,
+  and the symbols are spread over them so that the lines hit seldom but pay
+  when they do: three of a kind is at least the bet back for every symbol
+  except Dorkito and pizza, which return 0.4x.
+- **How loud a win is** (`tierOf` in `slots.ts`): a spin that pays less than
+  the bet is not a win. The readout stays small and neutral ("4 back", with
+  0.40x under it), the line is drawn in grey, and there's no jingle, shake,
+  confetti or cheer. From the bet up it is a WIN, then BIG WIN (10x), HUGE WIN
+  (50x) and HAMMY WIN (250x), each a notch louder: bigger readout and colour,
+  more shake and confetti, a longer cheer from Hammy.
+- **Payback**: RTP 99.003%, proven exactly, not by sampling.
+  `slotsmath.ts` walks all 3,200,000 combinations of reel stops and works out
   the orb's odds with a small sum over its bounces (every orb effect is
   `a × win + b`), then combines the two with the cap. The lines pay back
-  56.58% on spins without the orb and the orb spins add 42.42%.
-  Chance of any win 49.83% (a line pays on 47.11%), a win of at least the bet
-  17.52%, at least 10x 1.87%, at least 100x 0.021%, at least 1000x
-  0.000054%; the orb flies on 4.41% of spins. The standard deviation of a spin
-  is about 4.8 bets, a low-volatility machine.
+  57.91% on spins without the orb and the orb spins add 41.09%.
+  Chance of a line win 29.04% (any payout, with the orb, 35.60%), a spin that
+  pays at least the bet 26.13%, at least 10x 0.99%, 50x 0.098%, 100x
+  0.043%, 250x 0.011%, 1000x 0.0054%; the orb flies on 7.95% of spins. The
+  standard deviation of a spin is about 11.4 bets.
 - **Max win**: 5,000x the bet (`MAX_WIN`), applied to the whole spin. Without
-  the cap the top spin could pay about 7 million times the bet; the cap is
-  reached about once in 90 million spins (1.08e-8), and the RTP figure above
-  already includes it. Tiny bets lose a little to rounding down to whole
+  the cap the top spin could pay about 129 million times the bet (five Cube
+  Hammies, then all the orb's biggest multipliers); the cap is reached about
+  once in 2.3 million spins (4.4e-7), and the RTP figure above already
+  includes it. Tiny bets lose a little to rounding down to whole
   coins (`payMultiplier` makes sure floating point never costs a coin).
 
 Run the maths yourself with `nice -n 10 npx tsx scripts/slots-analysis.ts`
-(about 5 seconds, prints the JSON and a summary).
+(about 7 seconds, prints the JSON and a summary).
 
 For the browser smoke test, a build made with `VITE_SLOTS_TEST=1` accepts
 `?slots-seeds=3,17,2` in the address, so spin 1, 2, 3 come from those seeds

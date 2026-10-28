@@ -23,6 +23,7 @@ import {
   runOf,
   scoreCells,
   spin,
+  tierOf,
   type Roll,
   type SlotSymbol,
 } from '../../games/hammygotchi/src/slots';
@@ -275,6 +276,9 @@ describe('Hammy Slots: the payback', () => {
   it('hits often enough to be fun, with the orb and the top win rare', () => {
     expect(a.hit).toBeGreaterThan(a.hitBet);
     expect(a.hit).toBeGreaterThan(0.2);
+    // Swingy: most wins are at least the bet back, and a spin's spread is wide.
+    expect(a.hitBet).toBeGreaterThan(0.2);
+    expect(a.sd).toBeGreaterThan(8);
     expect(a.orb).toBeGreaterThan(0.02);
     expect(a.orb).toBeLessThan(0.15);
     expect(a.maxWin).toBe(MAX_WIN);
@@ -296,8 +300,21 @@ describe('Hammy Slots: the payback', () => {
     // The exact figures are the proof; this checks the spin function plays them.
     expect(Math.abs(hit / N - a.hit)).toBeLessThan(0.01);
     expect(Math.abs(orb / N - a.orb)).toBeLessThan(0.004);
-    expect(Math.abs(sum / N - a.rtp)).toBeLessThan(0.05);
+    expect(Math.abs(sum / N - a.rtp)).toBeLessThan(0.12);
   }, 120_000);
+});
+
+describe('Hammy Slots: how loud a win is', () => {
+  it('is no win under the bet, then escalates by tier', () => {
+    expect(tierOf(0)).toBeNull();
+    expect(tierOf(0.95)).toBeNull();
+    expect(tierOf(1)?.label).toBe('WIN');
+    expect(tierOf(9.99)?.label).toBe('WIN');
+    expect(tierOf(10)?.label).toBe('BIG WIN');
+    expect(tierOf(50)?.label).toBe('HUGE WIN');
+    expect(tierOf(250)?.label).toBe('HAMMY WIN');
+    expect(tierOf(MAX_WIN)?.label).toBe('HAMMY WIN');
+  });
 });
 
 describe('Hammy Slots: coins', () => {
