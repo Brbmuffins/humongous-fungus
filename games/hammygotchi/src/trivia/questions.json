@@ -1,0 +1,5432 @@
+[
+ {
+  "id": "gk-0001",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Guacamole is mostly mashed-up what?",
+  "answers": [
+   "Green peas",
+   "Avocado",
+   "Zucchini"
+  ],
+  "correct": 1,
+  "fact": "Guacamole is an avocado-based dip first developed in Mexico; its name means 'avocado sauce'.",
+  "source": "https://en.wikipedia.org/wiki/Guacamole"
+ },
+ {
+  "id": "gk-0002",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Marzipan is a sweet paste made from sugar and what?",
+  "answers": [
+   "Peanuts",
+   "Almonds",
+   "Coconut"
+  ],
+  "correct": 1,
+  "fact": "Marzipan is a confection made mainly of sugar and ground almonds.",
+  "source": "https://en.wikipedia.org/wiki/Marzipan"
+ },
+ {
+  "id": "gk-0003",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Tofu is made by curdling milk from which bean?",
+  "answers": [
+   "Soybeans",
+   "Kidney beans",
+   "Chickpeas"
+  ],
+  "correct": 0,
+  "fact": "Tofu is pressed curds of coagulated soy milk.",
+  "source": "https://en.wikipedia.org/wiki/Tofu"
+ },
+ {
+  "id": "gk-0004",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "The dip hummus is mainly made from mashed what?",
+  "answers": [
+   "Lentils",
+   "Chickpeas",
+   "Potatoes"
+  ],
+  "correct": 1,
+  "fact": "Hummus is cooked, mashed chickpeas blended with tahini, lemon juice and garlic.",
+  "source": "https://en.wikipedia.org/wiki/Hummus"
+ },
+ {
+  "id": "gk-0005",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "The pricey spice saffron comes from the stigmas of which flower?",
+  "answers": [
+   "Crocus",
+   "Tulip",
+   "Lavender"
+  ],
+  "correct": 0,
+  "fact": "Saffron threads are the dried stigmas of Crocus sativus, picked by hand, which is why it costs so much.",
+  "source": "https://en.wikipedia.org/wiki/Saffron"
+ },
+ {
+  "id": "gk-0006",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Vanilla flavouring comes from the seed pods of which type of plant?",
+  "answers": [
+   "A palm tree",
+   "A cactus",
+   "An orchid"
+  ],
+  "correct": 2,
+  "fact": "Vanilla is a spice from orchids of the genus Vanilla.",
+  "source": "https://en.wikipedia.org/wiki/Vanilla"
+ },
+ {
+  "id": "gk-0007",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Tequila is made from which plant?",
+  "answers": [
+   "Blue agave",
+   "Sugarcane",
+   "Corn"
+  ],
+  "correct": 0,
+  "fact": "Tequila is distilled from the blue agave plant, mainly around the Mexican town of Tequila.",
+  "source": "https://en.wikipedia.org/wiki/Tequila"
+ },
+ {
+  "id": "gk-0008",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Botanically speaking, what is a tomato?",
+  "answers": [
+   "A root",
+   "A fruit",
+   "A leaf"
+  ],
+  "correct": 1,
+  "fact": "A tomato is the edible berry of the tomato plant, even though we cook it like a vegetable.",
+  "source": "https://en.wikipedia.org/wiki/Tomato"
+ },
+ {
+  "id": "gk-0009",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 3,
+  "q": "Which of these is botanically a true berry?",
+  "answers": [
+   "Strawberry",
+   "Banana",
+   "Raspberry"
+  ],
+  "correct": 1,
+  "fact": "Bananas count as true berries; strawberries and raspberries do not, botanically.",
+  "source": "https://en.wikipedia.org/wiki/Berry_(botany)"
+ },
+ {
+  "id": "gk-0010",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 3,
+  "q": "On a cashew tree, the nut hangs from the end of what?",
+  "answers": [
+   "A bean pod",
+   "A fleshy cashew apple",
+   "A pine cone"
+  ],
+  "correct": 1,
+  "fact": "The cashew drupe grows at the end of the cashew apple, a swollen stalk.",
+  "source": "https://en.wikipedia.org/wiki/Cashew"
+ },
+ {
+  "id": "gk-0011",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "Botanically, peanuts are closer to which group?",
+  "answers": [
+   "Tree nuts like walnuts",
+   "Root vegetables",
+   "Legumes, like beans"
+  ],
+  "correct": 2,
+  "fact": "Peanuts are legumes whose pods develop underground.",
+  "source": "https://en.wikipedia.org/wiki/Peanut"
+ },
+ {
+  "id": "gk-0012",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "Coffee beans are actually the seeds of what?",
+  "answers": [
+   "A flower bud",
+   "A cherry-like fruit",
+   "A root"
+  ],
+  "correct": 1,
+  "fact": "Coffee beans are seeds from the fruits ('cherries') of the Coffea plant.",
+  "source": "https://en.wikipedia.org/wiki/Coffee"
+ },
+ {
+  "id": "gk-0013",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Which country grows the most coffee in the world?",
+  "answers": [
+   "Colombia",
+   "Brazil",
+   "Ethiopia"
+  ],
+  "correct": 1,
+  "fact": "Brazil produced about 31% of the world's coffee in 2023 and has led production since the 1850s.",
+  "source": "https://en.wikipedia.org/wiki/Coffee"
+ },
+ {
+  "id": "gk-0014",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "Green, black and white tea all come from which plant?",
+  "answers": [
+   "Chamomile",
+   "Camellia sinensis",
+   "Hibiscus"
+  ],
+  "correct": 1,
+  "fact": "They differ in how the leaves are processed, not in the plant: all are Camellia sinensis.",
+  "source": "https://en.wikipedia.org/wiki/Tea"
+ },
+ {
+  "id": "gk-0015",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "What makes popcorn kernels explode?",
+  "answers": [
+   "Expanding air bubbles",
+   "Water inside turning to steam",
+   "Melting butter"
+  ],
+  "correct": 1,
+  "fact": "Heated moisture in the kernel becomes steam until the pressure bursts the hull.",
+  "source": "https://en.wikipedia.org/wiki/Popcorn"
+ },
+ {
+  "id": "gk-0016",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "Kiwifruit originally came from which country?",
+  "answers": [
+   "New Zealand",
+   "China",
+   "Australia"
+  ],
+  "correct": 1,
+  "fact": "Kiwifruit is native to central and eastern China; New Zealand started growing it commercially in the early 1900s.",
+  "source": "https://en.wikipedia.org/wiki/Kiwifruit"
+ },
+ {
+  "id": "gk-0017",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Potatoes were first domesticated in which region?",
+  "answers": [
+   "Ireland",
+   "Eastern Europe",
+   "The Andes of South America"
+  ],
+  "correct": 2,
+  "fact": "Potatoes were domesticated 7,000-10,000 years ago around Peru and Bolivia, then reached Europe in the 1500s.",
+  "source": "https://en.wikipedia.org/wiki/Potato"
+ },
+ {
+  "id": "gk-0018",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "Kombucha is a fizzy drink made by fermenting what?",
+  "answers": [
+   "Cabbage juice",
+   "Sweetened tea",
+   "Cow's milk"
+  ],
+  "correct": 1,
+  "fact": "Kombucha is sugared tea fermented with a culture of bacteria and yeast (a SCOBY).",
+  "source": "https://en.wikipedia.org/wiki/Kombucha"
+ },
+ {
+  "id": "gk-0019",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Mead is an alcoholic drink made from fermented what?",
+  "answers": [
+   "Honey",
+   "Apples",
+   "Barley"
+  ],
+  "correct": 0,
+  "fact": "Mead is honey fermented with water, sometimes with fruit or spices.",
+  "source": "https://en.wikipedia.org/wiki/Mead"
+ },
+ {
+  "id": "gk-0020",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "In Italian, what does the pasta name 'farfalle' mean?",
+  "answers": [
+   "Little worms",
+   "Butterflies",
+   "Tiny ears"
+  ],
+  "correct": 1,
+  "fact": "Farfalle comes from the Italian word for butterflies.",
+  "source": "https://en.wikipedia.org/wiki/Farfalle"
+ },
+ {
+  "id": "gk-0021",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "The Italian dessert tiramisu translates roughly to what?",
+  "answers": [
+   "Cloud of cream",
+   "Sweet dreams",
+   "Pick me up"
+  ],
+  "correct": 2,
+  "fact": "Tiramisu comes from 'tirami su', meaning 'pick me up' or 'cheer me up'.",
+  "source": "https://en.wikipedia.org/wiki/Tiramisu"
+ },
+ {
+  "id": "gk-0022",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 3,
+  "q": "Cabbage, broccoli, kale and cauliflower are all what?",
+  "answers": [
+   "One species, Brassica oleracea",
+   "Different plant families",
+   "Hybrids of spinach"
+  ],
+  "correct": 0,
+  "fact": "They are cultivars of the single species Brassica oleracea, bred into very different shapes.",
+  "source": "https://en.wikipedia.org/wiki/Brassica_oleracea"
+ },
+ {
+  "id": "gk-0023",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Which country makes most of the world's maple syrup?",
+  "answers": [
+   "United States",
+   "Canada",
+   "Norway"
+  ],
+  "correct": 1,
+  "fact": "Canada produces more than 75 percent of the world's maple syrup, mostly in Quebec.",
+  "source": "https://en.wikipedia.org/wiki/Maple_syrup"
+ },
+ {
+  "id": "gk-0024",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Which part of the rhubarb plant is safe to eat?",
+  "answers": [
+   "The stalks",
+   "The leaves",
+   "The seeds"
+  ],
+  "correct": 0,
+  "fact": "The stalks are edible; the leaves are poisonous because of oxalic acid.",
+  "source": "https://en.wikipedia.org/wiki/Rhubarb"
+ },
+ {
+  "id": "gk-0025",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Kimchi, a spicy fermented side dish, comes from which country?",
+  "answers": [
+   "Korea",
+   "Japan",
+   "Thailand"
+  ],
+  "correct": 0,
+  "fact": "Kimchi is a traditional Korean dish of salted, fermented vegetables, most often cabbage or radish.",
+  "source": "https://en.wikipedia.org/wiki/Kimchi"
+ },
+ {
+  "id": "gk-0026",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Japanese sake is brewed from fermented what?",
+  "answers": [
+   "Wheat",
+   "Soybeans",
+   "Rice"
+  ],
+  "correct": 2,
+  "fact": "Sake is a Japanese alcoholic drink made by fermenting polished rice.",
+  "source": "https://en.wikipedia.org/wiki/Sake"
+ },
+ {
+  "id": "gk-0027",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Feta, the crumbly brined cheese, comes from which country?",
+  "answers": [
+   "Italy",
+   "France",
+   "Greece"
+  ],
+  "correct": 2,
+  "fact": "Feta is a Greek white brined cheese made from sheep's milk or a sheep and goat milk mix.",
+  "source": "https://en.wikipedia.org/wiki/Feta"
+ },
+ {
+  "id": "gk-0028",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Chocolate is made from the beans of which tree?",
+  "answers": [
+   "The coffee tree",
+   "The carob tree",
+   "The cacao tree"
+  ],
+  "correct": 2,
+  "fact": "Cocoa beans are the dried, fermented seeds of Theobroma cacao, the basis of chocolate.",
+  "source": "https://en.wikipedia.org/wiki/Cocoa_bean"
+ },
+ {
+  "id": "gk-0029",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Which chemical makes chili peppers taste hot?",
+  "answers": [
+   "Caffeine",
+   "Capsaicin",
+   "Menthol"
+  ],
+  "correct": 1,
+  "fact": "Capsaicin is the main active component of chili peppers and causes the burning sensation.",
+  "source": "https://en.wikipedia.org/wiki/Capsaicin"
+ },
+ {
+  "id": "gk-0030",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Which of these can last almost forever if stored well?",
+  "answers": [
+   "Honey",
+   "Fresh cream",
+   "Cut fruit salad"
+  ],
+  "correct": 0,
+  "fact": "Honey's sugar and acidity stop most microbes growing, so it does not spoil when properly stored.",
+  "source": "https://en.wikipedia.org/wiki/Honey"
+ },
+ {
+  "id": "gk-0031",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "Which fish gives Worcestershire sauce its savoury punch?",
+  "answers": [
+   "Salmon",
+   "Anchovies",
+   "Herring"
+  ],
+  "correct": 1,
+  "fact": "Worcestershire sauce is made with vinegar, anchovies, tamarind, garlic, onions and molasses.",
+  "source": "https://en.wikipedia.org/wiki/Worcestershire_sauce"
+ },
+ {
+  "id": "gk-0032",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Nutella is a chocolate spread made with which nut?",
+  "answers": [
+   "Peanuts",
+   "Hazelnuts",
+   "Almonds"
+  ],
+  "correct": 1,
+  "fact": "Nutella is a sweetened hazelnut cocoa spread made by the Italian company Ferrero.",
+  "source": "https://en.wikipedia.org/wiki/Nutella"
+ },
+ {
+  "id": "gk-0033",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Bubble tea was first invented in which country?",
+  "answers": [
+   "Japan",
+   "Taiwan",
+   "Vietnam"
+  ],
+  "correct": 1,
+  "fact": "Bubble tea originated in Taiwan in the 1980s.",
+  "source": "https://en.wikipedia.org/wiki/Bubble_tea"
+ },
+ {
+  "id": "gk-0034",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Poutine, fries with cheese curds and gravy, comes from which country?",
+  "answers": [
+   "France",
+   "Canada",
+   "United States"
+  ],
+  "correct": 1,
+  "fact": "Poutine emerged in Quebec, Canada, in the 1950s.",
+  "source": "https://en.wikipedia.org/wiki/Poutine"
+ },
+ {
+  "id": "gk-0035",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Paella is a famous rice dish from which country?",
+  "answers": [
+   "Spain",
+   "Italy",
+   "Mexico"
+  ],
+  "correct": 0,
+  "fact": "Paella comes from the Valencia region of Spain.",
+  "source": "https://en.wikipedia.org/wiki/Paella"
+ },
+ {
+  "id": "gk-0036",
+  "cat": "general",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "A mushroom is the fruiting body of which kind of living thing?",
+  "answers": [
+   "A plant",
+   "A bacterium",
+   "A fungus"
+  ],
+  "correct": 2,
+  "fact": "Mushrooms are the spore-bearing fruiting bodies of fungi, not plants.",
+  "source": "https://en.wikipedia.org/wiki/Mushroom"
+ },
+ {
+  "id": "gk-0037",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "What is the largest animal known ever to have lived?",
+  "answers": [
+   "Blue whale",
+   "Megalodon",
+   "Tyrannosaurus rex"
+  ],
+  "correct": 0,
+  "fact": "The blue whale is the largest animal known to have ever existed.",
+  "source": "https://en.wikipedia.org/wiki/Blue_whale"
+ },
+ {
+  "id": "gk-0038",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Which is the fastest land animal?",
+  "answers": [
+   "Lion",
+   "Greyhound",
+   "Cheetah"
+  ],
+  "correct": 2,
+  "fact": "Cheetahs can run about 93-104 km/h (58-65 mph).",
+  "source": "https://en.wikipedia.org/wiki/Cheetah"
+ },
+ {
+  "id": "gk-0039",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "How many neck vertebrae does a giraffe have?",
+  "answers": [
+   "Fourteen",
+   "Twenty-one",
+   "Seven"
+  ],
+  "correct": 2,
+  "fact": "Just like humans, giraffes have seven neck vertebrae; each one is just hugely long.",
+  "source": "https://animals.sandiegozoo.org/animals/giraffe"
+ },
+ {
+  "id": "gk-0040",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Which is the only mammal capable of true, sustained flight?",
+  "answers": [
+   "Bat",
+   "Flying squirrel",
+   "Sugar glider"
+  ],
+  "correct": 0,
+  "fact": "Bats are the only mammals capable of true and sustained flight; flying squirrels only glide.",
+  "source": "https://en.wikipedia.org/wiki/Bat"
+ },
+ {
+  "id": "gk-0041",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "What is a baby kangaroo called?",
+  "answers": [
+   "Joey",
+   "Cub",
+   "Pup"
+  ],
+  "correct": 0,
+  "fact": "Young kangaroos are called joeys and live in the pouch for months.",
+  "source": "https://en.wikipedia.org/wiki/Kangaroo"
+ },
+ {
+  "id": "gk-0042",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "In seahorses, which parent carries the babies?",
+  "answers": [
+   "The mom",
+   "Both take turns",
+   "The dad"
+  ],
+  "correct": 2,
+  "fact": "The female deposits eggs in the male's brood pouch, and he gives birth to the fry.",
+  "source": "https://en.wikipedia.org/wiki/Seahorse"
+ },
+ {
+  "id": "gk-0043",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Flamingos are pink because of what?",
+  "answers": [
+   "Pigments in their food",
+   "Sunlight bleaching",
+   "Being born with pink feathers"
+  ],
+  "correct": 0,
+  "fact": "Their pink colour comes from carotenoids in their diet of plankton.",
+  "source": "https://en.wikipedia.org/wiki/Flamingo"
+ },
+ {
+  "id": "gk-0044",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "The axolotl is famous for being able to regrow what?",
+  "answers": [
+   "Feathers",
+   "Lost limbs",
+   "A shell"
+  ],
+  "correct": 1,
+  "fact": "Axolotls can regrow lost limbs and tails over a few months.",
+  "source": "https://en.wikipedia.org/wiki/Axolotl"
+ },
+ {
+  "id": "gk-0045",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Which furry Australian mammal lays eggs?",
+  "answers": [
+   "Wombat",
+   "Platypus",
+   "Koala"
+  ],
+  "correct": 1,
+  "fact": "The platypus is a monotreme, a mammal that lays eggs instead of giving birth to live young.",
+  "source": "https://en.wikipedia.org/wiki/Platypus"
+ },
+ {
+  "id": "gk-0046",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "A narwhal's long 'horn' is actually what?",
+  "answers": [
+   "A tooth",
+   "A bone spike",
+   "Fused hair"
+  ],
+  "correct": 0,
+  "fact": "The narwhal's spiralled tusk is a canine tooth growing through the upper lip.",
+  "source": "https://en.wikipedia.org/wiki/Narwhal"
+ },
+ {
+  "id": "gk-0047",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "Which land mammal is pregnant the longest?",
+  "answers": [
+   "Giraffe",
+   "Rhinoceros",
+   "Elephant"
+  ],
+  "correct": 2,
+  "fact": "Elephant pregnancy lasts 21.5 to 22 months, the longest of any animal.",
+  "source": "https://nationalzoo.si.edu/animals/asian-elephant"
+ },
+ {
+  "id": "gk-0048",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "Which is the largest living rodent?",
+  "answers": [
+   "Beaver",
+   "Porcupine",
+   "Capybara"
+  ],
+  "correct": 2,
+  "fact": "The capybara is the largest living rodent.",
+  "source": "https://en.wikipedia.org/wiki/Capybara"
+ },
+ {
+  "id": "gk-0049",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "Which is the largest living lizard?",
+  "answers": [
+   "Green iguana",
+   "Gila monster",
+   "Komodo dragon"
+  ],
+  "correct": 2,
+  "fact": "Komodo dragons can reach about 3 m (10 ft) and 150 kg (330 lb).",
+  "source": "https://en.wikipedia.org/wiki/Komodo_dragon"
+ },
+ {
+  "id": "gk-0050",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Which is the world's largest living bird?",
+  "answers": [
+   "Emu",
+   "Ostrich",
+   "Albatross"
+  ],
+  "correct": 1,
+  "fact": "The ostrich is the heaviest and largest living bird.",
+  "source": "https://en.wikipedia.org/wiki/Ostrich"
+ },
+ {
+  "id": "gk-0051",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "How do honeybees tell hive-mates where flowers are?",
+  "answers": [
+   "Humming a tune",
+   "Leaving pollen trails",
+   "A waggle dance"
+  ],
+  "correct": 2,
+  "fact": "The waggle dance shows direction and distance to food, water or new nest sites.",
+  "source": "https://en.wikipedia.org/wiki/Waggle_dance"
+ },
+ {
+  "id": "gk-0052",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "What does a camel's hump mainly store?",
+  "answers": [
+   "Water",
+   "Muscle",
+   "Fat"
+  ],
+  "correct": 2,
+  "fact": "The humps are reservoirs of fatty tissue used as a calorie reserve, not water.",
+  "source": "https://en.wikipedia.org/wiki/Camel"
+ },
+ {
+  "id": "gk-0053",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "About how far can an owl turn its head?",
+  "answers": [
+   "About 90 degrees",
+   "A full 360 degrees",
+   "Around 270 degrees"
+  ],
+  "correct": 2,
+  "fact": "Owls can rotate their heads and necks as much as 270 degrees.",
+  "source": "https://en.wikipedia.org/wiki/Owl"
+ },
+ {
+  "id": "gk-0054",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "How do dolphins sleep?",
+  "answers": [
+   "On the sea floor",
+   "They never sleep",
+   "With half their brain awake"
+  ],
+  "correct": 2,
+  "fact": "Dolphins sleep with only half the brain at a time, staying alert for days on end.",
+  "source": "https://www.smithsonianmag.com/smart-news/dolphins-sleep-with-only-half-their-brain-at-a-time-81426439/"
+ },
+ {
+  "id": "gk-0055",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "A cow's stomach has how many compartments?",
+  "answers": [
+   "One",
+   "Four",
+   "Seven"
+  ],
+  "correct": 1,
+  "fact": "Cattle have one large stomach with four compartments: rumen, reticulum, omasum and abomasum.",
+  "source": "https://en.wikipedia.org/wiki/Cattle"
+ },
+ {
+  "id": "gk-0056",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "'Hippopotamus' comes from Greek words meaning what?",
+  "answers": [
+   "River horse",
+   "Water pig",
+   "Mud cow"
+  ],
+  "correct": 0,
+  "fact": "Hippopotamus comes from the Ancient Greek for 'horse of the river'.",
+  "source": "https://en.wikipedia.org/wiki/Hippopotamus"
+ },
+ {
+  "id": "gk-0057",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Which is the largest living fish?",
+  "answers": [
+   "Great white shark",
+   "Whale shark",
+   "Blue marlin"
+  ],
+  "correct": 1,
+  "fact": "The whale shark is the largest known living fish species.",
+  "source": "https://en.wikipedia.org/wiki/Whale_shark"
+ },
+ {
+  "id": "gk-0058",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Wild penguins live almost entirely in which part of the world?",
+  "answers": [
+   "The Southern Hemisphere",
+   "The Northern Hemisphere",
+   "Both halves equally"
+  ],
+  "correct": 0,
+  "fact": "Penguins live almost exclusively in the Southern Hemisphere; none live in the Arctic.",
+  "source": "https://en.wikipedia.org/wiki/Penguin"
+ },
+ {
+  "id": "gk-0059",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 3,
+  "q": "An alligator's snout is typically what shape?",
+  "answers": [
+   "Wide and U-shaped",
+   "Narrow and V-shaped",
+   "Long and hooked"
+  ],
+  "correct": 0,
+  "fact": "Alligators have broad, U-shaped snouts; crocodile snouts are typically more pointed and V-shaped.",
+  "source": "https://en.wikipedia.org/wiki/Alligator"
+ },
+ {
+  "id": "gk-0060",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 3,
+  "q": "What colour is an adult polar bear's skin?",
+  "answers": [
+   "White",
+   "Pink",
+   "Black"
+  ],
+  "correct": 2,
+  "fact": "Polar bears have black skin under their fur, which helps absorb warmth.",
+  "source": "https://polarbearsinternational.org/news-media/articles/why-polar-bears-have-black-skin"
+ },
+ {
+  "id": "gk-0061",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 3,
+  "q": "Which body part does a butterfly use to taste a leaf?",
+  "answers": [
+   "Its wings",
+   "Its feet",
+   "Its eyes"
+  ],
+  "correct": 1,
+  "fact": "Butterflies have chemoreceptors on their feet that act like taste buds.",
+  "source": "https://carleton.ca/biology/cu-faq/do-butterflies-really-taste-through-their-feet/"
+ },
+ {
+  "id": "gk-0062",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "A group of crows is called a what?",
+  "answers": [
+   "Parliament",
+   "Gaggle",
+   "Murder"
+  ],
+  "correct": 2,
+  "fact": "The collective name for a group of crows is a murder.",
+  "source": "https://en.wikipedia.org/wiki/Crow"
+ },
+ {
+  "id": "gk-0063",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "A group of lions is called a what?",
+  "answers": [
+   "Pack",
+   "Pride",
+   "Herd"
+  ],
+  "correct": 1,
+  "fact": "A group of lions living together is called a pride.",
+  "source": "https://en.wikipedia.org/wiki/Lion"
+ },
+ {
+  "id": "gk-0064",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Koalas mostly munch the leaves of which tree?",
+  "answers": [
+   "Oak",
+   "Eucalyptus",
+   "Bamboo"
+  ],
+  "correct": 1,
+  "fact": "Most of a koala's diet is eucalyptus leaves.",
+  "source": "https://en.wikipedia.org/wiki/Koala"
+ },
+ {
+  "id": "gk-0065",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Giant pandas get about 99% of their diet from what?",
+  "answers": [
+   "Fish",
+   "Bamboo",
+   "Berries"
+  ],
+  "correct": 1,
+  "fact": "About 99% of a giant panda's diet is bamboo, despite being classed as a carnivore.",
+  "source": "https://en.wikipedia.org/wiki/Giant_panda"
+ },
+ {
+  "id": "gk-0066",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "A baby horse is called a what?",
+  "answers": [
+   "Calf",
+   "Kid",
+   "Foal"
+  ],
+  "correct": 2,
+  "fact": "A foal is a young horse or other equine up to one year old.",
+  "source": "https://en.wikipedia.org/wiki/Foal"
+ },
+ {
+  "id": "gk-0067",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "How many legs do adult spiders have?",
+  "answers": [
+   "Six",
+   "Ten",
+   "Eight"
+  ],
+  "correct": 2,
+  "fact": "Adult arachnids, spiders included, have eight legs; insects have six.",
+  "source": "https://en.wikipedia.org/wiki/Arachnid"
+ },
+ {
+  "id": "gk-0068",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "What are shark skeletons made of?",
+  "answers": [
+   "Bone",
+   "Hardened keratin",
+   "Cartilage"
+  ],
+  "correct": 2,
+  "fact": "Sharks have skeletons of cartilage, which is lighter and more flexible than bone.",
+  "source": "https://en.wikipedia.org/wiki/Shark"
+ },
+ {
+  "id": "gk-0069",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Domestic dogs are descended from which animal?",
+  "answers": [
+   "Wolves",
+   "Foxes",
+   "Coyotes"
+  ],
+  "correct": 0,
+  "fact": "Dogs are domesticated descendants of an ancient, extinct wolf population.",
+  "source": "https://en.wikipedia.org/wiki/Dog"
+ },
+ {
+  "id": "gk-0070",
+  "cat": "general",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "How many hearts does an octopus have?",
+  "answers": [
+   "One",
+   "Three",
+   "Eight"
+  ],
+  "correct": 1,
+  "fact": "An octopus has a main heart plus two gill hearts.",
+  "source": "https://en.wikipedia.org/wiki/Octopus"
+ },
+ {
+  "id": "gk-0071",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 2,
+  "q": "Which planet is the hottest in our solar system?",
+  "answers": [
+   "Mercury",
+   "Venus",
+   "Mars"
+  ],
+  "correct": 1,
+  "fact": "Venus's thick atmosphere traps heat, hot enough to melt lead (about 467 C), even though Mercury is closer to the Sun.",
+  "source": "https://science.nasa.gov/venus/venus-facts/"
+ },
+ {
+  "id": "gk-0072",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 2,
+  "q": "Which planet is less dense than water, so it would float in a big enough bathtub?",
+  "answers": [
+   "Jupiter",
+   "Neptune",
+   "Saturn"
+  ],
+  "correct": 2,
+  "fact": "NASA says Saturn is the only planet in our solar system with an average density lower than water.",
+  "source": "https://science.nasa.gov/saturn/facts/"
+ },
+ {
+  "id": "gk-0073",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 2,
+  "q": "Which planet spins tipped on its side, its equator nearly at a right angle to its orbit?",
+  "answers": [
+   "Mars",
+   "Uranus",
+   "Neptune"
+  ],
+  "correct": 1,
+  "fact": "Uranus is tilted about 98 degrees, so it appears to roll around the Sun on its side.",
+  "source": "https://science.nasa.gov/uranus/facts/"
+ },
+ {
+  "id": "gk-0074",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 1,
+  "q": "Which planet is the farthest from the Sun?",
+  "answers": [
+   "Uranus",
+   "Saturn",
+   "Neptune"
+  ],
+  "correct": 2,
+  "fact": "Neptune is the eighth and most distant planet, about 30 times farther from the Sun than Earth is.",
+  "source": "https://science.nasa.gov/neptune/facts/"
+ },
+ {
+  "id": "gk-0075",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 2,
+  "q": "About how much of the solar system's total mass is the Sun?",
+  "answers": [
+   "About 75%",
+   "About 50%",
+   "More than 99%"
+  ],
+  "correct": 2,
+  "fact": "NASA says the Sun holds 99.8% of the solar system's mass. Everything else is leftovers.",
+  "source": "https://science.nasa.gov/sun/facts/"
+ },
+ {
+  "id": "gk-0076",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 1,
+  "q": "Which planet is closest to the Sun?",
+  "answers": [
+   "Mercury",
+   "Venus",
+   "Mars"
+  ],
+  "correct": 0,
+  "fact": "Mercury orbits at an average of about 36 million miles from the Sun and circles it every 88 days.",
+  "source": "https://science.nasa.gov/mercury/facts/"
+ },
+ {
+  "id": "gk-0077",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 2,
+  "q": "The Moon's surface gravity is about what fraction of Earth's?",
+  "answers": [
+   "One-half",
+   "One-sixth",
+   "One-twentieth"
+  ],
+  "correct": 1,
+  "fact": "Moon gravity is one-sixth of Earth's, which is why Apollo astronauts bounced along the surface.",
+  "source": "https://science.nasa.gov/moon/facts/"
+ },
+ {
+  "id": "gk-0078",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 1,
+  "q": "Which is the biggest planet in our solar system?",
+  "answers": [
+   "Saturn",
+   "Jupiter",
+   "Neptune"
+  ],
+  "correct": 1,
+  "fact": "NASA calls Jupiter the largest planet in the solar system: about 1,000 Earths could fit inside it.",
+  "source": "https://science.nasa.gov/jupiter/facts/"
+ },
+ {
+  "id": "gk-0079",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 1,
+  "q": "Since 2006, how has Pluto officially been classed?",
+  "answers": [
+   "A dwarf planet",
+   "A comet",
+   "A moon of Neptune"
+  ],
+  "correct": 0,
+  "fact": "In 2006 the IAU's new planet definition demoted Pluto to a dwarf planet, leaving eight planets.",
+  "source": "https://science.nasa.gov/solar-system/planets/"
+ },
+ {
+  "id": "gk-0080",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 1,
+  "q": "About how long does sunlight take to reach Earth?",
+  "answers": [
+   "About 8 minutes",
+   "About 8 seconds",
+   "About 8 hours"
+  ],
+  "correct": 0,
+  "fact": "NASA says it takes about eight minutes for light from the Sun to reach Earth.",
+  "source": "https://science.nasa.gov/earth/facts/"
+ },
+ {
+  "id": "gk-0081",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 2,
+  "q": "What was the first artificial satellite to orbit Earth?",
+  "answers": [
+   "Explorer 1",
+   "Vostok 1",
+   "Sputnik 1"
+  ],
+  "correct": 2,
+  "fact": "The Soviet Union launched Sputnik on October 4, 1957, starting the Space Age.",
+  "source": "https://www.nasa.gov/wp-content/uploads/static/history/sputnik.html"
+ },
+ {
+  "id": "gk-0082",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 1,
+  "q": "Who was the first person to walk on the Moon?",
+  "answers": [
+   "Neil Armstrong",
+   "Buzz Aldrin",
+   "Yuri Gagarin"
+  ],
+  "correct": 0,
+  "fact": "Armstrong stepped onto the Moon on July 20, 1969, during Apollo 11. Aldrin followed him out.",
+  "source": "https://www.nasa.gov/mission/apollo-11/"
+ },
+ {
+  "id": "gk-0083",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 1,
+  "q": "Who was the first human to travel into space?",
+  "answers": [
+   "Alan Shepard",
+   "John Glenn",
+   "Yuri Gagarin"
+  ],
+  "correct": 2,
+  "fact": "Gagarin flew aboard Vostok 1 on 12 April 1961 and orbited Earth once.",
+  "source": "https://planetary.org/space-missions/vostok-1"
+ },
+ {
+  "id": "gk-0084",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 2,
+  "q": "Who was the first woman in space?",
+  "answers": [
+   "Sally Ride",
+   "Valentina Tereshkova",
+   "Mae Jemison"
+  ],
+  "correct": 1,
+  "fact": "Tereshkova flew Vostok 6 on 16 June 1963, aged 26, with the call sign 'Chaika' (seagull).",
+  "source": "https://esa.int/About_Us/ESA_history/50_years_of_humans_in_space/First_woman_in_space_Valentina"
+ },
+ {
+  "id": "gk-0085",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 2,
+  "q": "Who became the first American in space, in 1961?",
+  "answers": [
+   "Alan Shepard",
+   "John Glenn",
+   "Neil Armstrong"
+  ],
+  "correct": 0,
+  "fact": "Shepard flew a 15-minute suborbital hop in Freedom 7 on May 5, 1961. Glenn was the first American to orbit.",
+  "source": "https://www.nasa.gov/history/may-5-1961-alan-shepard-becomes-the-first-american-in-space/"
+ },
+ {
+  "id": "gk-0086",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 3,
+  "q": "Which spacecraft was the first to exit the heliosphere and enter interstellar space?",
+  "answers": [
+   "Pioneer 10",
+   "Voyager 1",
+   "Cassini"
+  ],
+  "correct": 1,
+  "fact": "NASA says Voyager 1, launched in 1977, became the first to leave the heliosphere on Aug. 25, 2012.",
+  "source": "https://science.nasa.gov/mission/voyager/voyager-1/"
+ },
+ {
+  "id": "gk-0087",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 2,
+  "q": "About how often does Halley's Comet return to our skies?",
+  "answers": [
+   "About every 15 years",
+   "About every 250 years",
+   "About every 76 years"
+  ],
+  "correct": 2,
+  "fact": "Halley's orbit averages 76 years. Its last visit was 1986 and it is due back around 2061.",
+  "source": "https://science.nasa.gov/solar-system/comets/1p-halley/"
+ },
+ {
+  "id": "gk-0088",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 2,
+  "q": "What is the closest large galaxy to our Milky Way?",
+  "answers": [
+   "Whirlpool",
+   "Andromeda",
+   "Sombrero"
+  ],
+  "correct": 1,
+  "fact": "NASA says Andromeda is the closest large galaxy to the Milky Way, about 2.5 million light-years away.",
+  "source": "https://science.nasa.gov/photojournal/our-neighbor-andromeda/"
+ },
+ {
+  "id": "gk-0089",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 2,
+  "q": "About how many days pass from one new Moon to the next?",
+  "answers": [
+   "About 29.5 days",
+   "About 14 days",
+   "About 7 days"
+  ],
+  "correct": 0,
+  "fact": "NASA says the lunar phase cycle takes about 29.5 days, a bit longer than the Moon's 27.3-day orbit.",
+  "source": "https://science.nasa.gov/moon/moon-phases/"
+ },
+ {
+  "id": "gk-0090",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 1,
+  "q": "What blocks the Sun's light during a solar eclipse?",
+  "answers": [
+   "Earth's shadow",
+   "A cloud of space dust",
+   "The Moon"
+  ],
+  "correct": 2,
+  "fact": "A solar eclipse happens when the Moon passes between the Sun and Earth and casts a shadow on us.",
+  "source": "https://science.nasa.gov/eclipses/types/"
+ },
+ {
+  "id": "gk-0091",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 3,
+  "q": "Which planet takes longer to spin once on its axis than to go around the Sun?",
+  "answers": [
+   "Mercury",
+   "Venus",
+   "Mars"
+  ],
+  "correct": 1,
+  "fact": "A Venus day (one spin) is 243 Earth days, longer than its 225-day year.",
+  "source": "https://science.nasa.gov/venus/venus-facts/"
+ },
+ {
+  "id": "gk-0092",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 1,
+  "q": "What gives Mars its reddish colour?",
+  "answers": [
+   "Rusty iron minerals in its dust",
+   "Glowing lava on the surface",
+   "Reflected light from Jupiter"
+  ],
+  "correct": 0,
+  "fact": "NASA says iron minerals in Martian dirt oxidize, or rust, making the surface look red.",
+  "source": "https://science.nasa.gov/mars/facts/"
+ },
+ {
+  "id": "gk-0093",
+  "cat": "general",
+  "topic": "space",
+  "difficulty": 1,
+  "q": "Which gas makes up most of the air we breathe on Earth?",
+  "answers": [
+   "Oxygen",
+   "Carbon dioxide",
+   "Nitrogen"
+  ],
+  "correct": 2,
+  "fact": "Earth's atmosphere is 78% nitrogen and 21% oxygen, with 1% other gases.",
+  "source": "https://science.nasa.gov/earth/facts/"
+ },
+ {
+  "id": "gk-0094",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "What is the chemical symbol for gold?",
+  "answers": [
+   "Ag",
+   "Gd",
+   "Au"
+  ],
+  "correct": 2,
+  "fact": "Au comes from the Latin word 'aurum' for gold. Ag is silver.",
+  "source": "https://en.wikipedia.org/wiki/Gold"
+ },
+ {
+  "id": "gk-0095",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "What is the chemical formula for common table salt?",
+  "answers": [
+   "KCl",
+   "NaCl",
+   "NaOH"
+  ],
+  "correct": 1,
+  "fact": "Table salt is sodium chloride, one sodium ion for every chloride ion.",
+  "source": "https://en.wikipedia.org/wiki/Sodium_chloride"
+ },
+ {
+  "id": "gk-0096",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "Which element is the lightest of all?",
+  "answers": [
+   "Helium",
+   "Oxygen",
+   "Hydrogen"
+  ],
+  "correct": 2,
+  "fact": "Hydrogen, with one proton and one electron, is the lightest and most abundant element in the universe.",
+  "source": "https://en.wikipedia.org/wiki/Hydrogen"
+ },
+ {
+  "id": "gk-0097",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 2,
+  "q": "Which metal is liquid at normal room temperature?",
+  "answers": [
+   "Lead",
+   "Mercury",
+   "Aluminium"
+  ],
+  "correct": 1,
+  "fact": "Mercury is the only metallic element known to be liquid at standard temperature and pressure.",
+  "source": "https://en.wikipedia.org/wiki/Mercury_(element)"
+ },
+ {
+  "id": "gk-0098",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "Which natural material sits at the top of the Mohs hardness scale?",
+  "answers": [
+   "Quartz",
+   "Topaz",
+   "Diamond"
+  ],
+  "correct": 2,
+  "fact": "Diamond is 10 on the Mohs scale, the hardest naturally occurring material.",
+  "source": "https://en.wikipedia.org/wiki/Mohs_scale_of_mineral_hardness"
+ },
+ {
+  "id": "gk-0099",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 3,
+  "q": "Absolute zero, the coldest possible temperature, is how many degrees Celsius?",
+  "answers": [
+   "-273.15 C",
+   "-100 C",
+   "-459.67 C"
+  ],
+  "correct": 0,
+  "fact": "Zero kelvin is -273.15 C. The -459.67 figure is the same temperature in Fahrenheit.",
+  "source": "https://en.wikipedia.org/wiki/Absolute_zero"
+ },
+ {
+  "id": "gk-0100",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "Roughly how fast does light travel through a vacuum?",
+  "answers": [
+   "About 3,000 km per second",
+   "About 30 million km per second",
+   "About 300,000 km per second"
+  ],
+  "correct": 2,
+  "fact": "Light moves at exactly 299,792,458 metres per second, close to 300,000 km/s.",
+  "source": "https://en.wikipedia.org/wiki/Speed_of_light"
+ },
+ {
+  "id": "gk-0101",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "On the pH scale, what number is neutral pure water?",
+  "answers": [
+   "0",
+   "7",
+   "14"
+  ],
+  "correct": 1,
+  "fact": "The pH scale runs from 0 to 14 with 7 neutral, which is where pure water sits.",
+  "source": "https://www.usgs.gov/special-topics/water-science-school/science/ph-and-water"
+ },
+ {
+  "id": "gk-0102",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "Why can't you hear explosions in the vacuum of space?",
+  "answers": [
+   "Space is too cold for sound",
+   "Sound travels too fast to hear",
+   "There's no air to carry sound"
+  ],
+  "correct": 2,
+  "fact": "Sound is a mechanical wave and cannot propagate through a vacuum, since there is no medium.",
+  "source": "https://en.wikipedia.org/wiki/Sound"
+ },
+ {
+  "id": "gk-0103",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 2,
+  "q": "Compared with the Sun's surface, how hot is the air around a lightning bolt?",
+  "answers": [
+   "About as hot",
+   "About half as hot",
+   "About 5 times hotter"
+  ],
+  "correct": 2,
+  "fact": "The NWS says lightning can heat the air to 50,000 F, about 5 times hotter than the Sun's surface.",
+  "source": "https://www.weather.gov/safety/lightning-science-overview"
+ },
+ {
+  "id": "gk-0104",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "What actually makes the booming sound of thunder?",
+  "answers": [
+   "Clouds bumping into each other",
+   "Raindrops hitting the ground",
+   "Air heated fast by lightning"
+  ],
+  "correct": 2,
+  "fact": "Lightning rapidly heats the air, which expands violently and creates the sound wave we hear as thunder.",
+  "source": "https://www.weather.gov/safety/lightning-science-overview"
+ },
+ {
+  "id": "gk-0105",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 2,
+  "q": "Which scale rates a tornado's strength from 0 to 5?",
+  "answers": [
+   "Richter scale",
+   "Enhanced Fujita scale",
+   "Beaufort scale"
+  ],
+  "correct": 1,
+  "fact": "The NWS uses the Enhanced Fujita (EF) scale, which rates tornadoes from zero to five by damage.",
+  "source": "https://www.weather.gov/lsx/enhancedfujitascale"
+ },
+ {
+  "id": "gk-0106",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 3,
+  "q": "Which scale rates hurricanes from Category 1 to 5 by wind speed?",
+  "answers": [
+   "Fujita scale",
+   "Saffir-Simpson scale",
+   "Richter scale"
+  ],
+  "correct": 1,
+  "fact": "The Saffir-Simpson Hurricane Wind Scale rates hurricanes 1 to 5 using maximum sustained winds.",
+  "source": "https://www.nhc.noaa.gov/aboutsshws.php"
+ },
+ {
+  "id": "gk-0107",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "How many legs does an adult insect have?",
+  "answers": [
+   "Eight",
+   "Six",
+   "Ten"
+  ],
+  "correct": 1,
+  "fact": "Insects have a three-part body and three pairs of jointed legs. Eight legs means spider.",
+  "source": "https://en.wikipedia.org/wiki/Insect"
+ },
+ {
+  "id": "gk-0108",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "What green pigment lets plants absorb sunlight for photosynthesis?",
+  "answers": [
+   "Chlorophyll",
+   "Melanin",
+   "Keratin"
+  ],
+  "correct": 0,
+  "fact": "Plants absorb light with chlorophyll, which reflects green light and so makes most plants look green.",
+  "source": "https://en.wikipedia.org/wiki/Photosynthesis"
+ },
+ {
+  "id": "gk-0109",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "A caterpillar changes into a butterfly during which life stage?",
+  "answers": [
+   "Pupa (chrysalis)",
+   "Nymph",
+   "Egg"
+  ],
+  "correct": 0,
+  "fact": "During the pupal stage, adult structures form while larval ones break down. A butterfly's pupa is a chrysalis.",
+  "source": "https://en.wikipedia.org/wiki/Pupa"
+ },
+ {
+  "id": "gk-0110",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "Which part of a cell makes most of its chemical energy?",
+  "answers": [
+   "Nucleus",
+   "Mitochondria",
+   "Ribosomes"
+  ],
+  "correct": 1,
+  "fact": "NHGRI: mitochondria generate most of the chemical energy needed to power the cell's reactions.",
+  "source": "https://www.genome.gov/genetics-glossary/Mitochondria"
+ },
+ {
+  "id": "gk-0111",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "Which blood cells carry oxygen around the body?",
+  "answers": [
+   "White blood cells",
+   "Red blood cells",
+   "Platelets"
+  ],
+  "correct": 1,
+  "fact": "Red blood cells use hemoglobin to deliver oxygen from the lungs to body tissues.",
+  "source": "https://en.wikipedia.org/wiki/Red_blood_cell"
+ },
+ {
+  "id": "gk-0112",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "How many chambers does the human heart have?",
+  "answers": [
+   "Two",
+   "Four",
+   "Six"
+  ],
+  "correct": 1,
+  "fact": "The heart has two upper chambers (atria) and two lower chambers (ventricles).",
+  "source": "https://www.nhlbi.nih.gov/health/heart/anatomy"
+ },
+ {
+  "id": "gk-0113",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "About how many bones does a typical adult human have?",
+  "answers": [
+   "About 206",
+   "About 106",
+   "About 306"
+  ],
+  "correct": 0,
+  "fact": "Cleveland Clinic: adults have between 206 and 213 bones. Babies start with more, then some fuse.",
+  "source": "https://my.clevelandclinic.org/health/body/25176-bones"
+ },
+ {
+  "id": "gk-0114",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "What is the longest bone in the human body?",
+  "answers": [
+   "Humerus",
+   "Tibia",
+   "Femur (thigh bone)"
+  ],
+  "correct": 2,
+  "fact": "The femur, or thigh bone, is the longest and biggest bone in the body.",
+  "source": "https://my.clevelandclinic.org/health/body/25176-bones"
+ },
+ {
+  "id": "gk-0115",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 3,
+  "q": "Which tiny ear bone is the smallest in the human body?",
+  "answers": [
+   "Malleus (hammer)",
+   "Stapes (stirrup)",
+   "Incus (anvil)"
+  ],
+  "correct": 1,
+  "fact": "The stapes is only a few millimetres across, about 3.5 mm long, and is the body's smallest bone.",
+  "source": "https://my.clevelandclinic.org/health/body/ossicles"
+ },
+ {
+  "id": "gk-0116",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "What is the largest organ of the human body?",
+  "answers": [
+   "Skin",
+   "Liver",
+   "Lungs"
+  ],
+  "correct": 0,
+  "fact": "The skin is the largest organ in the body, covering its entire external surface.",
+  "source": "https://www.ncbi.nlm.nih.gov/sites/books/NBK470464/"
+ },
+ {
+  "id": "gk-0117",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "How many teeth do most adults have, wisdom teeth included?",
+  "answers": [
+   "24",
+   "32",
+   "40"
+  ],
+  "correct": 1,
+  "fact": "Most adults have 32 permanent teeth, wisdom teeth included.",
+  "source": "https://my.clevelandclinic.org/health/body/24655-teeth"
+ },
+ {
+  "id": "gk-0118",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 2,
+  "q": "How many chromosomes are in a typical human body cell?",
+  "answers": [
+   "32",
+   "64",
+   "46"
+  ],
+  "correct": 2,
+  "fact": "Humans have 22 pairs of autosomes plus one pair of sex chromosomes, for a total of 46.",
+  "source": "https://www.genome.gov/genetics-glossary/Chromosome"
+ },
+ {
+  "id": "gk-0119",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "What shape is a DNA molecule?",
+  "answers": [
+   "Single straight chain",
+   "Double helix",
+   "Flat ring"
+  ],
+  "correct": 1,
+  "fact": "DNA is two strands wound around each other in a shape known as a double helix.",
+  "source": "https://www.genome.gov/genetics-glossary/Deoxyribonucleic-Acid"
+ },
+ {
+  "id": "gk-0120",
+  "cat": "general",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "Which vitamin does your skin make when sunlight hits it?",
+  "answers": [
+   "Vitamin C",
+   "Vitamin D",
+   "Vitamin K"
+  ],
+  "correct": 1,
+  "fact": "When exposed to sunlight, the skin makes a compound that the liver and kidneys convert to vitamin D.",
+  "source": "https://hgic.clemson.edu/factsheet/vitamin-d/"
+ },
+ {
+  "id": "gk-0121",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "What is the capital city of Australia?",
+  "answers": [
+   "Sydney",
+   "Melbourne",
+   "Canberra"
+  ],
+  "correct": 2,
+  "fact": "Canberra, not Sydney or Melbourne, is Australia's capital.",
+  "source": "https://en.wikipedia.org/wiki/Canberra"
+ },
+ {
+  "id": "gk-0122",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "Which river flows through the middle of Paris?",
+  "answers": [
+   "The Thames",
+   "The Rhine",
+   "The Seine"
+  ],
+  "correct": 2,
+  "fact": "The Seine flows through Paris on its way to the English Channel at Le Havre.",
+  "source": "https://en.wikipedia.org/wiki/Seine"
+ },
+ {
+  "id": "gk-0123",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "Which is the largest ocean on Earth?",
+  "answers": [
+   "Atlantic Ocean",
+   "Indian Ocean",
+   "Pacific Ocean"
+  ],
+  "correct": 2,
+  "fact": "The Pacific covers about 32% of the planet's total surface area.",
+  "source": "https://en.wikipedia.org/wiki/Pacific_Ocean"
+ },
+ {
+  "id": "gk-0124",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "The ancient Inca citadel of Machu Picchu sits in the mountains of which country?",
+  "answers": [
+   "Bolivia",
+   "Colombia",
+   "Peru"
+  ],
+  "correct": 2,
+  "fact": "Machu Picchu is a 15th-century Inca citadel in southern Peru, around 2,430 m up.",
+  "source": "https://en.wikipedia.org/wiki/Machu_Picchu"
+ },
+ {
+  "id": "gk-0125",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 2,
+  "q": "In which Indian city is the Taj Mahal?",
+  "answers": [
+   "Delhi",
+   "Agra",
+   "Mumbai"
+  ],
+  "correct": 1,
+  "fact": "Shah Jahan built the Taj Mahal in Agra as a tomb for his wife Mumtaz Mahal.",
+  "source": "https://en.wikipedia.org/wiki/Taj_Mahal"
+ },
+ {
+  "id": "gk-0126",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "Which mountain has the highest peak above sea level on Earth?",
+  "answers": [
+   "K2",
+   "Mount Kilimanjaro",
+   "Mount Everest"
+  ],
+  "correct": 2,
+  "fact": "Everest rises about 8,849 m above sea level in the Himalayas.",
+  "source": "https://en.wikipedia.org/wiki/Mount_Everest"
+ },
+ {
+  "id": "gk-0127",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 2,
+  "q": "Africa's tallest mountain, Kilimanjaro, rises in which country?",
+  "answers": [
+   "Tanzania",
+   "Kenya",
+   "Ethiopia"
+  ],
+  "correct": 0,
+  "fact": "Kilimanjaro, at 5,895 m, is the highest mountain in Africa and stands in Tanzania.",
+  "source": "https://en.wikipedia.org/wiki/Mount_Kilimanjaro"
+ },
+ {
+  "id": "gk-0128",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "What is the main design in the middle of Japan's flag?",
+  "answers": [
+   "A red star",
+   "A red circle",
+   "A blue wave"
+  ],
+  "correct": 1,
+  "fact": "Japan's flag, the Hinomaru, is a red sun disc on white.",
+  "source": "https://en.wikipedia.org/wiki/Flag_of_Japan"
+ },
+ {
+  "id": "gk-0129",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "Which type of leaf appears in the middle of Canada's flag?",
+  "answers": [
+   "Oak leaf",
+   "Maple leaf",
+   "Birch leaf"
+  ],
+  "correct": 1,
+  "fact": "Canada's flag has one red 11-pointed maple leaf on a white band.",
+  "source": "https://en.wikipedia.org/wiki/Flag_of_Canada"
+ },
+ {
+  "id": "gk-0130",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "Which country gave the Statue of Liberty to the United States?",
+  "answers": [
+   "Britain",
+   "France",
+   "Spain"
+  ],
+  "correct": 1,
+  "fact": "The statue was a gift from the people of France, designed by Frédéric Bartholdi.",
+  "source": "https://en.wikipedia.org/wiki/Statue_of_Liberty"
+ },
+ {
+  "id": "gk-0131",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "Which river carved the Grand Canyon?",
+  "answers": [
+   "Colorado River",
+   "Mississippi River",
+   "Columbia River"
+  ],
+  "correct": 0,
+  "fact": "The Colorado River cut the Grand Canyon in Arizona.",
+  "source": "https://en.wikipedia.org/wiki/Grand_Canyon"
+ },
+ {
+  "id": "gk-0132",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "The Great Barrier Reef, the world's largest coral reef system, is off the coast of which country?",
+  "answers": [
+   "Brazil",
+   "Australia",
+   "Mexico"
+  ],
+  "correct": 1,
+  "fact": "It is located in the Coral Sea off Queensland, Australia.",
+  "source": "https://en.wikipedia.org/wiki/Great_Barrier_Reef"
+ },
+ {
+  "id": "gk-0133",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "The Panama Canal links the Pacific Ocean with which other ocean?",
+  "answers": [
+   "Atlantic Ocean",
+   "Indian Ocean",
+   "Arctic Ocean"
+  ],
+  "correct": 0,
+  "fact": "The canal joins the Pacific to the Caribbean Sea, which is part of the Atlantic.",
+  "source": "https://en.wikipedia.org/wiki/Panama_Canal"
+ },
+ {
+  "id": "gk-0134",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 2,
+  "q": "The island nation of the Maldives sits in which ocean?",
+  "answers": [
+   "Atlantic Ocean",
+   "Pacific Ocean",
+   "Indian Ocean"
+  ],
+  "correct": 2,
+  "fact": "The Maldives lie in the Indian Ocean, near the Arabian Sea.",
+  "source": "https://en.wikipedia.org/wiki/Maldives"
+ },
+ {
+  "id": "gk-0135",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "How many US presidents are carved into Mount Rushmore?",
+  "answers": [
+   "Four",
+   "Three",
+   "Six"
+  ],
+  "correct": 0,
+  "fact": "Washington, Jefferson, Theodore Roosevelt and Lincoln, each about 60 feet tall.",
+  "source": "https://en.wikipedia.org/wiki/Mount_Rushmore"
+ },
+ {
+  "id": "gk-0136",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 3,
+  "q": "Which lake holds the title of the deepest lake in the world?",
+  "answers": [
+   "Lake Superior",
+   "Lake Victoria",
+   "Lake Baikal"
+  ],
+  "correct": 2,
+  "fact": "Siberia's Lake Baikal is about 1,642 m deep at its maximum.",
+  "source": "https://en.wikipedia.org/wiki/Lake_Baikal"
+ },
+ {
+  "id": "gk-0137",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "What is the smallest country in the world by area?",
+  "answers": [
+   "Monaco",
+   "San Marino",
+   "Vatican City"
+  ],
+  "correct": 2,
+  "fact": "Vatican City covers only about 0.49 square kilometres.",
+  "source": "https://en.wikipedia.org/wiki/Vatican_City"
+ },
+ {
+  "id": "gk-0138",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "What is the largest island in the world (not counting continents)?",
+  "answers": [
+   "Madagascar",
+   "Greenland",
+   "Iceland"
+  ],
+  "correct": 1,
+  "fact": "Greenland is the world's largest island that is not a continent.",
+  "source": "https://en.wikipedia.org/wiki/Greenland"
+ },
+ {
+  "id": "gk-0139",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 2,
+  "q": "The Strait of Gibraltar separates Europe from which continent?",
+  "answers": [
+   "Africa",
+   "Asia",
+   "South America"
+  ],
+  "correct": 0,
+  "fact": "The narrow strait links the Atlantic Ocean to the Mediterranean Sea and separates Europe from Africa.",
+  "source": "https://en.wikipedia.org/wiki/Strait_of_Gibraltar"
+ },
+ {
+  "id": "gk-0140",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "What is the capital city of Brazil?",
+  "answers": [
+   "Rio de Janeiro",
+   "São Paulo",
+   "Brasília"
+  ],
+  "correct": 2,
+  "fact": "Brasília was founded in 1960 and replaced Rio de Janeiro as Brazil's capital.",
+  "source": "https://en.wikipedia.org/wiki/Bras%C3%ADlia"
+ },
+ {
+  "id": "gk-0141",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 3,
+  "q": "Which city is Switzerland's official 'federal city' and seat of government?",
+  "answers": [
+   "Zurich",
+   "Bern",
+   "Geneva"
+  ],
+  "correct": 1,
+  "fact": "Swiss lawmakers chose Bern as the Federal City in 1848.",
+  "source": "https://en.wikipedia.org/wiki/Bern"
+ },
+ {
+  "id": "gk-0142",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 1,
+  "q": "Which river flows through Cairo and then spreads into a delta on the Mediterranean?",
+  "answers": [
+   "The Niger",
+   "The Congo",
+   "The Nile"
+  ],
+  "correct": 2,
+  "fact": "The Nile passes Cairo, then forms a delta before reaching the Mediterranean Sea.",
+  "source": "https://en.wikipedia.org/wiki/Nile"
+ },
+ {
+  "id": "gk-0143",
+  "cat": "general",
+  "topic": "geography",
+  "difficulty": 3,
+  "q": "Angel Falls, the world's tallest uninterrupted waterfall, drops in which country?",
+  "answers": [
+   "Brazil",
+   "Venezuela",
+   "Peru"
+  ],
+  "correct": 1,
+  "fact": "Angel Falls in Venezuela's Canaima National Park is 979 m high.",
+  "source": "https://en.wikipedia.org/wiki/Angel_Falls"
+ },
+ {
+  "id": "gk-0144",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 2,
+  "q": "Which Wonder of the Ancient World is the only one still largely standing today?",
+  "answers": [
+   "Great Pyramid of Giza",
+   "Colossus of Rhodes",
+   "Hanging Gardens of Babylon"
+  ],
+  "correct": 0,
+  "fact": "The Great Pyramid, built around 2600 BC, is the only ancient wonder that remains largely intact.",
+  "source": "https://en.wikipedia.org/wiki/Great_Pyramid_of_Giza"
+ },
+ {
+  "id": "gk-0145",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 2,
+  "q": "The Rosetta Stone, found in 1799, helped scholars crack which ancient writing?",
+  "answers": [
+   "Maya glyphs",
+   "Viking runes",
+   "Egyptian hieroglyphs"
+  ],
+  "correct": 2,
+  "fact": "Its decree appears in hieroglyphs, Demotic and Greek, and Champollion used it to decode Egyptian script.",
+  "source": "https://en.wikipedia.org/wiki/Rosetta_Stone"
+ },
+ {
+  "id": "gk-0146",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 2,
+  "q": "Who led the 1922 dig that found the tomb of Tutankhamun?",
+  "answers": [
+   "Howard Carter",
+   "Heinrich Schliemann",
+   "Hiram Bingham"
+  ],
+  "correct": 0,
+  "fact": "Howard Carter and his patron Lord Carnarvon found the boy king's tomb in 1922.",
+  "source": "https://en.wikipedia.org/wiki/Tutankhamun"
+ },
+ {
+  "id": "gk-0147",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 2,
+  "q": "Whose expedition made the first voyage around the world, from 1519 to 1522?",
+  "answers": [
+   "Christopher Columbus's",
+   "Ferdinand Magellan's",
+   "James Cook's"
+  ],
+  "correct": 1,
+  "fact": "Magellan died on the way; Juan Sebastián Elcano finished the trip and returned to Spain.",
+  "source": "https://en.wikipedia.org/wiki/Ferdinand_Magellan"
+ },
+ {
+  "id": "gk-0148",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 1,
+  "q": "In which country is the prehistoric stone circle of Stonehenge?",
+  "answers": [
+   "England",
+   "Scotland",
+   "Ireland"
+  ],
+  "correct": 0,
+  "fact": "Stonehenge stands in Wiltshire, England, and was built in phases from about 3100 BC.",
+  "source": "https://en.wikipedia.org/wiki/Stonehenge"
+ },
+ {
+  "id": "gk-0149",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 1,
+  "q": "The Parthenon, a temple on the Acropolis in Athens, was dedicated to which goddess?",
+  "answers": [
+   "Athena",
+   "Aphrodite",
+   "Hera"
+  ],
+  "correct": 0,
+  "fact": "The Parthenon was built in the 5th century BC for Athena, patron goddess of Athens.",
+  "source": "https://en.wikipedia.org/wiki/Parthenon"
+ },
+ {
+  "id": "gk-0150",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 1,
+  "q": "The Colosseum in Rome was best known for hosting what?",
+  "answers": [
+   "Chess tournaments",
+   "Marathon races",
+   "Gladiator fights"
+  ],
+  "correct": 2,
+  "fact": "Opened in AD 80, it held gladiator contests, animal hunts and other public spectacles.",
+  "source": "https://en.wikipedia.org/wiki/Colosseum"
+ },
+ {
+  "id": "gk-0151",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 2,
+  "q": "The Terracotta Army of clay soldiers guards the tomb of which Chinese emperor?",
+  "answers": [
+   "Kublai Khan",
+   "Qin Shi Huang",
+   "Emperor Puyi"
+  ],
+  "correct": 1,
+  "fact": "Farmers digging a well near Xi'an found the army in 1974, buried near Qin Shi Huang's tomb.",
+  "source": "https://en.wikipedia.org/wiki/Terracotta_Army"
+ },
+ {
+  "id": "gk-0152",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 1,
+  "q": "In what year did Christopher Columbus's first voyage reach the Americas?",
+  "answers": [
+   "1392",
+   "1592",
+   "1492"
+  ],
+  "correct": 2,
+  "fact": "Columbus landed in the Caribbean on 12 October 1492 on a Spanish-backed voyage.",
+  "source": "https://en.wikipedia.org/wiki/Christopher_Columbus"
+ },
+ {
+  "id": "gk-0153",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 2,
+  "q": "Portuguese sailor Vasco da Gama sailed around Africa to reach which country in 1498?",
+  "answers": [
+   "China",
+   "Brazil",
+   "India"
+  ],
+  "correct": 2,
+  "fact": "Da Gama landed at Calicut (Kozhikode), opening a sea route between Europe and India.",
+  "source": "https://en.wikipedia.org/wiki/Vasco_da_Gama"
+ },
+ {
+  "id": "gk-0154",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 2,
+  "q": "What name did Norse explorer Leif Erikson give to the grape-filled land he found?",
+  "answers": [
+   "Vinland",
+   "Greenland",
+   "Iceland"
+  ],
+  "correct": 0,
+  "fact": "Leif named it Vinland, meaning Wineland, after wild vines and grapes.",
+  "source": "https://en.wikipedia.org/wiki/Leif_Erikson"
+ },
+ {
+  "id": "gk-0155",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 1,
+  "q": "The original Olympic Games of ancient Greece were held at which site?",
+  "answers": [
+   "Athens",
+   "Sparta",
+   "Olympia"
+  ],
+  "correct": 2,
+  "fact": "The ancient games were held at Olympia to honour Zeus, traditionally starting in 776 BC.",
+  "source": "https://en.wikipedia.org/wiki/Ancient_Olympic_Games"
+ },
+ {
+  "id": "gk-0156",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 2,
+  "q": "'Mesopotamia' means 'land between' which two rivers?",
+  "answers": [
+   "Tigris and Euphrates",
+   "Nile and Jordan",
+   "Indus and Ganges"
+  ],
+  "correct": 0,
+  "fact": "Mesopotamia lay between the Tigris and Euphrates, where the Sumerians developed cuneiform.",
+  "source": "https://en.wikipedia.org/wiki/Mesopotamia"
+ },
+ {
+  "id": "gk-0157",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 1,
+  "q": "Which civilization built the pyramid El Castillo at Chichen Itza in Mexico?",
+  "answers": [
+   "The Maya",
+   "The Aztecs",
+   "The Incas"
+  ],
+  "correct": 0,
+  "fact": "Chichen Itza was a Maya city; its main pyramid is the Temple of Kukulcán, El Castillo.",
+  "source": "https://en.wikipedia.org/wiki/Chichen_Itza"
+ },
+ {
+  "id": "gk-0158",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 1,
+  "q": "The Great Sphinx of Giza has the body of which animal?",
+  "answers": [
+   "A bull",
+   "A lion",
+   "A falcon"
+  ],
+  "correct": 1,
+  "fact": "The Sphinx is a limestone statue with a human head and a lion's body.",
+  "source": "https://en.wikipedia.org/wiki/Great_Sphinx_of_Giza"
+ },
+ {
+  "id": "gk-0159",
+  "cat": "general",
+  "topic": "history",
+  "difficulty": 2,
+  "q": "Explorer Marco Polo, who traveled to the court of Kublai Khan, came from which Italian city?",
+  "answers": [
+   "Florence",
+   "Venice",
+   "Naples"
+  ],
+  "correct": 1,
+  "fact": "Marco Polo was born in Venice around 1254 and wrote about his Asian travels.",
+  "source": "https://en.wikipedia.org/wiki/Marco_Polo"
+ },
+ {
+  "id": "gk-0160",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 1,
+  "q": "In what year did the Wright brothers make the first powered airplane flight?",
+  "answers": [
+   "1903",
+   "1888",
+   "1921"
+  ],
+  "correct": 0,
+  "fact": "On 17 December 1903 at Kitty Hawk, Orville's first flight lasted 12 seconds.",
+  "source": "https://en.wikipedia.org/wiki/Wright_brothers"
+ },
+ {
+  "id": "gk-0161",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 1,
+  "q": "Around 1440, Johannes Gutenberg developed what in Europe?",
+  "answers": [
+   "A movable-type printing press",
+   "The steam engine",
+   "The mechanical clock"
+  ],
+  "correct": 0,
+  "fact": "Gutenberg's press printed his famous 42-line Bible by 1455.",
+  "source": "https://en.wikipedia.org/wiki/Johannes_Gutenberg"
+ },
+ {
+  "id": "gk-0162",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 1,
+  "q": "Who invented the World Wide Web in 1989 while working at CERN?",
+  "answers": [
+   "Tim Berners-Lee",
+   "Bill Gates",
+   "Steve Jobs"
+  ],
+  "correct": 0,
+  "fact": "Berners-Lee proposed the Web in March 1989 at CERN and built the first browser and server.",
+  "source": "https://en.wikipedia.org/wiki/Tim_Berners-Lee"
+ },
+ {
+  "id": "gk-0163",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 1,
+  "q": "Which scientist discovered penicillin in 1928 after spotting mould on a dish?",
+  "answers": [
+   "Louis Pasteur",
+   "Marie Curie",
+   "Alexander Fleming"
+  ],
+  "correct": 2,
+  "fact": "Fleming saw mould had destroyed bacteria around it on a culture plate.",
+  "source": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+ },
+ {
+  "id": "gk-0164",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 1,
+  "q": "In 1867, Alfred Nobel patented which explosive?",
+  "answers": [
+   "Dynamite",
+   "Gunpowder",
+   "TNT"
+  ],
+  "correct": 0,
+  "fact": "Nobel's dynamite was safer than nitroglycerin; his will later founded the Nobel Prizes.",
+  "source": "https://en.wikipedia.org/wiki/Alfred_Nobel"
+ },
+ {
+  "id": "gk-0165",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 1,
+  "q": "As a teenager in 1820s Paris, who devised a raised-dot reading system for blind people?",
+  "answers": [
+   "Louis Pasteur",
+   "Louis Daguerre",
+   "Louis Braille"
+  ],
+  "correct": 2,
+  "fact": "Braille presented his system at 15 in 1825 while a student at a Paris school for blind youth.",
+  "source": "https://en.wikipedia.org/wiki/Louis_Braille"
+ },
+ {
+  "id": "gk-0166",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 2,
+  "q": "Edward Jenner's 1796 cowpox vaccine protected people against which disease?",
+  "answers": [
+   "Polio",
+   "Measles",
+   "Smallpox"
+  ],
+  "correct": 2,
+  "fact": "Jenner inoculated eight-year-old James Phipps with cowpox in 1796 to guard against smallpox.",
+  "source": "https://en.wikipedia.org/wiki/Edward_Jenner"
+ },
+ {
+  "id": "gk-0167",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 2,
+  "q": "What stuck to his dog's fur and inspired George de Mestral to invent Velcro?",
+  "answers": [
+   "Chewing gum",
+   "Tree sap",
+   "Burrs from a plant"
+  ],
+  "correct": 2,
+  "fact": "Burs' tiny hooks caught on loops of fur and clothing, inspiring Velcro's hook-and-loop design.",
+  "source": "https://en.wikipedia.org/wiki/Velcro"
+ },
+ {
+  "id": "gk-0168",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 2,
+  "q": "What melted in his pocket near a radar set and led Percy Spencer to the microwave oven?",
+  "answers": [
+   "A stick of butter",
+   "A candy bar",
+   "A frozen pizza"
+  ],
+  "correct": 1,
+  "fact": "Working on radar magnetrons at Raytheon, Spencer's candy bar melted; he then tested popcorn.",
+  "source": "https://en.wikipedia.org/wiki/Percy_Spencer"
+ },
+ {
+  "id": "gk-0169",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 2,
+  "q": "In 1800, Alessandro Volta invented the first what?",
+  "answers": [
+   "Electric battery",
+   "Light bulb",
+   "Telephone"
+  ],
+  "correct": 0,
+  "fact": "Volta's voltaic pile made a steady electric current; the volt is named after him.",
+  "source": "https://en.wikipedia.org/wiki/Alessandro_Volta"
+ },
+ {
+  "id": "gk-0170",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 3,
+  "q": "Hungarian editor László Bíró made which writing tool practical in the 1930s?",
+  "answers": [
+   "The ballpoint pen",
+   "The fountain pen",
+   "The mechanical pencil"
+  ],
+  "correct": 0,
+  "fact": "Bíró patented a ball-and-socket pen in 1938; it became the first commercially successful ballpoint.",
+  "source": "https://en.wikipedia.org/wiki/Ballpoint_pen"
+ },
+ {
+  "id": "gk-0171",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 3,
+  "q": "What was the first product ever scanned with a UPC barcode, in 1974?",
+  "answers": [
+   "A pack of chewing gum",
+   "A can of soup",
+   "A box of cereal"
+  ],
+  "correct": 0,
+  "fact": "On 26 June 1974 a 10-pack of Wrigley's Juicy Fruit was scanned in Troy, Ohio.",
+  "source": "https://en.wikipedia.org/wiki/Barcode"
+ },
+ {
+  "id": "gk-0172",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 2,
+  "q": "What did Thomas Edison invent in 1877 to record and replay sound?",
+  "answers": [
+   "The phonograph",
+   "The kinetoscope",
+   "The typewriter"
+  ],
+  "correct": 0,
+  "fact": "Edison announced the tinfoil phonograph in November 1877.",
+  "source": "https://en.wikipedia.org/wiki/Phonograph"
+ },
+ {
+  "id": "gk-0173",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 1,
+  "q": "Who was granted the first US patent for the telephone, in 1876?",
+  "answers": [
+   "Thomas Edison",
+   "Nikola Tesla",
+   "Alexander Graham Bell"
+  ],
+  "correct": 2,
+  "fact": "Bell received US patent No. 174,465 on 7 March 1876.",
+  "source": "https://en.wikipedia.org/wiki/Alexander_Graham_Bell"
+ },
+ {
+  "id": "gk-0174",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 2,
+  "q": "French doctor René Laennec rolled up paper in 1816 and ended up inventing what?",
+  "answers": [
+   "The thermometer",
+   "The stethoscope",
+   "The syringe"
+  ],
+  "correct": 1,
+  "fact": "Laennec used rolled paper to hear heartbeats without pressing his ear to a patient's chest.",
+  "source": "https://en.wikipedia.org/wiki/Stethoscope"
+ },
+ {
+  "id": "gk-0175",
+  "cat": "general",
+  "topic": "inventions",
+  "difficulty": 1,
+  "q": "Which ancient civilization is traditionally credited with inventing paper?",
+  "answers": [
+   "China",
+   "Ancient Rome",
+   "Ancient Greece"
+  ],
+  "correct": 0,
+  "fact": "Paper-making is credited to Cai Lun of China's Han dynasty, traditionally in 105 CE.",
+  "source": "https://en.wikipedia.org/wiki/Paper"
+ },
+ {
+  "id": "gk-0176",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 1,
+  "q": "Who directed the 1975 shark thriller Jaws?",
+  "answers": [
+   "George Lucas",
+   "Francis Ford Coppola",
+   "Steven Spielberg"
+  ],
+  "correct": 2,
+  "fact": "Steven Spielberg directed Jaws, released in 1975.",
+  "source": "https://en.wikipedia.org/wiki/Jaws_(film)"
+ },
+ {
+  "id": "gk-0177",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 2,
+  "q": "Which 1995 film was the first entirely computer-animated feature film?",
+  "answers": [
+   "A Bug's Life",
+   "The Lion King",
+   "Toy Story"
+  ],
+  "correct": 2,
+  "fact": "Pixar's Toy Story (1995), directed by John Lasseter, was the first fully computer-animated feature.",
+  "source": "https://en.wikipedia.org/wiki/Toy_Story"
+ },
+ {
+  "id": "gk-0178",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 2,
+  "q": "In Gone with the Wind, who says \"Frankly, my dear, I don't give a damn\"?",
+  "answers": [
+   "Ashley Wilkes",
+   "Atticus Finch",
+   "Rhett Butler"
+  ],
+  "correct": 2,
+  "fact": "Rhett Butler (Clark Gable) says it as he walks away from Scarlett at the end of the 1939 film.",
+  "source": "https://en.wikipedia.org/wiki/Gone_with_the_Wind_(film)"
+ },
+ {
+  "id": "gk-0179",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 2,
+  "q": "In Citizen Kane, what is \"Rosebud\" revealed to be?",
+  "answers": [
+   "A childhood sled",
+   "A racehorse",
+   "A love letter"
+  ],
+  "correct": 0,
+  "fact": "The film ends as Kane's staff burn the sled he played on as a boy; it has the name Rosebud on it.",
+  "source": "https://en.wikipedia.org/wiki/Citizen_Kane"
+ },
+ {
+  "id": "gk-0180",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 1,
+  "q": "What type of car is the time machine in Back to the Future?",
+  "answers": [
+   "A DeLorean",
+   "A Ford Mustang",
+   "A Volkswagen Beetle"
+  ],
+  "correct": 0,
+  "fact": "Doc Brown's time machine is a DeLorean that must hit 88 mph to travel through time.",
+  "source": "https://en.wikipedia.org/wiki/Back_to_the_Future"
+ },
+ {
+  "id": "gk-0181",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 2,
+  "q": "In E.T., which candy does Elliott use to lure the alien out of hiding?",
+  "answers": [
+   "M&M's",
+   "Reese's Pieces",
+   "Skittles"
+  ],
+  "correct": 1,
+  "fact": "Elliott leaves a trail of Reese's Pieces to lead E.T. into his house in the 1982 film.",
+  "source": "https://en.wikipedia.org/wiki/E.T._the_Extra-Terrestrial"
+ },
+ {
+  "id": "gk-0182",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 1,
+  "q": "What is the name of Dorothy's dog in The Wizard of Oz?",
+  "answers": [
+   "Benji",
+   "Toto",
+   "Lassie"
+  ],
+  "correct": 1,
+  "fact": "Dorothy's little dog Toto was played by a cairn terrier named Terry in the 1939 film.",
+  "source": "https://en.wikipedia.org/wiki/The_Wizard_of_Oz_(1939_film)"
+ },
+ {
+  "id": "gk-0183",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 1,
+  "q": "In The Lion King, what is the name of Simba's father?",
+  "answers": [
+   "Mufasa",
+   "Rafiki",
+   "Zazu"
+  ],
+  "correct": 0,
+  "fact": "Mufasa is king of the Pride Lands and father of Simba; his brother Scar is the villain.",
+  "source": "https://en.wikipedia.org/wiki/The_Lion_King"
+ },
+ {
+  "id": "gk-0184",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 1,
+  "q": "Who directed the 1997 movie Titanic?",
+  "answers": [
+   "James Cameron",
+   "Steven Spielberg",
+   "Ridley Scott"
+  ],
+  "correct": 0,
+  "fact": "James Cameron directed Titanic, which won the Oscar for Best Picture at the 70th Academy Awards.",
+  "source": "https://en.wikipedia.org/wiki/Titanic_(1997_film)"
+ },
+ {
+  "id": "gk-0185",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 1,
+  "q": "In Jurassic Park, dinosaur DNA is found in a mosquito preserved in what?",
+  "answers": [
+   "Amber",
+   "Ice",
+   "Tar"
+  ],
+  "correct": 0,
+  "fact": "The film's scientists extract dinosaur DNA from prehistoric mosquitoes trapped in amber.",
+  "source": "https://en.wikipedia.org/wiki/Jurassic_Park_(film)"
+ },
+ {
+  "id": "gk-0186",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 1,
+  "q": "In the 1933 film King Kong, which building does Kong climb at the end?",
+  "answers": [
+   "The Chrysler Building",
+   "The Woolworth Building",
+   "The Empire State Building"
+  ],
+  "correct": 2,
+  "fact": "Kong climbs the Empire State Building before being shot down by airplanes.",
+  "source": "https://en.wikipedia.org/wiki/King_Kong_(1933_film)"
+ },
+ {
+  "id": "gk-0187",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 2,
+  "q": "What is the name of the computer in the 1968 film 2001: A Space Odyssey?",
+  "answers": [
+   "HAL 9000",
+   "Skynet",
+   "WOPR"
+  ],
+  "correct": 0,
+  "fact": "Stanley Kubrick's 2001 features HAL 9000, the spaceship Discovery's computer.",
+  "source": "https://en.wikipedia.org/wiki/2001:_A_Space_Odyssey_(film)"
+ },
+ {
+  "id": "gk-0188",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 2,
+  "q": "The Sound of Music (1965) is set in which country?",
+  "answers": [
+   "Austria",
+   "Switzerland",
+   "Germany"
+  ],
+  "correct": 0,
+  "fact": "The film is set in Salzburg, Austria, and follows the seven von Trapp children.",
+  "source": "https://en.wikipedia.org/wiki/The_Sound_of_Music_(film)"
+ },
+ {
+  "id": "gk-0189",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 1,
+  "q": "In Finding Nemo, what kind of fish is Nemo?",
+  "answers": [
+   "A clownfish",
+   "A blue tang",
+   "A pufferfish"
+  ],
+  "correct": 0,
+  "fact": "Nemo and his father Marlin are clownfish; Dory is a regal blue tang.",
+  "source": "https://en.wikipedia.org/wiki/Finding_Nemo"
+ },
+ {
+  "id": "gk-0190",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 1,
+  "q": "In Mary Poppins, what does the nanny use to float down from the sky?",
+  "answers": [
+   "A balloon",
+   "A kite",
+   "An umbrella"
+  ],
+  "correct": 2,
+  "fact": "In the 1964 film, Mary Poppins descends from the clouds holding her umbrella.",
+  "source": "https://en.wikipedia.org/wiki/Mary_Poppins_(film)"
+ },
+ {
+  "id": "gk-0191",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 3,
+  "q": "Which film won the very first Academy Award for Best Animated Feature?",
+  "answers": [
+   "Toy Story",
+   "Shrek",
+   "Finding Nemo"
+  ],
+  "correct": 1,
+  "fact": "Shrek won the inaugural Best Animated Feature Oscar at the 74th Academy Awards.",
+  "source": "https://en.wikipedia.org/wiki/Shrek"
+ },
+ {
+  "id": "gk-0192",
+  "cat": "general",
+  "topic": "movies",
+  "difficulty": 1,
+  "q": "Who is Pinocchio's conscience in Disney's 1940 film?",
+  "answers": [
+   "Jiminy Cricket",
+   "Timothy Mouse",
+   "Figaro"
+  ],
+  "correct": 0,
+  "fact": "Jiminy Cricket, voiced by Cliff Edwards, is Pinocchio's conscience and sings \"When You Wish Upon a Star.\"",
+  "source": "https://en.wikipedia.org/wiki/Pinocchio_(1940_film)"
+ },
+ {
+  "id": "gk-0193",
+  "cat": "general",
+  "topic": "tv",
+  "difficulty": 1,
+  "q": "In The Flintstones, what is the name of the town where the family lives?",
+  "answers": [
+   "Rockville",
+   "Bedrock",
+   "Stoneville"
+  ],
+  "correct": 1,
+  "fact": "The cartoon is set in the Stone Age town of Bedrock.",
+  "source": "https://en.wikipedia.org/wiki/The_Flintstones"
+ },
+ {
+  "id": "gk-0194",
+  "cat": "general",
+  "topic": "tv",
+  "difficulty": 1,
+  "q": "What breed of dog is Scooby-Doo?",
+  "answers": [
+   "Great Dane",
+   "Bloodhound",
+   "Saint Bernard"
+  ],
+  "correct": 0,
+  "fact": "Scooby-Doo, Where Are You! debuted in 1969, starring a Great Dane and his friends.",
+  "source": "https://en.wikipedia.org/wiki/Scooby-Doo"
+ },
+ {
+  "id": "gk-0195",
+  "cat": "general",
+  "topic": "tv",
+  "difficulty": 1,
+  "q": "On Sesame Street, where does Oscar the Grouch live?",
+  "answers": [
+   "In a treehouse",
+   "In a trash can",
+   "In a boot"
+  ],
+  "correct": 1,
+  "fact": "Oscar the Grouch lives in a trash can on Sesame Street, which first aired in 1969.",
+  "source": "https://en.wikipedia.org/wiki/Sesame_Street"
+ },
+ {
+  "id": "gk-0196",
+  "cat": "general",
+  "topic": "tv",
+  "difficulty": 1,
+  "q": "In the original 1960s Star Trek, Captain Kirk commands which starship?",
+  "answers": [
+   "USS Enterprise",
+   "USS Voyager",
+   "Battlestar Galactica"
+  ],
+  "correct": 0,
+  "fact": "James T. Kirk (William Shatner) is captain of the USS Enterprise in Star Trek, which began in 1966.",
+  "source": "https://en.wikipedia.org/wiki/Star_Trek:_The_Original_Series"
+ },
+ {
+  "id": "gk-0197",
+  "cat": "general",
+  "topic": "tv",
+  "difficulty": 1,
+  "q": "Which cartoon rabbit's catchphrase is \"What's up, Doc?\"",
+  "answers": [
+   "Peter Rabbit",
+   "Roger Rabbit",
+   "Bugs Bunny"
+  ],
+  "correct": 2,
+  "fact": "Bugs Bunny, voiced originally by Mel Blanc, debuted in 1940 and loves carrots.",
+  "source": "https://en.wikipedia.org/wiki/Bugs_Bunny"
+ },
+ {
+  "id": "gk-0198",
+  "cat": "general",
+  "topic": "tv",
+  "difficulty": 2,
+  "q": "Who is the frog host of The Muppet Show?",
+  "answers": [
+   "Fozzie Bear",
+   "Kermit the Frog",
+   "Gonzo"
+  ],
+  "correct": 1,
+  "fact": "Kermit the Frog hosted and ran the variety show, which aired from 1976 to 1981.",
+  "source": "https://en.wikipedia.org/wiki/The_Muppet_Show"
+ },
+ {
+  "id": "gk-0199",
+  "cat": "general",
+  "topic": "tv",
+  "difficulty": 1,
+  "q": "On The Simpsons, Homer works as a safety inspector at what?",
+  "answers": [
+   "A doughnut factory",
+   "A nuclear power plant",
+   "A toy warehouse"
+  ],
+  "correct": 1,
+  "fact": "Homer is a safety inspector at the Springfield Nuclear Power Plant.",
+  "source": "https://en.wikipedia.org/wiki/The_Simpsons"
+ },
+ {
+  "id": "gk-0200",
+  "cat": "general",
+  "topic": "tv",
+  "difficulty": 2,
+  "q": "In which decade did the cartoon Tom and Jerry first appear?",
+  "answers": [
+   "The 1940s",
+   "The 1920s",
+   "The 1960s"
+  ],
+  "correct": 0,
+  "fact": "William Hanna and Joseph Barbera created Tom and Jerry in 1940.",
+  "source": "https://en.wikipedia.org/wiki/Tom_and_Jerry"
+ },
+ {
+  "id": "gk-0201",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 1,
+  "q": "How many keys does a standard modern piano have?",
+  "answers": [
+   "72",
+   "100",
+   "88"
+  ],
+  "correct": 2,
+  "fact": "A standard piano has 52 white keys and 36 black keys, for 88 in total.",
+  "source": "https://en.wikipedia.org/wiki/Piano"
+ },
+ {
+  "id": "gk-0202",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 1,
+  "q": "How many strings does a standard violin have?",
+  "answers": [
+   "Six",
+   "Eight",
+   "Four"
+  ],
+  "correct": 2,
+  "fact": "A violin has four strings, normally tuned G, D, A and E in perfect fifths.",
+  "source": "https://en.wikipedia.org/wiki/Violin"
+ },
+ {
+  "id": "gk-0203",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 1,
+  "q": "In which English city did The Beatles form?",
+  "answers": [
+   "Manchester",
+   "London",
+   "Liverpool"
+  ],
+  "correct": 2,
+  "fact": "The Beatles formed in Liverpool in 1960 and broke up in 1970.",
+  "source": "https://en.wikipedia.org/wiki/The_Beatles"
+ },
+ {
+  "id": "gk-0204",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 1,
+  "q": "Michael Jackson's 1982 album with \"Billie Jean\" and \"Beat It\" is called what?",
+  "answers": [
+   "Bad",
+   "Dangerous",
+   "Thriller"
+  ],
+  "correct": 2,
+  "fact": "Thriller was released on November 29, 1982 and includes both \"Billie Jean\" and \"Beat It.\"",
+  "source": "https://en.wikipedia.org/wiki/Thriller_(album)"
+ },
+ {
+  "id": "gk-0205",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 1,
+  "q": "Which band recorded \"Bohemian Rhapsody\" on the 1975 album A Night at the Opera?",
+  "answers": [
+   "Queen",
+   "Led Zeppelin",
+   "Pink Floyd"
+  ],
+  "correct": 0,
+  "fact": "Freddie Mercury wrote \"Bohemian Rhapsody\" for Queen; it runs 5 minutes 55 seconds.",
+  "source": "https://en.wikipedia.org/wiki/Bohemian_Rhapsody"
+ },
+ {
+  "id": "gk-0206",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 2,
+  "q": "Though often made of brass, the saxophone belongs to which instrument family?",
+  "answers": [
+   "Brass",
+   "Woodwind",
+   "Percussion"
+  ],
+  "correct": 1,
+  "fact": "The sax is a single-reed woodwind with a conical body, invented by Belgian Adolphe Sax.",
+  "source": "https://en.wikipedia.org/wiki/Saxophone"
+ },
+ {
+  "id": "gk-0207",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 2,
+  "q": "In which city was composer Wolfgang Amadeus Mozart born?",
+  "answers": [
+   "Vienna",
+   "Salzburg",
+   "Berlin"
+  ],
+  "correct": 1,
+  "fact": "Mozart was born in Salzburg, Austria, on January 27, 1756.",
+  "source": "https://en.wikipedia.org/wiki/Wolfgang_Amadeus_Mozart"
+ },
+ {
+  "id": "gk-0208",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 1,
+  "q": "The pop group ABBA, known for \"Dancing Queen,\" came from which country?",
+  "answers": [
+   "Sweden",
+   "Norway",
+   "Denmark"
+  ],
+  "correct": 0,
+  "fact": "ABBA formed in Stockholm in 1972 and won Eurovision in 1974 with \"Waterloo.\"",
+  "source": "https://en.wikipedia.org/wiki/ABBA"
+ },
+ {
+  "id": "gk-0209",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 1,
+  "q": "Which brass instrument is famous for its long telescoping slide?",
+  "answers": [
+   "Tuba",
+   "French horn",
+   "Trombone"
+  ],
+  "correct": 2,
+  "fact": "Nearly all trombones use a telescoping slide, instead of valves, to change pitch.",
+  "source": "https://en.wikipedia.org/wiki/Trombone"
+ },
+ {
+  "id": "gk-0210",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 2,
+  "q": "Which standard orchestral string instrument is the largest and lowest-pitched?",
+  "answers": [
+   "Cello",
+   "Viola",
+   "Double bass"
+  ],
+  "correct": 2,
+  "fact": "The double bass is the largest and lowest-pitched chordophone in the modern symphony orchestra.",
+  "source": "https://en.wikipedia.org/wiki/Double_bass"
+ },
+ {
+  "id": "gk-0211",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 1,
+  "q": "Which former Beatle released the 1971 song \"Imagine\"?",
+  "answers": [
+   "John Lennon",
+   "Paul McCartney",
+   "George Harrison"
+  ],
+  "correct": 0,
+  "fact": "John Lennon released \"Imagine\" on October 11, 1971, on the album of the same name.",
+  "source": "https://en.wikipedia.org/wiki/Imagine_(John_Lennon_song)"
+ },
+ {
+  "id": "gk-0212",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 2,
+  "q": "Who composed the violin concertos known as The Four Seasons?",
+  "answers": [
+   "Johann Sebastian Bach",
+   "George Frideric Handel",
+   "Antonio Vivaldi"
+  ],
+  "correct": 2,
+  "fact": "Italian composer Antonio Vivaldi's Four Seasons was published in 1725 as four violin concertos.",
+  "source": "https://en.wikipedia.org/wiki/The_Four_Seasons_(Vivaldi)"
+ },
+ {
+  "id": "gk-0213",
+  "cat": "general",
+  "topic": "music",
+  "difficulty": 1,
+  "q": "Which famous composer kept composing music even after he went deaf?",
+  "answers": [
+   "Wolfgang Amadeus Mozart",
+   "Ludwig van Beethoven",
+   "Johann Sebastian Bach"
+  ],
+  "correct": 1,
+  "fact": "Beethoven's hearing loss began around 1798, yet he went on to write his Ninth Symphony in 1824.",
+  "source": "https://en.wikipedia.org/wiki/Ludwig_van_Beethoven"
+ },
+ {
+  "id": "gk-0214",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 1,
+  "q": "How high above the floor is a regulation basketball rim?",
+  "answers": [
+   "10 feet",
+   "8 feet",
+   "12 feet"
+  ],
+  "correct": 0,
+  "fact": "The rim sits exactly 10 feet (3.05 m) above the court.",
+  "source": "https://en.wikipedia.org/wiki/Basketball"
+ },
+ {
+  "id": "gk-0215",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 2,
+  "q": "What did James Naismith nail up as the first basketball goals?",
+  "answers": [
+   "Peach baskets",
+   "Milk crates",
+   "Laundry hampers"
+  ],
+  "correct": 0,
+  "fact": "Naismith nailed peach baskets to an elevated track in Springfield, Massachusetts, in 1891.",
+  "source": "https://en.wikipedia.org/wiki/Basketball"
+ },
+ {
+  "id": "gk-0216",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 1,
+  "q": "A full marathon race is about how far?",
+  "answers": [
+   "26.2 miles (42.2 km)",
+   "20.5 miles (33 km)",
+   "31.1 miles (50 km)"
+  ],
+  "correct": 0,
+  "fact": "The marathon distance was set at 42.195 km (26 miles 385 yards) in 1921, after the 1908 London Olympics.",
+  "source": "https://en.wikipedia.org/wiki/Marathon"
+ },
+ {
+  "id": "gk-0217",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 1,
+  "q": "How many interlocking rings are in the Olympic symbol?",
+  "answers": [
+   "Four",
+   "Seven",
+   "Five"
+  ],
+  "correct": 2,
+  "fact": "The five rings, designed in 1913, represent the union of the five continents.",
+  "source": "https://en.wikipedia.org/wiki/Olympic_symbols"
+ },
+ {
+  "id": "gk-0218",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 1,
+  "q": "Which city hosted the first modern Summer Olympics in 1896?",
+  "answers": [
+   "Athens",
+   "Paris",
+   "London"
+  ],
+  "correct": 0,
+  "fact": "The first modern Olympic Games were held in Athens, Greece, in April 1896.",
+  "source": "https://en.wikipedia.org/wiki/1896_Summer_Olympics"
+ },
+ {
+  "id": "gk-0219",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 1,
+  "q": "In baseball, how many strikes make a batter strike out?",
+  "answers": [
+   "Two",
+   "Three",
+   "Four"
+  ],
+  "correct": 1,
+  "fact": "A batter against whom three strikes are recorded strikes out; four balls earns a walk.",
+  "source": "https://en.wikipedia.org/wiki/Baseball"
+ },
+ {
+  "id": "gk-0220",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 2,
+  "q": "In golf, a birdie is a score of how many strokes relative to par?",
+  "answers": [
+   "One under par",
+   "One over par",
+   "Two under par"
+  ],
+  "correct": 0,
+  "fact": "A birdie is one stroke under par; an eagle is two under and a bogey one over.",
+  "source": "https://en.wikipedia.org/wiki/Glossary_of_golf"
+ },
+ {
+  "id": "gk-0221",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 1,
+  "q": "In tennis scoring, what does \"love\" mean?",
+  "answers": [
+   "One point",
+   "Zero",
+   "Advantage"
+  ],
+  "correct": 1,
+  "fact": "\"Love\" is the tennis term for zero points.",
+  "source": "https://en.wikipedia.org/wiki/Tennis_scoring_system"
+ },
+ {
+  "id": "gk-0222",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 1,
+  "q": "How many players does a soccer team have on the field, including the goalkeeper?",
+  "answers": [
+   "9",
+   "11",
+   "13"
+  ],
+  "correct": 1,
+  "fact": "Association football is played by two teams of 11 players each.",
+  "source": "https://en.wikipedia.org/wiki/Association_football"
+ },
+ {
+  "id": "gk-0223",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 1,
+  "q": "How many points is a touchdown worth in American football?",
+  "answers": [
+   "Three",
+   "Seven",
+   "Six"
+  ],
+  "correct": 2,
+  "fact": "A touchdown scores 6 points; the extra point after it adds 1 or a two-point conversion adds 2.",
+  "source": "https://en.wikipedia.org/wiki/Touchdown"
+ },
+ {
+  "id": "gk-0224",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 1,
+  "q": "What do ice hockey players hit with their sticks?",
+  "answers": [
+   "A puck",
+   "A shuttlecock",
+   "A birdie"
+  ],
+  "correct": 0,
+  "fact": "Hockey uses a puck made of vulcanized rubber, hit toward the opponent's goal.",
+  "source": "https://en.wikipedia.org/wiki/Ice_hockey"
+ },
+ {
+  "id": "gk-0225",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 2,
+  "q": "Which Grand Slam tennis tournament is still played on grass?",
+  "answers": [
+   "Wimbledon",
+   "The French Open",
+   "The US Open"
+  ],
+  "correct": 0,
+  "fact": "Wimbledon is the only tennis major still played on grass.",
+  "source": "https://en.wikipedia.org/wiki/The_Championships,_Wimbledon"
+ },
+ {
+  "id": "gk-0226",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 2,
+  "q": "Who scored the first perfect 10 in Olympic gymnastics, at the 1976 Games?",
+  "answers": [
+   "Nadia Comaneci",
+   "Olga Korbut",
+   "Mary Lou Retton"
+  ],
+  "correct": 0,
+  "fact": "At age 14 in Montreal, Comaneci's perfect score showed as \"1.00\" because the board couldn't display 10.",
+  "source": "https://en.wikipedia.org/wiki/Nadia_Com%C4%83neci"
+ },
+ {
+  "id": "gk-0227",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 1,
+  "q": "What color jersey is worn by the overall leader of the Tour de France?",
+  "answers": [
+   "Yellow",
+   "Green",
+   "Red"
+  ],
+  "correct": 0,
+  "fact": "The yellow jersey honors the yellow paper of L'Auto, the newspaper that created the race in 1903.",
+  "source": "https://en.wikipedia.org/wiki/Tour_de_France"
+ },
+ {
+  "id": "gk-0228",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 2,
+  "q": "How many strikes in a row make a perfect 300 game in ten-pin bowling?",
+  "answers": [
+   "Ten",
+   "Fifteen",
+   "Twelve"
+  ],
+  "correct": 2,
+  "fact": "A perfect game of 300 takes twelve consecutive strikes.",
+  "source": "https://en.wikipedia.org/wiki/Ten-pin_bowling"
+ },
+ {
+  "id": "gk-0229",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 3,
+  "q": "What was volleyball originally called when William G. Morgan invented it in 1895?",
+  "answers": [
+   "Mintonette",
+   "Netball",
+   "Handball"
+  ],
+  "correct": 0,
+  "fact": "Morgan, a YMCA director in Holyoke, Massachusetts, called it Mintonette before it was renamed volleyball.",
+  "source": "https://en.wikipedia.org/wiki/Volleyball"
+ },
+ {
+  "id": "gk-0230",
+  "cat": "general",
+  "topic": "sports",
+  "difficulty": 3,
+  "q": "In baseball, how far is the pitcher's plate from home plate?",
+  "answers": [
+   "60 feet 6 inches",
+   "50 feet",
+   "70 feet"
+  ],
+  "correct": 0,
+  "fact": "The pitching distance of 60 feet 6 inches was set in 1893.",
+  "source": "https://en.wikipedia.org/wiki/Baseball_field"
+ },
+ {
+  "id": "gw-0001",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "What is the hardest substance your body makes?",
+  "answers": [
+   "Bone",
+   "Tooth enamel",
+   "Fingernails"
+  ],
+  "correct": 1,
+  "fact": "Enamel is about 96% mineral, more than any other tissue you make. Chomp responsibly.",
+  "source": "https://www.healthline.com/health/hardest-substance-in-the-human-body"
+ },
+ {
+  "id": "gw-0002",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Fresh sweat barely smells. What makes you stink?",
+  "answers": [
+   "The salt in it",
+   "Bacteria munching on sweat",
+   "Toxins leaving your body"
+  ],
+  "correct": 1,
+  "fact": "Sweat is colorless and odorless until skin bacteria break it down.",
+  "source": "https://www.healthline.com/health/bromhidrosis"
+ },
+ {
+  "id": "gw-0003",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Pus is mostly made of dead what?",
+  "answers": [
+   "White blood cells",
+   "Skin cells",
+   "Red blood cells"
+  ],
+  "correct": 0,
+  "fact": "Pus is mainly dead white blood cells (plus dead bacteria) left from the immune fight.",
+  "source": "https://www.medicalnewstoday.com/articles/249182"
+ },
+ {
+  "id": "gw-0004",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "What gives poop its brown color?",
+  "answers": [
+   "Dye in your stomach acid",
+   "Whatever color your lunch was",
+   "Bile pigment from old blood"
+  ],
+  "correct": 2,
+  "fact": "Old red blood cells make bilirubin, which gut bacteria turn into stercobilin, the brown pigment.",
+  "source": "https://www.sciencefocus.com/the-human-body/why-is-poo-always-brown-no-matter-what-we-eat/"
+ },
+ {
+  "id": "gw-0005",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "How do head lice get from head to head?",
+  "answers": [
+   "They hop like fleas",
+   "They crawl; no hopping or flying",
+   "They fly short distances"
+  ],
+  "correct": 1,
+  "fact": "The CDC says head lice move by crawling; they cannot hop or fly.",
+  "source": "https://www.cdc.gov/lice/about/head-lice.html"
+ },
+ {
+  "id": "gw-0006",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "What are the 'nits' stuck to hair in a lice outbreak?",
+  "answers": [
+   "Lice eggs",
+   "Dried dandruff flakes",
+   "Tiny knots of hair"
+  ],
+  "correct": 0,
+  "fact": "Nits are lice eggs, laid close to the scalp; they hatch in about a week.",
+  "source": "https://www.cdc.gov/lice/about/head-lice.html"
+ },
+ {
+  "id": "gw-0007",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "What causes common warts?",
+  "answers": [
+   "Touching a toad",
+   "A virus (HPV)",
+   "A skin fungus"
+  ],
+  "correct": 1,
+  "fact": "Warts are skin growths caused by infection with the human papillomavirus.",
+  "source": "https://medlineplus.gov/warts.html"
+ },
+ {
+  "id": "gw-0008",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Athlete's foot is an infection caused by what?",
+  "answers": [
+   "A tiny worm",
+   "A virus",
+   "A fungus"
+  ],
+  "correct": 2,
+  "fact": "Fungi such as Trichophyton rubrum cause it; roughly 15% of people have it at any time.",
+  "source": "https://en.wikipedia.org/wiki/Athlete%27s_foot"
+ },
+ {
+  "id": "gw-0009",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "You swallow a piece of chewing gum. What happens to it?",
+  "answers": [
+   "It sits there for 7 years",
+   "It sticks to your intestines",
+   "It passes through like food"
+  ],
+  "correct": 2,
+  "fact": "Gum is indigestible but just gets pushed along and exits; the 7-year claim is folklore.",
+  "source": "https://www.scientificamerican.com/article/fact-or-fiction-chewing-gum-takes-seven-years-to-digest/"
+ },
+ {
+  "id": "gw-0010",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Where does the gas in a typical burp come from?",
+  "answers": [
+   "Gas your liver makes",
+   "Air stored in your lungs",
+   "Air or fizz you swallowed"
+  ],
+  "correct": 2,
+  "fact": "Swallowed air (or carbon dioxide from fizzy drinks) that can't be absorbed gets burped out.",
+  "source": "https://en.wikipedia.org/wiki/Belching"
+ },
+ {
+  "id": "gw-0011",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Why does your nose run when you cry?",
+  "answers": [
+   "Sadness swells your sinuses",
+   "Your ears drain into it",
+   "Tears drain into your nose"
+  ],
+  "correct": 2,
+  "fact": "Extra tears flow through the nasolacrimal duct into the nasal cavity.",
+  "source": "https://en.wikipedia.org/wiki/Nasolacrimal_duct"
+ },
+ {
+  "id": "gw-0012",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Where does most of the snot your nose makes end up?",
+  "answers": [
+   "Swallowed into your stomach",
+   "Blown into tissues",
+   "Evaporated away"
+  ],
+  "correct": 0,
+  "fact": "Cilia sweep mucus to the throat, and most of it is swallowed without you noticing.",
+  "source": "https://en.wikipedia.org/wiki/Mucus"
+ },
+ {
+  "id": "gw-0013",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "How much mucus do experts think your body makes daily?",
+  "answers": [
+   "About a teaspoon",
+   "About a bathtub",
+   "About a liter"
+  ],
+  "correct": 2,
+  "fact": "Cleveland Clinic: most experts think the body makes about a liter of mucus a day.",
+  "source": "https://health.clevelandclinic.org/mucus-and-phlegm-what-to-do-if-you-have-too-much"
+ },
+ {
+  "id": "gw-0014",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Dust mites chow down mostly on what?",
+  "answers": [
+   "Carpet and wood fibers",
+   "Flakes of shed skin",
+   "Spilled sugar"
+  ],
+  "correct": 1,
+  "fact": "House dust mites feed on skin flakes from humans and other animals.",
+  "source": "https://en.wikipedia.org/wiki/House_dust_mite"
+ },
+ {
+  "id": "gw-0015",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "What causes the itchy skin condition scabies?",
+  "answers": [
+   "Tiny mites burrowing in skin",
+   "A skin fungus",
+   "Dry winter air"
+  ],
+  "correct": 0,
+  "fact": "CDC: the microscopic scabies mite burrows into the upper layer of skin and lays eggs.",
+  "source": "https://www.cdc.gov/scabies/about/index.html"
+ },
+ {
+  "id": "gw-0016",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 3,
+  "q": "The crusty 'sleep' in your eye corners has what proper name?",
+  "answers": [
+   "Rheum",
+   "Cerumen",
+   "Sebum"
+  ],
+  "correct": 0,
+  "fact": "Rheum is dried mucus, skin cells, blood cells and dust that collects around the eyes.",
+  "source": "https://en.wikipedia.org/wiki/Rheum"
+ },
+ {
+  "id": "gw-0017",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "Earwax is partly made by modified what?",
+  "answers": [
+   "Tear glands",
+   "Saliva glands",
+   "Sweat glands"
+  ],
+  "correct": 2,
+  "fact": "Ceruminous glands are modified sweat glands; sebaceous glands add oily sebum.",
+  "source": "https://my.clevelandclinic.org/health/body/24624-earwax"
+ },
+ {
+  "id": "gw-0018",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "Wet or dry earwax: what decides which you get?",
+  "answers": [
+   "Mostly your genes",
+   "Your diet",
+   "How often you clean"
+  ],
+  "correct": 0,
+  "fact": "Wet wax is dominant and dry is recessive, tied to the ABCC11 gene.",
+  "source": "https://my.clevelandclinic.org/health/body/24624-earwax"
+ },
+ {
+  "id": "gw-0019",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "What mainly causes bad breath?",
+  "answers": [
+   "Food rotting in your stomach",
+   "Air trapped in your lungs",
+   "Stinky bacteria on your tongue"
+  ],
+  "correct": 2,
+  "fact": "Tongue bacteria make smelly sulfur compounds and cause most mouth-related bad breath.",
+  "source": "https://en.wikipedia.org/wiki/Halitosis"
+ },
+ {
+  "id": "gw-0020",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "What turns the sugar you eat into tooth-eating acid?",
+  "answers": [
+   "Bacteria in your mouth",
+   "Your saliva",
+   "Your stomach acid"
+  ],
+  "correct": 0,
+  "fact": "NIDCR: decay-causing bacteria meeting sugars and starches form acid that wears enamel.",
+  "source": "https://www.nidcr.nih.gov/health-info/tooth-decay"
+ },
+ {
+  "id": "gw-0021",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "The sticky film dentists scrape off your teeth is mostly what?",
+  "answers": [
+   "Colonies of bacteria",
+   "Hardened sugar",
+   "Dried toothpaste"
+  ],
+  "correct": 0,
+  "fact": "Dental plaque is a biofilm of microorganisms, mostly bacteria.",
+  "source": "https://en.wikipedia.org/wiki/Dental_plaque"
+ },
+ {
+  "id": "gw-0022",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Which acid does your stomach make to break down food?",
+  "answers": [
+   "Citric acid",
+   "Sulfuric acid",
+   "Hydrochloric acid"
+  ],
+  "correct": 2,
+  "fact": "Stomach cells make hydrochloric acid, with a pH of about 1 to 3.",
+  "source": "https://en.wikipedia.org/wiki/Gastric_acid"
+ },
+ {
+  "id": "gw-0023",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "What keeps stomach acid from eating the stomach itself?",
+  "answers": [
+   "A coat of saliva",
+   "A layer of mucus",
+   "A layer of fat"
+  ],
+  "correct": 1,
+  "fact": "The stomach lining secretes mucus and bicarbonate that shield it from the acid.",
+  "source": "https://en.wikipedia.org/wiki/Gastric_acid"
+ },
+ {
+  "id": "gw-0024",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Hair and fingernails are made of the same protein. Which?",
+  "answers": [
+   "Collagen",
+   "Keratin",
+   "Elastin"
+  ],
+  "correct": 1,
+  "fact": "Fingernails and toenails are made of alpha-keratin; hair is mainly keratin proteins too.",
+  "source": "https://en.wikipedia.org/wiki/Nail_(anatomy)"
+ },
+ {
+  "id": "gw-0025",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "How fast does scalp hair grow on average?",
+  "answers": [
+   "About 1 mm a month",
+   "About 1 cm a month",
+   "About 10 cm a month"
+  ],
+  "correct": 1,
+  "fact": "Hair is commonly said to grow about 1 cm per month, with wide variation.",
+  "source": "https://en.wikipedia.org/wiki/Hair"
+ },
+ {
+  "id": "gw-0026",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Fingernails vs toenails: which grow faster, and how much?",
+  "answers": [
+   "Fingernails, about twice as fast",
+   "Toenails, about twice as fast",
+   "They grow at the same speed"
+  ],
+  "correct": 0,
+  "fact": "Fingernails grow about 3.5 mm a month versus about 1.6 mm for toenails.",
+  "source": "https://en.wikipedia.org/wiki/Nail_(anatomy)"
+ },
+ {
+  "id": "gw-0027",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "Lose a toenail and it takes about how long to regrow?",
+  "answers": [
+   "About 2 weeks",
+   "About 3 months",
+   "12 to 18 months"
+  ],
+  "correct": 2,
+  "fact": "Fingernails regrow in 3 to 6 months, but toenails need a year to a year and a half.",
+  "source": "https://en.wikipedia.org/wiki/Nail_(anatomy)"
+ },
+ {
+  "id": "gw-0028",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "A 10-second kiss swaps about how many bacteria?",
+  "answers": [
+   "About 80 million",
+   "About 80 thousand",
+   "About 80 billion"
+  ],
+  "correct": 0,
+  "fact": "A Dutch study in the journal Microbiome estimated about 80 million bacteria transfer.",
+  "source": "https://www.sciencealert.com/kisses-transfer-80-million-bacteria-new-study-reveals"
+ },
+ {
+  "id": "gw-0029",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "Scientists swabbed 60 belly buttons. How many bacteria species turned up?",
+  "answers": [
+   "More than 2,000",
+   "About 20",
+   "About 200"
+  ],
+  "correct": 0,
+  "fact": "The Belly Button Biodiversity project found 2,368 species, 1,458 possibly new to science.",
+  "source": "https://www.nationalgeographic.com/science/article/121114-belly-button-bacteria-science-health-dunn"
+ },
+ {
+  "id": "gw-0030",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 3,
+  "q": "What's the medical word for your tummy rumbling?",
+  "answers": [
+   "Flatulence",
+   "Borborygmi",
+   "Eructation"
+  ],
+  "correct": 1,
+  "fact": "Borborygmi are rumbles from gas and fluid moving through the gut, hungry or not.",
+  "source": "https://en.wikipedia.org/wiki/Stomach_rumble"
+ },
+ {
+  "id": "gw-0031",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "What share of fart gas is actually the smelly stuff?",
+  "answers": [
+   "About 10%",
+   "Less than 1%",
+   "About half"
+  ],
+  "correct": 1,
+  "fact": "Over 99% is odorless gas; the smell comes from a sliver of volatile sulfur compounds.",
+  "source": "https://en.wikipedia.org/wiki/Flatulence"
+ },
+ {
+  "id": "gw-0032",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "Which two gases can make a fart flammable?",
+  "answers": [
+   "Nitrogen and carbon dioxide",
+   "Oxygen and argon",
+   "Hydrogen and methane"
+  ],
+  "correct": 2,
+  "fact": "Hydrogen and methane in flatus are flammable. Do not test this at home.",
+  "source": "https://en.wikipedia.org/wiki/Flatulence"
+ },
+ {
+  "id": "gw-0033",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Why do beans make people gassy?",
+  "answers": [
+   "Gut bacteria ferment them",
+   "They are full of trapped air",
+   "They make stomach acid fizz"
+  ],
+  "correct": 0,
+  "fact": "Bacteria in the large intestine ferment beans' carbs and release gas as a byproduct.",
+  "source": "https://my.clevelandclinic.org/health/symptoms/flatulence"
+ },
+ {
+  "id": "gw-0034",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 3,
+  "q": "Which pigment makes pee yellow?",
+  "answers": [
+   "Melanin",
+   "Urobilin",
+   "Keratin"
+  ],
+  "correct": 1,
+  "fact": "Urobilin (urochrome) forms when colorless urobilinogen, from broken-down blood, oxidizes.",
+  "source": "https://en.wikipedia.org/wiki/Urobilin"
+ },
+ {
+  "id": "gw-0035",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "Spit is about what percent water?",
+  "answers": [
+   "About 50%",
+   "About 75%",
+   "About 99%"
+  ],
+  "correct": 2,
+  "fact": "Human saliva is around 99% water, plus enzymes, mucus and some cells.",
+  "source": "https://en.wikipedia.org/wiki/Saliva"
+ },
+ {
+  "id": "gw-0036",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "Your saliva starts breaking down which food type?",
+  "answers": [
+   "Protein",
+   "Vitamins",
+   "Starch"
+  ],
+  "correct": 2,
+  "fact": "The enzyme amylase in saliva begins digesting starch right in your mouth.",
+  "source": "https://en.wikipedia.org/wiki/Saliva"
+ },
+ {
+  "id": "gw-0037",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "What tiny critters live in the eyelash follicles of most adults?",
+  "answers": [
+   "Baby bedbugs",
+   "Microscopic fleas",
+   "Demodex mites"
+  ],
+  "correct": 2,
+  "fact": "Up to 90% of adults carry Demodex mites in facial hair follicles, eyelashes included.",
+  "source": "https://www.uclahealth.org/news/article/up-90-adults-play-host-mites"
+ },
+ {
+  "id": "gw-0038",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "Doctors sometimes put live maggots on wounds to do what?",
+  "answers": [
+   "Stitch skin together",
+   "Eat the dead tissue",
+   "Numb the pain"
+  ],
+  "correct": 1,
+  "fact": "Medical maggots are FDA-approved: they liquefy and eat dead tissue, cleaning the wound.",
+  "source": "https://pharmacytimes.com/view/3-weird-things-the-fda-regulates-or-recognizes"
+ },
+ {
+  "id": "gw-0039",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "Doctors treat some stubborn gut infections with a transplant of what?",
+  "answers": [
+   "Stomach acid",
+   "Intestinal worms",
+   "A healthy person's poop"
+  ],
+  "correct": 2,
+  "fact": "Fecal transplants move gut microbes from a healthy donor and cure most C. diff cases.",
+  "source": "https://en.wikipedia.org/wiki/Fecal_microbiota_transplant"
+ },
+ {
+  "id": "gw-0040",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 3,
+  "q": "Tonsil stones are mostly bacteria plus what?",
+  "answers": [
+   "Calcium and mineral salts",
+   "Chipped tooth enamel",
+   "Swallowed sand and dust"
+  ],
+  "correct": 0,
+  "fact": "They are biofilms of bacteria with calcium salts, trapped in tonsil crevices.",
+  "source": "https://en.wikipedia.org/wiki/Tonsil_stone"
+ },
+ {
+  "id": "gw-0041",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 3,
+  "q": "A hairball in a human stomach is called a what?",
+  "answers": [
+   "Phytobezoar",
+   "Hirsutism",
+   "Trichobezoar"
+  ],
+  "correct": 2,
+  "fact": "Digestion can't break down hair, so swallowed hair can pile up into a trichobezoar.",
+  "source": "https://en.wikipedia.org/wiki/Rapunzel_syndrome"
+ },
+ {
+  "id": "gw-0042",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "What gives green snot its color?",
+  "answers": [
+   "Algae in your sinuses",
+   "An enzyme from white blood cells",
+   "Leftover stomach bile"
+  ],
+  "correct": 1,
+  "fact": "Neutrophils release myeloperoxidase, a green heme enzyme, into mucus.",
+  "source": "https://en.wikipedia.org/wiki/Myeloperoxidase"
+ },
+ {
+  "id": "gw-0043",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "Foot odor is partly caused by a bacterium that also ripens what?",
+  "answers": [
+   "Stinky cheeses",
+   "Soy sauce",
+   "Sourdough bread"
+  ],
+  "correct": 0,
+  "fact": "Brevibacterium linens lives on skin and helps ripen Limburger and Munster cheese.",
+  "source": "https://en.wikipedia.org/wiki/Brevibacterium_linens"
+ },
+ {
+  "id": "gw-0044",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 3,
+  "q": "A newborn's very first poop, dark and tar-like, is called?",
+  "answers": [
+   "Colostrum",
+   "Meconium",
+   "Lanugo"
+  ],
+  "correct": 1,
+  "fact": "Meconium is sticky, dark olive stool made of stuff the baby swallowed in the womb.",
+  "source": "https://en.wikipedia.org/wiki/Meconium"
+ },
+ {
+  "id": "gw-0045",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 3,
+  "q": "Newborns are often coated in a waxy white layer called what?",
+  "answers": [
+   "Vernix",
+   "Lanugo",
+   "Cradle cap"
+  ],
+  "correct": 0,
+  "fact": "Vernix caseosa is mostly water with lipids and proteins, plus sebum and shed skin cells.",
+  "source": "https://en.wikipedia.org/wiki/Vernix_caseosa"
+ },
+ {
+  "id": "gw-0046",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 1,
+  "q": "The sweat that cools you off is mostly made of what?",
+  "answers": [
+   "Plain old water",
+   "Salt",
+   "Body oil"
+  ],
+  "correct": 0,
+  "fact": "Eccrine sweat is clear, odorless and 98-99% water.",
+  "source": "https://en.wikipedia.org/wiki/Sweat_gland"
+ },
+ {
+  "id": "gw-0047",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "What makes a blackhead black?",
+  "answers": [
+   "Dirt stuck in the pore",
+   "Pigment from bacteria",
+   "Oxidation, not dirt"
+  ],
+  "correct": 2,
+  "fact": "Plugged-pore contents react with air and darken; it is not about being unclean.",
+  "source": "https://www.medicalnewstoday.com/articles/71615"
+ },
+ {
+  "id": "gw-0048",
+  "cat": "gross",
+  "topic": "body",
+  "difficulty": 2,
+  "q": "How long can a beef tapeworm grow inside a person?",
+  "answers": [
+   "Up to 10 centimeters",
+   "Up to 10 meters (33 feet)",
+   "Up to 1 meter"
+  ],
+  "correct": 1,
+  "fact": "The CDC says Taenia saginata tapeworms can reach up to 10 meters in length.",
+  "source": "https://www.cdc.gov/taeniasis/about/index.html"
+ },
+ {
+  "id": "gw-0049",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "What shape is a wombat's poop?",
+  "answers": [
+   "Cubes",
+   "Perfect spheres",
+   "Flat pancakes"
+  ],
+  "correct": 0,
+  "fact": "Wombat intestines mold dry poop into cubes, which stack on rocks and logs without rolling away.",
+  "source": "https://www.smithsonianmag.com/smart-news/scientists-have-solved-mystery-how-wombats-poop-cubes-180976898/"
+ },
+ {
+  "id": "gw-0050",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 3,
+  "q": "A bare-nosed wombat may drop up to how many poop cubes a day?",
+  "answers": [
+   "About 100",
+   "About 3",
+   "About 10"
+  ],
+  "correct": 0,
+  "fact": "Bare-nosed wombats poop four to eight pieces at a time and may make up to 100 cubes a day.",
+  "source": "https://www.smithsonianmag.com/smart-news/scientists-have-solved-mystery-how-wombats-poop-cubes-180976898/"
+ },
+ {
+  "id": "gw-0051",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "How often does a three-toed sloth climb down its tree to poop?",
+  "answers": [
+   "Every day",
+   "About once a week",
+   "Once a month"
+  ],
+  "correct": 1,
+  "fact": "Three-toed sloths descend roughly once a week to defecate, a risky trip that benefits the moths in their fur.",
+  "source": "https://www.scientificamerican.com/article/why-sloths-leave-the-trees-to-defecate"
+ },
+ {
+  "id": "gw-0052",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "Moths live in a sloth's fur, and what green stuff grows there that sloths may snack on?",
+  "answers": [
+   "Mushrooms",
+   "Algae",
+   "Clover"
+  ],
+  "correct": 1,
+  "fact": "Sloth-fur moths and the algae they help fertilize form a garden that supplements the sloth's leafy diet.",
+  "source": "https://www.scientificamerican.com/article/why-sloths-leave-the-trees-to-defecate"
+ },
+ {
+  "id": "gw-0053",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Why do vultures poop on their own legs?",
+  "answers": [
+   "To mark territory",
+   "To make perching sticky",
+   "To cool off"
+  ],
+  "correct": 2,
+  "fact": "Called urohidrosis: droppings on the legs evaporate and cool the bird.",
+  "source": "https://peregrinefund.org/index.php/news/five-ways-raptors-stay-cool-during-sweltering-summer-months"
+ },
+ {
+  "id": "gw-0054",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "When threatened, turkey vultures may fire what at attackers?",
+  "answers": [
+   "Acidic vomit",
+   "Venom from their beaks",
+   "Sticky silk from their tongues"
+  ],
+  "correct": 0,
+  "fact": "Turkey vultures puke stinging acid at predators, which also lightens them for a quick getaway.",
+  "source": "https://www.nationalgeographic.com/science/article/vomit-throw-up-snakes-pythons-vultures"
+ },
+ {
+  "id": "gw-0055",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "What does a hagfish do to a predator that bites it?",
+  "answers": [
+   "Shocks it with electricity",
+   "Stings it with spines",
+   "Chokes it with slime"
+  ],
+  "correct": 2,
+  "fact": "Hagfish slime fills a predator's mouth and gills, making it gag and back off.",
+  "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3216612"
+ },
+ {
+  "id": "gw-0056",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 3,
+  "q": "How does a hagfish scrape its own slime off its body?",
+  "answers": [
+   "Shakes like a wet dog",
+   "Ties itself in a knot",
+   "Peels it off with its claws"
+  ],
+  "correct": 1,
+  "fact": "A hagfish knots its body and slides the knot down to wipe away slime so it doesn't suffocate itself.",
+  "source": "https://www.ipm.org/show/amomentofscience/2019-09-13/hagfish-slime"
+ },
+ {
+  "id": "gw-0057",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 3,
+  "q": "At night, African dung beetles steer their dung balls in a straight line using what?",
+  "answers": [
+   "Orion's Belt",
+   "The Milky Way",
+   "The North Star"
+  ],
+  "correct": 1,
+  "fact": "A 2013 study showed dung beetles use the Milky Way's glow to roll straight, a first for any animal.",
+  "source": "https://earthsky.org/earth/dung-beetles-use-the-milky-way-to-navigate-at-night/"
+ },
+ {
+  "id": "gw-0058",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "The horned dung beetle Onthophagus taurus can pull how many times its own body weight?",
+  "answers": [
+   "About 10 times",
+   "About 50 times",
+   "Over 1,000 times"
+  ],
+  "correct": 2,
+  "fact": "Its pulling record is 1,141 times body weight, like a person hauling six double-decker buses.",
+  "source": "https://www.qmul.ac.uk/news/latest-news/2010/se/pulling-power-points-the-way-to-the-worlds-strongest-insect.html"
+ },
+ {
+  "id": "gw-0059",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Why do rabbits re-eat their own special soft droppings?",
+  "answers": [
+   "To hide their scent",
+   "To warm their burrow",
+   "To squeeze out more nutrients"
+  ],
+  "correct": 2,
+  "fact": "Eating cecotropes gives rabbits a second pass at nutrients from fibrous plants.",
+  "source": "https://en.wikipedia.org/wiki/Cecotrope"
+ },
+ {
+  "id": "gw-0060",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 3,
+  "q": "Baby koalas eat 'pap' from their mother to pick up what?",
+  "answers": [
+   "Extra calcium for bones",
+   "A fluffier coat",
+   "Gut bacteria for eucalyptus"
+  ],
+  "correct": 2,
+  "fact": "Pap is full of live bacteria that help a joey's gut handle eucalyptus leaves when it stops drinking milk.",
+  "source": "http://www.australiangeographic.com.au/news/2022/07/pap-not-poop-the-gift-a-mother-koala-gives-her-joey/"
+ },
+ {
+  "id": "gw-0061",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "A horned lizard defends itself by squirting what out of its eyes?",
+  "answers": [
+   "Acid",
+   "Ink",
+   "Blood"
+  ],
+  "correct": 2,
+  "fact": "Horned lizards can squirt an aimed stream of blood from the corners of the eyes up to 5 feet.",
+  "source": "https://en.wikipedia.org/wiki/Horned_lizard"
+ },
+ {
+  "id": "gw-0062",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "The northern fulmar defends itself by projectile-vomiting what?",
+  "answers": [
+   "Warm seawater",
+   "Stinky stomach oil",
+   "Mashed berries"
+  ],
+  "correct": 1,
+  "fact": "Fulmars shoot a stream of stomach oil up to about six feet, which ruins other birds' feathers.",
+  "source": "https://www.pbs.org/wgbh/nova/nature/defensive-vomiting.html"
+ },
+ {
+  "id": "gw-0063",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "What can a stressed sea cucumber do with its insides?",
+  "answers": [
+   "Hide them in its shell",
+   "Swap them with a friend",
+   "Spew them out and regrow them"
+  ],
+  "correct": 2,
+  "fact": "Sea cucumbers can eject their guts to escape, then regrow the digestive tract in weeks.",
+  "source": "https://oceanbites.org/going-with-your-gut-not-if-you-are-a-sea-cucumber/"
+ },
+ {
+  "id": "gw-0064",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "The tongue-eating louse does what to a snapper's tongue?",
+  "answers": [
+   "Takes its place",
+   "Stretches it twice as long",
+   "Dyes it bright red"
+  ],
+  "correct": 0,
+  "fact": "Cymothoa exigua cuts off the tongue's blood supply, then attaches itself to the stub as a replacement.",
+  "source": "https://en.wikipedia.org/wiki/Cymothoa_exigua"
+ },
+ {
+  "id": "gw-0065",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "How do vampire bats help a hungry roostmate?",
+  "answers": [
+   "Giving up their sleeping spot",
+   "Barfing up blood for them",
+   "Licking their wounds clean"
+  ],
+  "correct": 1,
+  "fact": "Vampire bats regurgitate blood to feed starving roostmates, even unrelated ones.",
+  "source": "https://www.discoverwildlife.com/animal-facts/mammals/vampire-bats-donate-food"
+ },
+ {
+  "id": "gw-0066",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "Scientists can spot hidden Antarctic penguin colonies from space by looking for what?",
+  "answers": [
+   "Their poop stains",
+   "Their loud honking",
+   "Their glowing eyes"
+  ],
+  "correct": 0,
+  "fact": "Dense colonies leave pink guano stains, coloured by their krill diet, visible in satellite images.",
+  "source": "http://www.australiangeographic.com.au/news/2010/08/penguin-poo-gives-clues-from-space/"
+ },
+ {
+  "id": "gw-0067",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "The red 'blood sweat' of hippos is really what?",
+  "answers": [
+   "A pigment sunscreen goo",
+   "Actual blood",
+   "Berry juice from their food"
+  ],
+  "correct": 0,
+  "fact": "It is neither blood nor sweat but red and orange pigments that block UV and slow bacteria.",
+  "source": "https://www.nature.com/news/2004/040524/full/news040524-7.html"
+ },
+ {
+  "id": "gw-0068",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "What might a housefly do after landing on your sandwich?",
+  "answers": [
+   "Vomit on it",
+   "Weave a silk web over it",
+   "Sneeze germs on it"
+  ],
+  "correct": 0,
+  "fact": "Flies can regurgitate stored crop contents right onto your bread.",
+  "source": "https://www.umass.edu/news/article/why-you-should-pay-attention-fly-vomit"
+ },
+ {
+  "id": "gw-0069",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Houseflies taste food with their what?",
+  "answers": [
+   "Wings",
+   "Feet",
+   "Eyes"
+  ],
+  "correct": 1,
+  "fact": "Houseflies have taste receptors on their legs, so they identify food by walking on it.",
+  "source": "https://en.wikipedia.org/wiki/House_fly"
+ },
+ {
+  "id": "gw-0070",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "How hot can a bombardier beetle's defensive spray get?",
+  "answers": [
+   "Warm bath (about 40°C)",
+   "Boiling (about 100°C)",
+   "Molten (about 300°C)"
+  ],
+  "correct": 1,
+  "fact": "The beetle mixes two chemicals in a rear chamber and blasts out a spray up to about 100°C.",
+  "source": "https://nhm.ac.uk/discover/bombardier-beetles-and-their-caustic-chemical-cannon.html"
+ },
+ {
+  "id": "gw-0071",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "The FDA cleared blood-sucking leeches in 2004 to help with what?",
+  "answers": [
+   "Lowering fevers",
+   "Whitening teeth",
+   "Healing skin grafts"
+  ],
+  "correct": 2,
+  "fact": "Leeches remove pooled blood under skin grafts and restore circulation in blocked veins.",
+  "source": "https://www.healthday.com/health-news/fda-oks-medicinal-use-of-leeches-519858.html"
+ },
+ {
+  "id": "gw-0072",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "To digest a clam, many starfish push their what out of their body?",
+  "answers": [
+   "Heart",
+   "Stomach",
+   "Brain"
+  ],
+  "correct": 1,
+  "fact": "Many starfish evert their stomach to digest prey outside the body.",
+  "source": "https://en.wikipedia.org/wiki/Starfish"
+ },
+ {
+  "id": "gw-0073",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "How do spiders eat prey without chewing?",
+  "answers": [
+   "Swallow it whole",
+   "Crush it with flat teeth",
+   "Liquefy it, then slurp it"
+  ],
+  "correct": 2,
+  "fact": "Spiders spit digestive juices onto prey, then suck up the liquefied meal.",
+  "source": "https://smithsonianeducation.org/educators/lesson_plans/under_spell_spiders/pursuit.html"
+ },
+ {
+  "id": "gw-0074",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "Frogs use which body part to help push food down their throat?",
+  "answers": [
+   "Their ears",
+   "Their back feet",
+   "Their eyeballs"
+  ],
+  "correct": 2,
+  "fact": "Frogs retract their eyes into the mouth to push prey toward the esophagus.",
+  "source": "https://www.discovermagazine.com/planet-earth/frogs-use-their-eyes-to-push-food-down-while-swallowing"
+ },
+ {
+  "id": "gw-0075",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "How long can a cockroach live without its head?",
+  "answers": [
+   "Weeks",
+   "A few seconds",
+   "A couple of hours"
+  ],
+  "correct": 0,
+  "fact": "Headless roaches can live for weeks because they breathe through body spiracles and barely bleed.",
+  "source": "https://www.scientificamerican.com/article/fact-or-fiction-cockroach-can-live-without-head/"
+ },
+ {
+  "id": "gw-0076",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "How do owls get rid of bones and fur they can't digest?",
+  "answers": [
+   "Poop them out in a pile",
+   "Cough up a pellet",
+   "Bury them for later"
+  ],
+  "correct": 1,
+  "fact": "Owls regurgitate indigestible bones, teeth and fur as a compact pellet, often at roost.",
+  "source": "https://audubon.org/news/what-owl-pellet"
+ },
+ {
+  "id": "gw-0077",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 3,
+  "q": "Pigeon 'milk' for chicks is produced in what part of the parent?",
+  "answers": [
+   "Throat pouch (the crop)",
+   "Tiny udders under the wings",
+   "Glands in the beak"
+  ],
+  "correct": 0,
+  "fact": "Fluid-filled cells from the lining of the crop are shed to make protein-rich pigeon milk.",
+  "source": "https://web.stanford.edu/group/stanfordbirds/text/uessays/uBird_Milk.html"
+ },
+ {
+  "id": "gw-0078",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "Lobsters pee out of which part of their body?",
+  "answers": [
+   "Their claws",
+   "Their tail",
+   "Their face"
+  ],
+  "correct": 2,
+  "fact": "Lobsters have bladders in their heads and release urine plumes to signal rivals and mates.",
+  "source": "https://en.wikipedia.org/wiki/American_lobster"
+ },
+ {
+  "id": "gw-0079",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Archerfish knock insects off branches by spitting what?",
+  "answers": [
+   "Sticky venom",
+   "Jets of water",
+   "Tiny pebbles"
+  ],
+  "correct": 1,
+  "fact": "Archerfish shoot a jet of water from a tube formed by tongue and mouth roof.",
+  "source": "https://australian.museum/learn/animals/fishes/sevenspot-archerfish-toxotes-chatareus/"
+ },
+ {
+  "id": "gw-0080",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "What do parrotfish poop out that builds tropical beaches?",
+  "answers": [
+   "Sand",
+   "Seashells",
+   "Pearls"
+  ],
+  "correct": 0,
+  "fact": "Parrotfish munch coral and excrete sand; they helped build Hawaiian beaches and a Maldives island.",
+  "source": "https://www.sciencenews.org/blog/wild-things/island-maldives-made-parrotfish-poop"
+ },
+ {
+  "id": "gw-0081",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "In winter, how do honeybees mostly handle bathroom breaks?",
+  "answers": [
+   "Poop into the honey",
+   "Dig tiny toilets outside",
+   "Wait for a warm-day flight"
+  ],
+  "correct": 2,
+  "fact": "Bees keep making feces all winter and leave the hive to relieve themselves on warm, dry days.",
+  "source": "https://www.honeybeesuite.com/?p=2344"
+ },
+ {
+  "id": "gw-0082",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "What lives in the pores of almost every adult's face?",
+  "answers": [
+   "Microscopic mites",
+   "Tiny fleas",
+   "Baby lice"
+  ],
+  "correct": 0,
+  "fact": "Face mites live in hair follicles, and DNA tests found them on every adult sampled.",
+  "source": "https://www.nationalgeographic.com/science/phenomena/2014/08/27/you-almost-certainly-have-mites-on-your-face/"
+ },
+ {
+  "id": "gw-0083",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Which of these animals physically cannot vomit?",
+  "answers": [
+   "Horse",
+   "Dog",
+   "Cat"
+  ],
+  "correct": 0,
+  "fact": "Horses have a very strong esophageal sphincter and a weak vomiting reflex.",
+  "source": "https://equusmagazine.com/horse-care/qa-horses-vomit-28006"
+ },
+ {
+  "id": "gw-0084",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Most of a cow's methane comes out as what?",
+  "answers": [
+   "Burps",
+   "Farts",
+   "Sweat"
+  ],
+  "correct": 0,
+  "fact": "Methane from a cow's rumen is largely burped out; very little is released at the other end.",
+  "source": "https://www.sciencelearn.org.nz/videos/2058-methane-emissions-cow-burps-not-farts"
+ },
+ {
+  "id": "gw-0085",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "Why do pigs wallow in mud?",
+  "answers": [
+   "To sharpen their teeth",
+   "To grow thicker hair",
+   "To cool down"
+  ],
+  "correct": 2,
+  "fact": "Pigs lack functional sweat glands, so they wallow in mud or water to cool off.",
+  "source": "https://en.wikipedia.org/wiki/Wallowing"
+ },
+ {
+  "id": "gw-0086",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "What makes bird poop white?",
+  "answers": [
+   "Calcium from eggshells",
+   "Uric acid (bird pee)",
+   "Sunlight bleaching"
+  ],
+  "correct": 1,
+  "fact": "Whitish uric acid crystals from the bird's urine give droppings their white colour.",
+  "source": "https://www.discoverwildlife.com/animal-facts/birds/why-is-bird-poo-white"
+ },
+ {
+  "id": "gw-0087",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "Why is spotted hyena poop bright white?",
+  "answers": [
+   "They eat white sand",
+   "It's full of bone calcium",
+   "Dust from the savanna"
+  ],
+  "correct": 1,
+  "fact": "Hyenas crunch bones, so their droppings are loaded with calcium and phosphorus.",
+  "source": "https://www.nationalgeographic.com/science/article/hyenas-toilet-fossils-poop-coprolite"
+ },
+ {
+  "id": "gw-0088",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "A silver-spotted skipper caterpillar can fire its poop pellets about how far?",
+  "answers": [
+   "About 2 cm",
+   "Roughly 1.5 m (5 ft)",
+   "About 15 cm"
+  ],
+  "correct": 1,
+  "fact": "Skipper caterpillars launch frass as far as 153 cm, probably to hide from predators.",
+  "source": "https://www.sciencenews.org/article/ballistic-defecation-hiding-not-hygiene"
+ },
+ {
+  "id": "gw-0089",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "A snail's ribbon-like tongue is lined with thousands of tiny what?",
+  "answers": [
+   "Suction cups",
+   "Teeth",
+   "Stingers"
+  ],
+  "correct": 1,
+  "fact": "Snails and slugs eat with a jaw and a radula, a band of thousands of microscopic teeth.",
+  "source": "https://nhm.org/stories/microscopic-look-snail-jaws"
+ },
+ {
+  "id": "gw-0090",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 3,
+  "q": "Which large seabird do Galapagos vampire finches prick for a blood meal?",
+  "answers": [
+   "Nazca booby",
+   "Albatross",
+   "Pelican"
+  ],
+  "correct": 0,
+  "fact": "Vampire ground finches peck booby skin and drink the blood, especially when food is scarce.",
+  "source": "https://www.smithsonianmag.com/smart-news/why-some-darwins-finches-evolved-drink-blood-180976814/"
+ },
+ {
+  "id": "gw-0091",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "Ambergris, a perfume ingredient, forms in the gut of which animal?",
+  "answers": [
+   "Giant squid",
+   "Walrus",
+   "Sperm whale"
+  ],
+  "correct": 2,
+  "fact": "Ambergris forms in the sperm whale's intestines and is passed out like faecal matter.",
+  "source": "https://en.wikipedia.org/wiki/Ambergris"
+ },
+ {
+  "id": "gw-0092",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 3,
+  "q": "Some pearlfish hide from predators inside the rear end of what?",
+  "answers": [
+   "A sea turtle",
+   "A sea cucumber",
+   "A pufferfish"
+  ],
+  "correct": 1,
+  "fact": "Some pearlfish species live inside a sea cucumber's anus for shelter.",
+  "source": "https://www.australiangeographic.com.au/blogs/creatura-blog/2014/08/pearlfish-lives-in-sea-cucumber-anus/"
+ },
+ {
+  "id": "gw-0093",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 2,
+  "q": "New World tarantulas defend themselves by flinging what from their abdomen?",
+  "answers": [
+   "Sticky silk",
+   "Venom darts",
+   "Itchy barbed hairs"
+  ],
+  "correct": 2,
+  "fact": "They rub their hind legs on the abdomen to throw irritating urticating hairs at attackers.",
+  "source": "https://en.wikipedia.org/wiki/Urticating_hair"
+ },
+ {
+  "id": "gw-0094",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 1,
+  "q": "A skunk's stinky spray comes from glands near its what?",
+  "answers": [
+   "Ears",
+   "Mouth",
+   "Tail"
+  ],
+  "correct": 2,
+  "fact": "Skunks spray sulfur-rich liquid from anal scent glands, aiming accurately up to about 3 m (10 ft).",
+  "source": "https://en.wikipedia.org/wiki/Skunk"
+ },
+ {
+  "id": "gw-0095",
+  "cat": "gross",
+  "topic": "animals",
+  "difficulty": 3,
+  "q": "Many baby termites get their gut microbes by doing what?",
+  "answers": [
+   "Licking tree sap",
+   "Biting beetles",
+   "Eating adults' rear-end fluid"
+  ],
+  "correct": 2,
+  "fact": "Neonates get gut symbionts by feeding on parents' gut fluids, called proctodeal trophallaxis.",
+  "source": "https://www.frontiersin.org/articles/10.3389/fevo.2020.00014/full"
+ },
+ {
+  "id": "gw-0096",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Sardinia's casu marzu is a cheese famous for containing live what?",
+  "answers": [
+   "Fly maggots",
+   "Beetle grubs",
+   "Tiny crabs"
+  ],
+  "correct": 0,
+  "fact": "Cheese-fly larvae are added to pecorino and their digestion ferments it. Sale is banned in the EU.",
+  "source": "https://en.wikipedia.org/wiki/Casu_marzu"
+ },
+ {
+  "id": "gw-0097",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "Which tiny critters give France's bright orange Mimolette cheese its crusty rind?",
+  "answers": [
+   "Fruit flies",
+   "Cheese mites",
+   "Cheese weevils"
+  ],
+  "correct": 1,
+  "fact": "Mites munch the rind for years. The US FDA once blocked imports over a six-mites-per-square-inch limit.",
+  "source": "https://www.npr.org/sections/thesalt/2013/05/11/180570160/tiny-mites-spark-big-battle-over-imports-of-french-cheese"
+ },
+ {
+  "id": "gw-0098",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "The red food dye carmine, found in some pink yogurts, is made from what?",
+  "answers": [
+   "Boiled red beets",
+   "Crushed raspberry seeds",
+   "Dried cochineal insects"
+  ],
+  "correct": 2,
+  "fact": "Carmine is extracted from the dried, pulverized bodies of cochineal insects.",
+  "source": "https://www.cspinet.org/new/201307241.html"
+ },
+ {
+  "id": "gw-0099",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "The shiny 'confectioner's glaze' on jelly beans is made from what?",
+  "answers": [
+   "Lac bug secretions",
+   "Boiled seaweed",
+   "Squeezed corn syrup"
+  ],
+  "correct": 0,
+  "fact": "Shellac is a resin secreted by female lac bugs. It is also sold as confectioner's glaze.",
+  "source": "https://thetakeout.com/2068005/bug-excretion-in-candy-shellac-coating-explained"
+ },
+ {
+  "id": "gw-0100",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "What did Swiss researchers find causes the holes in Swiss cheese?",
+  "answers": [
+   "Tiny bits of hay in the milk",
+   "Salt crystals",
+   "Cheese mould spores"
+  ],
+  "correct": 0,
+  "fact": "Agroscope scientists found hay particles in milk form the 'eyes'. Cleaner milking means fewer holes.",
+  "source": "https://www.smithsonianmag.com/smart-news/scientists-have-finally-figured-out-why-swiss-cheese-has-holes-180955450/"
+ },
+ {
+  "id": "gw-0101",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "Why must Iceland's hákarl shark meat be fermented before anyone eats it?",
+  "answers": [
+   "Fresh meat is poisonous",
+   "Raw shark is too chewy",
+   "It turns the flesh pink"
+  ],
+  "correct": 0,
+  "fact": "Fresh Greenland shark flesh is toxic (TMAO). Fermenting and drying it for months makes it edible.",
+  "source": "https://en.wikipedia.org/wiki/Greenland_shark"
+ },
+ {
+  "id": "gw-0102",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Castoreum, a rare 'natural flavouring', comes from the glands of which animal?",
+  "answers": [
+   "Beaver",
+   "Skunk",
+   "Otter"
+  ],
+  "correct": 0,
+  "fact": "Beaver castoreum is FDA-approved as a flavouring but is now exceedingly rare in food.",
+  "source": "https://www.snopes.com/fact-check/castoreum"
+ },
+ {
+  "id": "gw-0103",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Kopi luwak coffee beans have been eaten and pooped out by which animal?",
+  "answers": [
+   "Rhesus monkey",
+   "Asian palm civet",
+   "Fruit bat"
+  ],
+  "correct": 1,
+  "fact": "Civets eat the coffee cherries, and the partly digested beans are collected from their droppings.",
+  "source": "https://en.wikipedia.org/wiki/Kopi_luwak"
+ },
+ {
+  "id": "gw-0104",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Chinese bird's-nest soup is made from nests built from what?",
+  "answers": [
+   "Woven river grass",
+   "Mud and twigs",
+   "Hardened swiftlet spit"
+  ],
+  "correct": 2,
+  "fact": "Edible-nest swiftlet nests are made entirely of solidified saliva.",
+  "source": "https://en.wikipedia.org/wiki/Edible-nest_swiftlet"
+ },
+ {
+  "id": "gw-0105",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "Ancient Rome's favourite sauce, garum, was fermented from what?",
+  "answers": [
+   "Fish guts",
+   "Snail slime",
+   "Pig fat"
+  ],
+  "correct": 0,
+  "fact": "Romans fermented fish guts with salt for months, much like modern fish sauce.",
+  "source": "https://www.nationalgeographic.com/history/history-magazine/article/what-is-garum-rome-fish-sauce"
+ },
+ {
+  "id": "gw-0106",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "How long are Chinese 'century eggs' actually preserved?",
+  "answers": [
+   "About 100 years",
+   "About 10 years",
+   "Weeks to months"
+  ],
+  "correct": 2,
+  "fact": "Eggs are cured in clay, ash, salt and quicklime for several weeks to a few months, not a century.",
+  "source": "https://en.wikipedia.org/wiki/Century_egg"
+ },
+ {
+  "id": "gw-0107",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "Marmite is a spread made from leftover what from beer-making?",
+  "answers": [
+   "Hops stalks",
+   "Brewer's yeast",
+   "Barley husks"
+  ],
+  "correct": 1,
+  "fact": "Marmite began in 1902 using spare yeast from Bass Brewery in Burton upon Trent.",
+  "source": "https://en.wikipedia.org/wiki/Marmite"
+ },
+ {
+  "id": "gw-0108",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 3,
+  "q": "Natto, the stringy Japanese breakfast, is soybeans fermented with which bacterium?",
+  "answers": [
+   "Bacillus subtilis",
+   "Lactobacillus bulgaricus",
+   "Streptococcus mutans"
+  ],
+  "correct": 0,
+  "fact": "Cooked soybeans are fermented with Bacillus subtilis var. natto, which makes the sticky strands.",
+  "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10923668"
+ },
+ {
+  "id": "gw-0109",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 2,
+  "q": "Sweden's notoriously stinky surströmming is canned, fermented what?",
+  "answers": [
+   "Cod",
+   "Herring",
+   "Salmon"
+  ],
+  "correct": 1,
+  "fact": "Surströmming is fermented Baltic Sea herring, famous for its powerful smell when the can is opened.",
+  "source": "https://en.wikipedia.org/wiki/Surstr%C3%B6mming"
+ },
+ {
+  "id": "gw-0110",
+  "cat": "gross",
+  "topic": "food",
+  "difficulty": 1,
+  "q": "The US FDA allows peanut butter to average up to 30 what per 100 grams?",
+  "answers": [
+   "Insect fragments",
+   "Peanut shell chunks",
+   "Wood splinters"
+  ],
+  "correct": 0,
+  "fact": "The FDA's defect action level for peanut butter is an average of 30 insect fragments per 100 g.",
+  "source": "https://en.wikipedia.org/wiki/The_Food_Defect_Action_Levels"
+ },
+ {
+  "id": "gw-0111",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 1,
+  "q": "At the English royal court, what was the Groom of the Stool's job?",
+  "answers": [
+   "Helping the king with the toilet",
+   "Carrying the king's footstool",
+   "Feeding the royal dogs"
+  ],
+  "correct": 0,
+  "fact": "The most intimate courtier helped the monarch with excretion and hygiene, and later gained real power.",
+  "source": "https://en.wikipedia.org/wiki/Groom_of_the_Stool"
+ },
+ {
+  "id": "gw-0112",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 3,
+  "q": "Who is credited with building a flush toilet for Queen Elizabeth I in the 1590s?",
+  "answers": [
+   "Thomas Crapper",
+   "Sir John Harington",
+   "Sir Walter Raleigh"
+  ],
+  "correct": 1,
+  "fact": "Her godson Harington installed one at Richmond Palace. Crapper came centuries later and did not invent the toilet.",
+  "source": "https://blog.sciencemuseum.org.uk/a-flushing-story/"
+ },
+ {
+  "id": "gw-0113",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 3,
+  "q": "During London's Great Stink of 1858, Parliament soaked its curtains in what?",
+  "answers": [
+   "Lavender oil",
+   "Vinegar",
+   "Chloride of lime"
+  ],
+  "correct": 2,
+  "fact": "Parliament doused its curtains in chloride of lime to mask the Thames reek, then passed a law within 18 days.",
+  "source": "https://www.historic-uk.com/HistoryUK/HistoryofBritain/Londons-Great-Stink/"
+ },
+ {
+  "id": "gw-0114",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 2,
+  "q": "What was a Roman 'vomitorium' actually?",
+  "answers": [
+   "A room to purge after feasts",
+   "A bath for sick patients",
+   "A passage for crowds to exit"
+  ],
+  "correct": 2,
+  "fact": "Vomitoria were stadium passages that 'spewed' crowds out. The puking-room idea is a modern myth.",
+  "source": "https://www.history.com/articles/vomitoriums-fact-or-fiction"
+ },
+ {
+  "id": "gw-0115",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 2,
+  "q": "Emperor Vespasian's line 'money does not stink' defended a tax on what?",
+  "answers": [
+   "Garum fish sauce",
+   "Public bathhouse steam",
+   "Urine from public toilets"
+  ],
+  "correct": 2,
+  "fact": "Vespasian taxed urine collection and held up coins to ask Titus if they smelled. 'Pecunia non olet' became a proverb.",
+  "source": "https://en.wikipedia.org/wiki/Vespasian"
+ },
+ {
+  "id": "gw-0116",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 2,
+  "q": "George Washington's dentures were not wooden. One set had carved what?",
+  "answers": [
+   "Hippopotamus ivory",
+   "Oak",
+   "Beeswax"
+  ],
+  "correct": 0,
+  "fact": "One set was made of carved hippo ivory, human teeth and brass nails. The wood myth came from stains.",
+  "source": "https://www.popsci.com/george-washington-dentures/"
+ },
+ {
+  "id": "gw-0117",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 1,
+  "q": "Where was toilet paper first written about, around the year 589?",
+  "answers": [
+   "China",
+   "Egypt",
+   "Rome"
+  ],
+  "correct": 0,
+  "fact": "Scholar Yan Zhitui wrote about it in 589, so paper was used for hygiene in China by the 6th century.",
+  "source": "https://en.wikipedia.org/wiki/Toilet_paper"
+ },
+ {
+  "id": "gw-0118",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 3,
+  "q": "'Mellitus' in diabetes mellitus comes from the Latin for what, after sweet urine?",
+  "answers": [
+   "Milk",
+   "Honey",
+   "Wine"
+  ],
+  "correct": 1,
+  "fact": "Doctors tasted urine to diagnose diabetes. 'Mellitus' comes from the Latin for honey, hence 'honey-sweet'.",
+  "source": "https://dartmed.dartmouth.edu/winter08/html/diabetes_detectives_02.php"
+ },
+ {
+  "id": "gw-0119",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 1,
+  "q": "For thousands of years, people blamed toothaches on what?",
+  "answers": [
+   "Wicked moonbeams",
+   "Tiny worms in the tooth",
+   "Grumpy tooth fairies"
+  ],
+  "correct": 1,
+  "fact": "A Babylonian tablet, 'The Legend of the Worm', blames tooth worms. The belief lasted into the 18th century.",
+  "source": "https://en.wikipedia.org/wiki/Tooth_worm"
+ },
+ {
+  "id": "gw-0120",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 3,
+  "q": "What valuable item did Samuel Pepys famously bury in his garden in the Great Fire of 1666?",
+  "answers": [
+   "A round of Parmesan cheese",
+   "His spare wigs",
+   "His pet parrot"
+  ],
+  "correct": 0,
+  "fact": "Pepys hid his valuables and famously buried a round of parmesan cheese in his garden.",
+  "source": "https://www.rmg.co.uk/stories/blog/curatorial/londons-burning-samuel-pepys-great-fire-london"
+ },
+ {
+  "id": "gw-0121",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 2,
+  "q": "At medieval feasts, what were 'trenchers' used as?",
+  "answers": [
+   "Napkins made of linen",
+   "Plates made of stale bread",
+   "Cups made of cow horn"
+  ],
+  "correct": 1,
+  "fact": "A trencher was a flat round of stale bread used as a plate, then eaten or given to the poor.",
+  "source": "https://en.wikipedia.org/wiki/Trencher_(tableware)"
+ },
+ {
+  "id": "gw-0122",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 1,
+  "q": "Old Edinburgh folk yelled 'Gardyloo!' before doing what from their windows?",
+  "answers": [
+   "Emptying chamber pots",
+   "Hanging out laundry",
+   "Firing cannons"
+  ],
+  "correct": 0,
+  "fact": "'Gardyloo' came from the French for 'beware of the water'. The 1749 Nastiness Act tried to curb the practice.",
+  "source": "https://www.edinburghexpert.com/blog/what-a-waste-a-brief-history-of-poo-in-edinburgh"
+ },
+ {
+  "id": "gw-0123",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 1,
+  "q": "Old-time tanners softened raw hides by working in which smelly ingredient?",
+  "answers": [
+   "Boiled cabbage water",
+   "Dog or pigeon poo",
+   "Powdered chalk"
+  ],
+  "correct": 1,
+  "fact": "Bating and puering used hen, pigeon or dog droppings. Their bacterial enzymes made leather soft.",
+  "source": "https://en.wikipedia.org/wiki/Bating_(leather)"
+ },
+ {
+  "id": "gw-0124",
+  "cat": "gross",
+  "topic": "weird-history",
+  "difficulty": 1,
+  "q": "In Tudor England, what was a 'gong farmer's' job?",
+  "answers": [
+   "Emptying cesspits",
+   "Ringing church bells",
+   "Herding geese"
+  ],
+  "correct": 0,
+  "fact": "Gong farmers dug out privies and cesspits, and were only allowed to work at night.",
+  "source": "https://en.wikipedia.org/wiki/Gong_farmer"
+ },
+ {
+  "id": "gw-0125",
+  "cat": "gross",
+  "topic": "science",
+  "difficulty": 2,
+  "q": "A brainless slime mould recreated which city's rail network in a 2010 experiment?",
+  "answers": [
+   "Tokyo",
+   "London",
+   "New York"
+  ],
+  "correct": 0,
+  "fact": "Physarum polycephalum, fed oat flakes at city positions, grew tubes much like Tokyo's rail map.",
+  "source": "https://www.nationalgeographic.com/science/article/slime-mould-attacks-simulates-tokyo-rail-network"
+ },
+ {
+  "id": "gw-0126",
+  "cat": "gross",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "Which gas gives Uranus's cloud tops a rotten-egg smell?",
+  "answers": [
+   "Hydrogen sulfide",
+   "Methane",
+   "Helium"
+  ],
+  "correct": 0,
+  "fact": "Gemini North observations confirmed hydrogen sulfide in Uranus's cloud tops, the gas of rotten eggs.",
+  "source": "https://www.jpl.nasa.gov/news/what-uranus-cloud-tops-have-in-common-with-rotten-eggs/"
+ },
+ {
+  "id": "gw-0127",
+  "cat": "gross",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "Astronauts say the smell of space clinging to their suits resembles what?",
+  "answers": [
+   "Fresh mint",
+   "Cut grass",
+   "Seared steak and hot metal"
+  ],
+  "correct": 2,
+  "fact": "Spacewalkers report an acrid smell of seared steak, hot metal and welding fumes after coming inside.",
+  "source": "https://www.space.com/16688-what-does-space-smell-like.html"
+ },
+ {
+  "id": "gw-0128",
+  "cat": "gross",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "The titan arum is nicknamed the 'corpse flower' for smelling like what?",
+  "answers": [
+   "Burnt rubber",
+   "Wet cardboard",
+   "Rotting flesh"
+  ],
+  "correct": 2,
+  "fact": "The rare bloom unleashes a stench like rotting flesh inside the greenhouse.",
+  "source": "https://www.nbcnews.com/sciencemain/foul-corpse-flower-alive-blooming-stinky-6C10707621"
+ },
+ {
+  "id": "gw-0129",
+  "cat": "gross",
+  "topic": "science",
+  "difficulty": 2,
+  "q": "How long does a corpse flower bloom stay open before collapsing?",
+  "answers": [
+   "About 2 weeks",
+   "24 to 48 hours",
+   "A whole month"
+  ],
+  "correct": 1,
+  "fact": "The rare, stinky titan arum bloom lasts only about 24 to 48 hours.",
+  "source": "https://www.nbcnews.com/sciencemain/foul-corpse-flower-alive-blooming-stinky-6C10707621"
+ },
+ {
+  "id": "gw-0130",
+  "cat": "gross",
+  "topic": "science",
+  "difficulty": 2,
+  "q": "The 'zombie-ant' fungus forces infected ants to bite what before they die?",
+  "answers": [
+   "A passing beetle's leg",
+   "A leaf vein",
+   "Their own queen"
+  ],
+  "correct": 1,
+  "fact": "At solar noon the fungus makes ants bite a leaf's main vein, in a cool damp spot good for the fungus.",
+  "source": "https://www.sciencedaily.com/releases/2011/05/110509065536.htm"
+ },
+ {
+  "id": "gw-0131",
+  "cat": "gross",
+  "topic": "science",
+  "difficulty": 3,
+  "q": "The earthy smell of rain comes partly from a compound made by which microbes?",
+  "answers": [
+   "Earthworm sweat",
+   "Streptomyces soil bacteria",
+   "Pollen grains"
+  ],
+  "correct": 1,
+  "fact": "Soil bacteria like Streptomyces make geosmin. Humans can smell it at about 5 parts per trillion.",
+  "source": "https://sciencenotes.org/petrichor-and-geosmin-the-smell-of-rain/"
+ },
+ {
+  "id": "gw-0132",
+  "cat": "gross",
+  "topic": "science",
+  "difficulty": 1,
+  "q": "To turn nectar into honey, bees repeatedly do what with it?",
+  "answers": [
+   "Bury it underground",
+   "Pass it as droppings",
+   "Regurgitate it"
+  ],
+  "correct": 2,
+  "fact": "Foragers regurgitate nectar to hive bees, which regurgitate it into wax cells while adding enzymes.",
+  "source": "https://extension.msstate.edu/blogs/extension-for-real-life/how-honey-made"
+ }
+]
