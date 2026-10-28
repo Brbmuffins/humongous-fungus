@@ -27,7 +27,9 @@ import { RocketApp } from '@hammygotchi/rocketview';
 import { setSound, unlock } from '@hammygotchi/sound';
 import { Arena } from './online/arena';
 import { goOnline } from './online/join';
+import { TriviaApp } from './online/triviaview';
 import type { OnlineWallet } from './online/wallet';
+import { TRIVIA_NAME } from '../shared/trivia';
 import { START_COINS, TOP_UP_COINS, Wallet } from './wallet';
 
 /** What the front page needs of a wallet, local or the server's. */
@@ -70,6 +72,7 @@ class ArcadePage {
   private balance = h('span', { id: 'balance' });
   private portrait = h('canvas', { class: 'a-portrait', 'aria-hidden': 'true' });
   private cardsEl = h('div', { class: 'a-cards' });
+  private triviaEl = h('button', { class: 'a-trivia', type: 'button', hidden: true, onclick: () => this.openGame('trivia') });
   private soundBtn = h('button', { class: 'a-link', type: 'button', onclick: () => this.wallet.setSound(!this.wallet.sound) });
   private resetBtn = h('button', { class: 'a-link', type: 'button', onclick: () => this.askReset() });
   private toastEl = h('p', { class: 'a-toast', role: 'status', hidden: true });
@@ -80,7 +83,7 @@ class ArcadePage {
   private topUpBtn = h('button', { class: 'btn btn-cheese', type: 'button', onclick: () => this.takeTopUp() });
   private topUpEl = h('div', { class: 'a-topup', role: 'status', hidden: true }, this.topUpText, this.topUpBtn);
   private screen: ArcadeScreen | null = null;
-  private game: ArcadeGame | null = null;
+  private game: ArcadeGame | 'trivia' | null = null;
   /** The browser history entry the open game pushed, if it did. */
   private pushed = false;
   private toastTimer = 0;
@@ -106,6 +109,7 @@ class ArcadePage {
         ),
         h('h2', { class: 'a-pick' }, 'Pick a game'),
         this.cardsEl,
+        this.triviaEl,
         h(
           'footer',
           { class: 'a-foot' },
@@ -127,6 +131,7 @@ class ArcadePage {
     this.render();
     if (arena) {
       for (const e of ['players', 'status', 'snapshot']) arena.sky.on(e, () => this.renderSky());
+      arena.trivia.onChange(() => this.renderTrivia());
     }
 
     // Browsers only allow sound after a first tap.
@@ -156,6 +161,7 @@ class ArcadePage {
 
     const linked = ARCADE.find((g) => `#${g.id}` === location.hash);
     if (linked) this.openGame(linked.id, false);
+    else if (arena && location.hash === '#trivia') this.openGame('trivia', false);
   }
 
   // The front page -----------------------------------------------------------
@@ -164,6 +170,7 @@ class ArcadePage {
     const w = this.wallet;
     setText(this.balance, coinsText(w.coins));
     this.cardsEl.replaceChildren(...ARCADE.map((g) => this.card(g)));
+    this.renderTrivia();
     setSound(w.sound);
     setText(this.soundBtn, w.sound ? '🔊 Sound on' : '🔇 Sound off');
     this.soundBtn.setAttribute('aria-pressed', String(w.sound));
@@ -211,6 +218,22 @@ class ArcadePage {
     this.renameEl.hidden = false;
     input.focus();
     input.select();
+  }
+
+  /** The Damp Seat's card: only when the arcade's server is there, with what is on right now. */
+  private renderTrivia(): void {
+    const t = this.arena?.trivia;
+    this.triviaEl.hidden = !t;
+    if (!t) return;
+    const r = t.round;
+    const now = r ? (r.phase === 'lobby' ? 'Doors open' : `Question ${r.i + 1} of ${r.total}`) : 'Setting up';
+    this.triviaEl.replaceChildren(
+      h('span', { class: 'a-icon', 'aria-hidden': 'true' }, '💦'),
+      h('span', { class: 'a-name' }, TRIVIA_NAME),
+      h('span', { class: 'a-blurb' }, 'One player in the hot seat, everyone else the crowd. Free to join. ', h('span', { class: 'a-trivia-live' }, r ? `${r.humans.length + r.cast.length} in the crowd · ${now}` : now)),
+      h('span', { class: 'a-play', 'aria-hidden': 'true' }, 'Play ›'),
+    );
+    this.triviaEl.setAttribute('aria-label', `Play ${TRIVIA_NAME}, the one-versus-the-crowd quiz`);
   }
 
   private card(g: ArcadeDef): HTMLElement {
@@ -292,7 +315,7 @@ class ArcadePage {
 
   // The games ----------------------------------------------------------------
 
-  private openGame(id: ArcadeGame, push = true): void {
+  private openGame(id: ArcadeGame | 'trivia', push = true): void {
     if (this.screen) return;
     const close = () => this.leave();
     // With the server there: the shared rounds. Without: the same screens on rounds rolled here.
@@ -303,7 +326,7 @@ class ArcadePage {
       crossing: () => new CrossingApp(this.wallet, close, a?.crossing),
       plinko: () => new PlinkoApp(this.wallet, close, a?.plinko),
     };
-    const app = make[id]();
+    const app = id === 'trivia' && a ? new TriviaApp(this.wallet, close, a.trivia) : make[id as ArcadeGame]();
     // The way back to the front page, where the ✕ would be.
     const back = h('button', { class: 'a-back', type: 'button', onclick: close }, h('span', { 'aria-hidden': 'true' }, '‹'), ' Arcade');
     back.setAttribute('aria-label', 'Back to the front page');
@@ -361,13 +384,13 @@ class ArcadePage {
     }
     this.offered = false;
     this.render();
-    if (talk && r.rounds) {
+    if (talk && r.rounds && game !== 'trivia') {
       const home = HOME_LINES[game];
       const line = pick(r.net > 0 ? home.won : r.net < 0 ? home.lost : home.even);
       this.say(`${r.net ? `${signed(r.net)} coins. ` : ''}${line}`);
     }
     // Back on the front page, with the card you came from focused.
-    (this.cardsEl.children[ARCADE.findIndex((g) => g.id === game)] as HTMLElement | undefined)?.focus({ preventScroll: true });
+    (game === 'trivia' ? this.triviaEl : (this.cardsEl.children[ARCADE.findIndex((g) => g.id === game)] as HTMLElement | undefined))?.focus({ preventScroll: true });
   }
 }
 

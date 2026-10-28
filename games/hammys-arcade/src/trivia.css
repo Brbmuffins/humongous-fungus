@@ -1,0 +1,256 @@
+/* The Damp Seat. Sits on the arcade card look (arcade.css) and the page's colours. */
+.a-trivia {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 14px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  border: 2px solid color-mix(in srgb, var(--stink) 55%, var(--line));
+  border-radius: 22px;
+  background:
+    radial-gradient(130% 120% at 0% 0%, color-mix(in srgb, var(--stink) 26%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--panel-2), var(--panel));
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.a-trivia:hover {
+  border-color: var(--stink);
+}
+.a-trivia .a-icon {
+  grid-row: 1 / 3;
+  --c: var(--stink);
+}
+.a-trivia .a-name {
+  align-self: end;
+}
+.a-trivia .a-blurb {
+  grid-column: 2;
+  align-self: start;
+}
+.a-trivia .a-play {
+  grid-row: 1 / 3;
+  grid-column: 3;
+}
+.a-trivia-live {
+  color: var(--stink);
+  font-weight: 600;
+}
+
+.ds-card {
+  width: min(680px, 100%);
+}
+.ds-host {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ds-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--cheese);
+  font-size: 26px;
+}
+.ds-line {
+  flex: 1;
+  min-height: 3.4em;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1.35;
+}
+.ds-meta,
+.ds-sub,
+.ds-role {
+  font-size: 13px;
+  color: var(--muted);
+}
+.ds-stage {
+  display: grid;
+  gap: 10px;
+  min-height: 260px;
+  align-content: start;
+}
+.ds-big {
+  font: 400 24px/1.1 var(--font-display);
+  color: var(--cheese);
+  text-wrap: balance;
+}
+.ds-count {
+  font-variant-numeric: tabular-nums;
+}
+.ds-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ds-actions .btn {
+  flex: 1 1 160px;
+  min-height: 46px;
+}
+.ds-kind {
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ds-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel);
+}
+.ds-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--stink);
+  transform-origin: left;
+  transition: transform 0.12s linear;
+}
+.ds-clock {
+  font: 400 18px/1 var(--font-display);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ds-q {
+  font: 500 clamp(17px, 4.6vw, 22px) / 1.25 var(--font-ui);
+  text-wrap: balance;
+}
+.ds-answers {
+  display: grid;
+  gap: 8px;
+}
+.ds-answer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 8px 12px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  font: 500 16px/1.25 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+.ds-answer:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+.ds-answer:not(:disabled):hover {
+  border-color: var(--cheese);
+}
+.ds-answer.picked {
+  border-color: var(--blue);
+  opacity: 1;
+  background: color-mix(in srgb, var(--blue) 22%, var(--panel));
+}
+.ds-answer.shown {
+  cursor: default;
+}
+.ds-answer.right {
+  border-color: var(--mint);
+  background: color-mix(in srgb, var(--mint) 20%, var(--panel));
+}
+.ds-letter {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--panel-2);
+  font: 400 15px/1 var(--font-display);
+}
+.ds-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 13px;
+}
+.ds-reveal {
+  display: grid;
+  gap: 8px;
+}
+.ds-fact {
+  font-size: 14px;
+  line-height: 1.4;
+}
+.ds-fact a {
+  color: var(--cheese);
+  font-weight: 600;
+}
+.ds-notice {
+  color: var(--danger);
+  font-size: 13px;
+}
+.ds-wall {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  max-height: 128px;
+  overflow: hidden;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--room);
+}
+.ds-dot {
+  width: 22px;
+  height: 22px;
+  font-size: 15px;
+  line-height: 22px;
+  text-align: center;
+}
+.ds-dot.out {
+  opacity: 0.18;
+  filter: grayscale(1);
+}
+.ds-dot.you {
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--stink) 35%, transparent);
+}
+.ds-dot.me {
+  outline: 2px solid var(--cheese);
+}
+.ds-foot {
+  font-size: 12px;
+}
+@media (min-width: 900px) {
+  .ds-answers {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ds-answer {
+    min-height: 84px;
+  }
+  .ds-dot {
+    width: 26px;
+    height: 26px;
+    line-height: 26px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ds-bar-fill {
+    transition: none;
+  }
+}
+.btn-stink {
+  background: var(--stink);
+  color: var(--stink-ink);
+}
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--text);
+}

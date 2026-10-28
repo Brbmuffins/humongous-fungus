@@ -28,6 +28,7 @@ export const EVENTS = [
   'plinko.drop',
   'plinko.epoch',
   'plinko.reveal',
+  ...['round', 'crowd', 'ask', 'tally', 'closing', 'reveal', 'decide', 'end'].map((e) => `trivia.${e}`),
 ] as const;
 
 type Handler = (data: any) => void;

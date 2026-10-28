@@ -1,6 +1,7 @@
 // What the page and the server say to each other. The server (games/hammys-arcade/server)
 // is the only thing that rolls dice, holds coins or keeps time; the page draws what it's told.
 import type { ArcadeGame, BetStats } from '@hammygotchi/arcade';
+import type { TriviaSnapshot } from './trivia';
 
 /** Everything lives under this path, on the same origin as the page. */
 export const API = '/arcade/api/';
@@ -145,6 +146,7 @@ export interface Snapshot {
   crossing: { round: CrossingRound | null };
   mines: { round: MinesRound | null };
   plinko: { hash: string; epoch: number; first: number; recent: PlinkoDrop[] };
+  trivia: TriviaSnapshot;
 }
 
 /** The answer to every POST. */

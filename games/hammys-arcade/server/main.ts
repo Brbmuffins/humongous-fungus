@@ -3,6 +3,7 @@
 //   PORT       required (0 picks a free one)
 //   HOST       default 127.0.0.1
 //   DATA_DIR   where the wallet file goes (default ./data)
+//   TRIVIA_TIME_SCALE optional, tests only: run The Damp Seat this many times faster
 //   STATIC_DIR optional: serve its index.html at / (local testing only)
 import { App } from './app';
 
@@ -17,6 +18,8 @@ const app = new App({
   host: process.env.HOST || '127.0.0.1',
   dataDir: process.env.DATA_DIR || './data',
   staticDir: process.env.STATIC_DIR || null,
+  // Test-only: run The Damp Seat faster than real time.
+  triviaTimeScale: Number(process.env.TRIVIA_TIME_SCALE) || undefined,
 });
 
 const at = await app.listen();

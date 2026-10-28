@@ -41,7 +41,7 @@ export function amountOf(v: unknown): number | null {
 }
 
 export interface Game {
-  readonly id: ArcadeGame;
+  readonly id: ArcadeGame | 'trivia';
   /** Public state for a page that just connected. */
   snapshot(): unknown;
   /** Do whatever is due by now. */
