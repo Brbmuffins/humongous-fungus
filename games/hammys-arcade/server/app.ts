@@ -8,6 +8,7 @@ import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { API, type Snapshot } from '../shared/protocol';
 import { CrossingGame } from './crossing';
+import { DealGame } from './deal';
 import { newSeed, type Env, type Game, type Res } from './engine';
 import { Buckets } from './limits';
 import { MinesGame } from './mines';
@@ -47,7 +48,7 @@ const STATUS: Record<string, number> = { bad_request: 400, unauthorized: 401, no
 
 export class App {
   readonly store: Store;
-  readonly games: { rocket: RocketGame; crossing: CrossingGame; mines: MinesGame; plinko: PlinkoGame };
+  readonly games: { rocket: RocketGame; crossing: CrossingGame; mines: MinesGame; plinko: PlinkoGame; deal: DealGame };
   readonly env: Env;
   readonly server: Server;
   private clients = new Map<string, Client>();
@@ -80,7 +81,7 @@ export class App {
       newSeed: opts.newSeed ?? newSeed,
       wake: () => this.wake(),
     };
-    this.games = { rocket: new RocketGame(this.env), crossing: new CrossingGame(this.env), mines: new MinesGame(this.env), plinko: new PlinkoGame(this.env) };
+    this.games = { rocket: new RocketGame(this.env), crossing: new CrossingGame(this.env), mines: new MinesGame(this.env), plinko: new PlinkoGame(this.env), deal: new DealGame(this.env) };
     if (opts.staticDir) this.staticHtml = readFileSync(join(opts.staticDir, 'index.html'), 'utf8');
     this.server = createServer((req, res) => {
       this.route(req, res).catch((e: unknown) => {
@@ -93,7 +94,7 @@ export class App {
   }
 
   private all(): Game[] {
-    return [this.games.rocket, this.games.crossing, this.games.mines, this.games.plinko];
+    return [this.games.rocket, this.games.crossing, this.games.mines, this.games.plinko, this.games.deal];
   }
 
   async listen(): Promise<{ host: string; port: number }> {
@@ -198,6 +199,7 @@ export class App {
       crossing: this.games.crossing.snapshot(),
       mines: this.games.mines.snapshot(),
       plinko: this.games.plinko.snapshot(),
+      deal: this.games.deal.snapshot(),
     };
   }
 
@@ -346,9 +348,9 @@ export class App {
       if (!given) return this.reply(res, { ok: false, error: 'not_broke', message: 'You still have coins, or some are riding on a round.' });
       return this.reply(res, { ok: true, given, me: this.store.me(player) });
     }
-    const m = /^(rocket|crossing|mines|plinko)\/([a-z]+)$/.exec(rest);
+    const m = /^(rocket|crossing|mines|plinko|deal)\/([a-z]+)$/.exec(rest);
     if (m) {
-      const r = this.games[m[1] as 'rocket' | 'crossing' | 'mines' | 'plinko'].handle(m[2], player, body);
+      const r = this.games[m[1] as 'rocket' | 'crossing' | 'mines' | 'plinko' | 'deal'].handle(m[2], player, body);
       if (r) return this.reply(res, r.ok ? { ...r, me: this.store.me(player) } : { ...r, me: this.store.me(player) } as Res);
     }
     return this.send(res, 404, { ok: false, error: 'not_found', message: 'Nothing here.' });

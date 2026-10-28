@@ -3,6 +3,7 @@
 import { crashCause, crashPoint } from '@hammygotchi/rocket';
 import { VEHICLES } from '@hammygotchi/crossing';
 import { clampMines, layMines } from '@hammygotchi/mines';
+import { layBoxes, type DealLayout } from '@hammygotchi/deal';
 import { dropPath, binOf, plinkoTable, type PlinkoRisk, type PlinkoRows } from '@hammygotchi/plinko';
 import { rollAt, stream } from './fair';
 
@@ -32,3 +33,6 @@ export function plinkoResult(path: readonly boolean[], rows: PlinkoRows, risk: P
   const bin = binOf(path);
   return { bin, mult: plinkoTable(rows, risk)[bin] };
 }
+
+/** Pizza Boxes: which prize is under which box, and the wobble in each offer, from the round's seed. */
+export const dealLayoutOf = (seed: string): DealLayout => layBoxes(stream(seed, 'deal'));

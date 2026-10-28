@@ -1,6 +1,7 @@
 // What the page and the server say to each other. The server (games/hammys-arcade/server)
 // is the only thing that rolls dice, holds coins or keeps time; the page draws what it's told.
 import type { ArcadeGame, BetStats } from '@hammygotchi/arcade';
+import type { LiveDealTable } from '@hammygotchi/roundsource';
 
 /** Everything lives under this path, on the same origin as the page. */
 export const API = '/arcade/api/';
@@ -29,8 +30,15 @@ export const MINES_LAST_START_MS = 3000;
 export const PLINKO_EPOCH_DROPS = 100;
 export const PLINKO_EPOCH_MS = 15 * 60_000;
 
+/** A Pizza Boxes round nobody has touched for this long settles itself (the same as walking away). */
+export const DEAL_IDLE_MS = 120_000;
+/** The most live rounds a page is told about at once. */
+export const DEAL_LIVE_MAX = 40;
+/** What a watcher can say: the page sends a number, never words. */
+export const DEAL_REACTS: readonly string[] = ['No deal!', 'Take it!', 'Open that one!', 'Bold.', 'Ouch.', 'Nice box!'];
+
 /** The games with rounds the server holds coins in until they finish. */
-export type StakeGame = 'rocket' | 'crossing' | 'mines';
+export type StakeGame = 'rocket' | 'crossing' | 'mines' | 'deal';
 
 export interface Me {
   id: string;
@@ -136,6 +144,9 @@ export interface PlinkoDrop {
   at: number;
 }
 
+/** A Pizza Boxes round as the sky shows it: no box contents that are still shut. */
+export type DealTable = Omit<LiveDealTable, 'all'>;
+
 /** Everything a page needs the moment it connects. */
 export interface Snapshot {
   serverNow: number;
@@ -145,6 +156,7 @@ export interface Snapshot {
   crossing: { round: CrossingRound | null };
   mines: { round: MinesRound | null };
   plinko: { hash: string; epoch: number; first: number; recent: PlinkoDrop[] };
+  deal: { live: DealTable[] };
 }
 
 /** The answer to every POST. */

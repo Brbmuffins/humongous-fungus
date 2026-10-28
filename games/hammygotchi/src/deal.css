@@ -225,3 +225,112 @@
   font-weight: 600;
   text-align: center;
 }
+
+/* --- Online: fairness line, watching, reactions ----------------------------- */
+.modal-card .deal-fair {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.deal-watchbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(255, 211, 77, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 211, 77, 0.35);
+}
+.deal-watchbar[hidden],
+.deal-reacts[hidden],
+.deal-feed[hidden],
+.deal-watch[hidden] {
+  display: none;
+}
+.deal-watching {
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deal-reacts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.deal-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+.deal-feed b {
+  color: var(--text);
+}
+.deal-watch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.deal-watch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.deal-watch-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'who bet' 'state state';
+  gap: 2px 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.deal-watch-row:hover,
+.deal-watch-row:focus-visible {
+  background: rgba(255, 255, 255, 0.13);
+}
+.deal-watch-who {
+  grid-area: who;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deal-watch-bet {
+  grid-area: bet;
+  color: #ffd34d;
+  font-weight: 700;
+}
+.deal-watch-state {
+  grid-area: state;
+  color: var(--muted);
+  font-size: 13px;
+}
+.modal-card .deal-watch-none {
+  color: var(--muted);
+  font-weight: 400;
+}
+.modal-card .deal-watch-none[hidden] {
+  display: none;
+}

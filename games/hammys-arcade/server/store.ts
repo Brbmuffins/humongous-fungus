@@ -27,6 +27,8 @@ export interface Player extends ArcadeSeat {
 export const AVATARS: readonly string[] = ['🧑‍🚀', '🦸', '🐸', '🐙', '🦊', '🐼', '🤠', '🥷', '🧙', '🐧', '🦄', '👾', '🐲', '🦖', '🐝', '🦉'];
 
 const FILE_VERSION = 1;
+/** Games whose stakes stay on the player across a restart (the game saves its round and picks it up again, or gives the stake back itself). */
+const KEPT_STAKES: readonly StakeGame[] = ['deal'];
 /** The most players we keep. */
 export const MAX_PLAYERS = 50_000;
 
@@ -54,6 +56,9 @@ export class Store {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private writing: Promise<void> = Promise.resolve();
   private dirty = false;
+  /** What other parts of the server keep in this file, by name (see `keep`), and what the file had when it was read. */
+  private keepers = new Map<string, () => unknown>();
+  private kept: Record<string, unknown> = {};
 
   constructor(opts: StoreOptions = {}) {
     this.file = opts.file ?? null;
@@ -67,9 +72,9 @@ export class Store {
   load(): { players: number; refunded: number } {
     let refunded = 0;
     if (this.file && existsSync(this.file)) {
-      let raw: { players?: Partial<Saved>[] } | null = null;
+      let raw: { players?: Partial<Saved>[]; kept?: Record<string, unknown> } | null = null;
       try {
-        raw = JSON.parse(readFileSync(this.file, 'utf8')) as { players?: Partial<Saved>[] };
+        raw = JSON.parse(readFileSync(this.file, 'utf8')) as { players?: Partial<Saved>[]; kept?: Record<string, unknown> };
       } catch {
         // A damaged file: keep it (renamed) rather than overwrite it, and start empty.
         try {
@@ -78,11 +83,14 @@ export class Store {
           // Nothing more to do.
         }
       }
+      if (raw?.kept && typeof raw.kept === 'object') this.kept = raw.kept;
       for (const d of raw?.players ?? []) {
         const p = this.revive(d);
         if (!p) continue;
         // A round that was on when the server stopped is gone: the stake goes back.
+        // (Except rounds that are saved with the wallets and carry on: see KEPT_STAKES.)
         for (const g of Object.keys(p.stakes) as StakeGame[]) {
+          if (KEPT_STAKES.includes(g)) continue;
           refunded += p.stakes[g] ?? 0;
           this.giveBack(p, g);
         }
@@ -101,7 +109,7 @@ export class Store {
       if (b && typeof b === 'object') arcade[g.id] = { rounds: Math.max(0, Math.floor(num(b.rounds, 0))), net: Math.floor(num(b.net, 0)), best: Math.max(0, num(b.best, 0)) };
     }
     const stakes: Player['stakes'] = {};
-    for (const g of ['rocket', 'crossing', 'mines'] as const) {
+    for (const g of ['rocket', 'crossing', 'mines', 'deal'] as const) {
       const v = d.stakes?.[g];
       if (typeof v === 'number' && Number.isFinite(v) && v > 0) stakes[g] = Math.floor(v);
     }
@@ -127,7 +135,19 @@ export class Store {
       const { fit: _f, fresh: _r, diedAt: _d, stats, ...rest } = p;
       return { ...rest, stats: stats.arcade };
     });
-    return JSON.stringify({ v: FILE_VERSION, savedAt: this.now(), players });
+    const kept: Record<string, unknown> = {};
+    for (const [k, f] of this.keepers) kept[k] = f();
+    return JSON.stringify({ v: FILE_VERSION, savedAt: this.now(), players, kept });
+  }
+
+  /**
+   * Keep something of a game's in the wallet file, so it is saved in the same
+   * write as the coins it holds. `save` is called whenever the file is written.
+   * Returns what the file had under `key` when it was read (undefined if nothing).
+   */
+  keep(key: string, save: () => unknown): unknown {
+    this.keepers.set(key, save);
+    return this.kept[key];
   }
 
   /** Something changed: save soon. */

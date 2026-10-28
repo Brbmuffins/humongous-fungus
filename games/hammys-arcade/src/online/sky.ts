@@ -28,6 +28,8 @@ export const EVENTS = [
   'plinko.drop',
   'plinko.epoch',
   'plinko.reveal',
+  'deal.step',
+  'deal.react',
 ] as const;
 
 type Handler = (data: any) => void;

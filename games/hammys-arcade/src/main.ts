@@ -303,7 +303,7 @@ class ArcadePage {
       mines: () => new MinesApp(this.wallet, close, a?.mines),
       crossing: () => new CrossingApp(this.wallet, close, a?.crossing),
       plinko: () => new PlinkoApp(this.wallet, close, a?.plinko),
-      deal: () => new DealApp(this.wallet, close),
+      deal: () => new DealApp(this.wallet, close, a?.deal),
     };
     const app = make[id]();
     // The way back to the front page, where the ✕ would be.

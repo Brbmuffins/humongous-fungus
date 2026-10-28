@@ -104,13 +104,14 @@ body over 2 KB, `429` slow down.
 | `POST /arcade/api/crossing/{bet,unbet,go,cash}` | `{secret, amount, difficulty}`, `{secret, lane}` |
 | `POST /arcade/api/mines/{start,open,cash}` | `{secret, amount, grid, mines}`, `{secret, index}` |
 | `POST /arcade/api/plinko/drop` | `{secret, amount, rows, risk}` |
+| `POST /arcade/api/deal/{bet,pick,open,answer,swap,leave,mine,react}` | `{secret, amount}`, `{secret, box}`, `{secret, deal}`, `{secret, swap}`, `{secret}`, `{secret, table, r}` (see Pizza Boxes) |
 
 **The sky.** The first event is `snapshot` (the whole state: `cid`,
 `players`, each game's round, the last rocket flights, plinko's hash and last
 drops). After it: `players`, `renamed`, and per game `rocket.betting / bet /
 left / start / bail / crash / reveal`, `crossing.betting / bet / left / start /
 lane / cash / end`, `mines.round / run / left / progress / end`, and
-`plinko.drop / epoch / reveal`. Every event carries `serverNow`. A comment
+`plinko.drop / epoch / reveal`, and `deal.step / react`. Every event carries `serverNow`. A comment
 (`: keep-alive`) goes out every 15 s. `retry: 2000` is sent, so the browser
 reconnects by itself and gets a fresh `snapshot` (the page replaces its state
 with it). A client with more than 256 KB unsent is hung up on, closed
@@ -136,7 +137,7 @@ There is no login: the `secret` the server hands back at the first `hello` is
 kept in the browser (`hammys-arcade.player.v1`) and is the only way back to
 that wallet. The server stores only its SHA-256 and never sends it again.
 
-### The four games online
+### The four games online (Pizza Boxes is a fifth, below)
 
 All four: stakes are held on the server until the round settles, one wallet
 per player for the whole arcade, every outcome decided on the server from a
@@ -196,6 +197,7 @@ Crossing: lane k: u = rollAt(seed, "lane", k); truck = rollAt(seed, "truck", k) 
 Mines:    floor = layMines(grid, mines, stream(seed, "mines:<grid>:<mines>"))
 Plinko:   seeds rotate after 100 drops or 15 minutes; drop n of a seed:
           path = stream(seed, "plinko:<n>") -> left/right per row
+Pizza Boxes: boxes = layBoxes(stream(seed, "deal"))  (shuffle of the 20 prizes, then the offers' wobble)
 ```
 
 Plinko has no rounds, so its seed is committed for an *epoch*: the hash is
@@ -219,6 +221,11 @@ Known gaps, written down rather than fixed:
   exploit, only a default worth knowing about (it is not a way to skip a bad roll:
   the roll for a lane is drawn when the lane is decided, after the last chance to
   press Go).
+- **Pizza Boxes seeds are in the wallet file.** A round that survives a restart
+  has to keep its seed, so the seed of every live real round is saved (server
+  side, in `hammys-arcade-wallets.json`, which is never served). Anyone who could
+  read that file could read ahead in a live round; it has the same protection as
+  the wallets (and the players' secret hashes) themselves.
 - The wallet file is one JSON file for the whole arcade (up to 50,000
   players); a database would be next if it ever grows past that.
 
@@ -337,13 +344,77 @@ Every move returns events (`picked`, `opened` with the prize, `offer`, `dealt`,
 `declined`, `final`, `reveal`, `left`) and keeps them in `round.events`, for a
 spectator feed. Nothing you do changes what's where.
 
-**Leaving mid-round** (closing the card, Back, or the page's `pagehide`)
+**Leaving mid-round**, offline (closing the card, Back, or the page's `pagehide`),
 settles the way the round was going: with an offer on the table you take it; with
 no offer out you keep your box and get what's in it (it was decided at bet time,
 so leaving tells you nothing); before you've picked a box the bet is refunded.
 None of these can pay more than the average of what was in play.
 
 Stats are the arcade's own: rounds, net and best multiplier under `deal`.
+
+### Pizza Boxes online (and watching)
+
+Offline the round is rolled on the phone, as above. With the server up
+(`server/deal.ts`, the page side `online/mirrors.ts` `DealMirror` feeding
+`dealview.ts`'s `DealSource`, typed in `roundsource.ts`) it works like Poop
+Plinko, a solo round decided on the server, but every round is on a table other
+players can watch.
+
+- **The server decides.** A bet (`deal/bet`) takes the stake from the wallet,
+  draws a 256-bit seed, publishes `hash = SHA-256(seed)` and lays the boxes from
+  the seed with `dealLayoutOf(seed) = layBoxes(stream(seed, "deal"))`
+  (`shared/derive.ts`, the same function the page uses). The server runs
+  `DealRound` unchanged; the page only sends choices (`pick`, `open`, `answer`,
+  `swap`, `leave`) and draws what it is told. Winnings are paid from the server
+  wallet when the round ends; a refund (left before picking a box) gives the
+  stake back as if it was never placed.
+- **No leaks.** Everything that goes out (replies, the sky, the snapshot) is a
+  `DealTable`: who, the bet, the hash, the phase, your box number, the offer, the
+  boxes opened so far **with** their prizes, and the one box left at the swap.
+  Prizes under shut boxes, the layout and the seed never leave until the round
+  is over, when the seed comes out (`seed` in the final table). The page checks
+  `SHA-256(seed) == hash`, lays the floor out again and checks it against every
+  opened box and the outcome, and shows a check mark (or `DOES NOT MATCH`).
+  The average of what is in play, which the page needs to judge the offer, is
+  worked out from the fixed prize set less what has been opened.
+- **Watching.** Every step is a `deal.step` event `{table, events}` where
+  `events` are `DealRound`'s own (`picked`, `opened`, `offer`, `dealt`, `declined`,
+  `final`, `reveal`, `left`); `table.v` counts steps, so a page that hears a step
+  twice (the reply and the sky) ignores the second. A snapshot carries every
+  live table (up to 40, newest first), and a "Watching now" list on the game's
+  screen lists the other players' rounds: tap one to follow it. A spectator's
+  screen is read-only (no bet, no boxes, no Deal button); it plays each opening, the
+  phone ringing, Dr. Moss's offer and the answer as they come. The page replays
+  them with the same sounds and lines as the player's.
+- **Reactions.** A watcher can send one of six fixed phrases (`DEAL_REACTS`: No
+  deal!, Take it!, Open that one!, Bold., Ouch., Nice box!) by number
+  (`deal/react {table, r}`); the player and the other watchers see "Name: phrase".
+  No free text, no emoji. One per player per 3 seconds, and at most 6 in a burst
+  per table (then one every 2 seconds). Reactions are not saved.
+- **Stalled rounds.** A round nobody has touched for `DEAL_IDLE_MS` (2 minutes)
+  settles itself by the leave rule above (`DealRound.leave`): the offer on the
+  table if the phone is ringing, otherwise the box's value, and before a box is
+  picked the stake is refunded. The server's clock sees to it, so it happens
+  whether or not anyone is connected. Closing the screen or the tab does **not**
+  settle it: it carries on, and opening the game again picks it up (`deal/mine`,
+  and the snapshot) until the timeout.
+- **Restarts.** The seed and the list of moves of every live real round are
+  saved in the same file write as the wallets (`Store.keep`), and on start each
+  round is played again from its moves (the rules are deterministic), the stake
+  stays held (`KEPT_STAKES` in `store.ts`; other games' stakes are still given
+  back), and every round gets a full two minutes again (the time the server was
+  down isn't the player's fault). A stake with no round to go with it, or a
+  round whose stake isn't there, is squared up on start (the stake goes back /
+  the round is dropped). A crash loses at most the last second and a half of
+  moves (the save delay).
+- **Quiet times.** If a page is connected and nobody real has a round, one of the
+  cast (`ROCKET_CROWD`) sits down with a made-up bet, picks, opens and answers on
+  a timer, takes the deal sooner or later depending on their nerve, and then goes
+  home; another sits down some seconds later while it stays quiet. They use real
+  seeds, publish and reveal like anyone, never touch a wallet and are not saved.
+- **Limits.** Rounds start at most 4 in a burst and then one per 15 s per player
+  (every start is broadcast); one live round per player; the usual 30 burst /
+  10 a second per player and 60 / 20 per address on top.
 
 ## Tests
 
@@ -366,6 +437,18 @@ Stats are the arcade's own: rounds, net and best multiplier under `deal`.
   temp `DATA_DIR`, and drives two players over real HTTP and SSE through all four
   games, then checks the seeds, stops it with SIGTERM and restarts it. Takes about
   45 s because rounds run on the real clock.
+
+- `deal.test.ts`: Pizza Boxes on the server (stake, hash first, seed explains the
+  boxes, payout, validation, refunds, no leaks, the timeout in every phase, restart
+  from a saved file, orphan stakes, step events, reactions and their limits, the
+  made-up player).
+- `deal-mirror.test.ts`: the page's `DealMirror` against the real server game
+  (every step once and in order for a player and a spectator, the seed check and its
+  failure, holding a kept box's winnings back, coming back to a round, reactions).
+- `deal-live.test.ts`: the server in this process on a free port: two players and a
+  spectator over real HTTP and SSE, a restart in the middle of a round, a round
+  settling itself after the timeout across a restart, the cast playing for a page
+  that is watching. Takes about 10 s.
 
 The games' rules are tested in `tests/hammygotchi/`; Pizza Boxes is in
 `tests/hammygotchi/deal.test.ts` (prize mean, offers never above the average in
