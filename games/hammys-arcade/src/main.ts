@@ -1,8 +1,11 @@
-// Hammy's Arcade as its own page: the front page with the four games as big
+// Hammy's Arcade as its own page: the front page with the five games as big
 // cards, your coins and how each game has gone, and the games themselves,
 // which are Hammygotchi's (rules and screens in games/hammygotchi/src),
-// betting this page's play-money wallet. No server, no network: it all runs
-// and saves in the browser.
+// betting a play-money wallet. When the arcade's server is there (same site,
+// under /arcade/api/) everyone shares one sky: the same rounds, with the
+// coins, the dice and the clock on the server, and a name typed once. When
+// it isn't (opened as a file, or the server is down) the page falls back to
+// playing alone, all in the browser, exactly as before.
 import '@fontsource/bagel-fat-one/latin-400.css';
 import '@fontsource/rubik/latin-400.css';
 import '@fontsource/rubik/latin-500.css';
@@ -15,15 +18,29 @@ import './page.css';
 import { h, setText } from '@shared/dom';
 import { fmt } from '@shared/format';
 import { ARCADE, HOME_LINES, type ArcadeDef, type ArcadeGame } from '@hammygotchi/arcade';
-import type { ArcadeScreen } from '@hammygotchi/arcadeview';
+import type { ArcadeHost, ArcadeScreen } from '@hammygotchi/arcadeview';
 import { CrossingApp } from '@hammygotchi/crossingview';
 import { paintPortrait, type Face } from '@hammygotchi/hammy';
 import { MinesApp } from '@hammygotchi/minesview';
 import { PlinkoApp } from '@hammygotchi/plinkoview';
 import { RocketApp } from '@hammygotchi/rocketview';
-import { SlotsApp } from '@hammygotchi/slotsview';
+import { SlotsApp, bigText } from '@hammygotchi/slotsview';
 import { setSound, unlock } from '@hammygotchi/sound';
+import { Arena } from './online/arena';
+import { goOnline } from './online/join';
+import type { OnlineWallet } from './online/wallet';
 import { START_COINS, TOP_UP_COINS, Wallet } from './wallet';
+
+/** What the front page needs of a wallet, local or the server's. */
+type WalletLike = ArcadeHost & {
+  readonly coins: number;
+  readonly broke: boolean;
+  readonly sound: boolean;
+  onChange(f: () => void): void;
+  topUp(): number | Promise<number>;
+  setSound(on: boolean): void;
+  save(): void;
+};
 
 /** Hammy, when you're out of coins and he has to say where the next ones came from. */
 const TOP_UP_OFFERS = [
@@ -57,6 +74,11 @@ class ArcadePage {
   private soundBtn = h('button', { class: 'a-link', type: 'button', onclick: () => this.wallet.setSound(!this.wallet.sound) });
   private resetBtn = h('button', { class: 'a-link', type: 'button', onclick: () => this.askReset() });
   private toastEl = h('p', { class: 'a-toast', role: 'status', hidden: true });
+  private skyEl = h('p', { class: 'a-sky' });
+  private tickerEl = h('p', { class: 'a-ticker', role: 'status', 'aria-live': 'polite', hidden: true });
+  private tickerTimer = 0;
+  private nameBtn = h('button', { class: 'a-link', type: 'button', onclick: () => this.askRename() });
+  private renameEl = h('form', { class: 'a-rename', hidden: true });
   private topUpText = h('span', { class: 'a-topup-text' });
   private topUpBtn = h('button', { class: 'btn btn-cheese', type: 'button', onclick: () => this.takeTopUp() });
   private topUpEl = h('div', { class: 'a-topup', role: 'status', hidden: true }, this.topUpText, this.topUpBtn);
@@ -70,7 +92,10 @@ class ArcadePage {
   private resetting = false;
   private offered = false;
 
-  constructor(private wallet: Wallet) {
+  constructor(
+    private wallet: WalletLike,
+    private arena: Arena | null,
+  ) {
     this.root.append(
       h(
         'main',
@@ -79,7 +104,7 @@ class ArcadePage {
           'header',
           { class: 'a-top' },
           this.portrait,
-          h('div', { class: 'a-title' }, h('h1', null, 'Hammy’s Arcade'), h('p', null, 'Five ways to lose imaginary coins on a cube.')),
+          h('div', { class: 'a-title' }, h('h1', null, 'Hammy’s Arcade'), h('p', null, 'Five ways to lose imaginary coins on a cube.'), this.skyEl, this.tickerEl),
           h('p', { class: 'coins', 'aria-label': 'Your coins' }, h('span', { class: 'coin', 'aria-hidden': 'true' }, 'H'), this.balance),
         ),
         h('h2', { class: 'a-pick' }, 'Pick a game'),
@@ -87,8 +112,15 @@ class ArcadePage {
         h(
           'footer',
           { class: 'a-foot' },
-          h('p', { class: 'note' }, 'Play money only: the coins are pretend, there is nothing to buy and nothing to cash out. Every game pays back about 99 of every 100 coins bet over many rounds, and every round is decided by your browser’s secure random numbers.'),
-          h('p', { class: 'a-foot-row' }, this.soundBtn, this.resetBtn),
+          h(
+            'p',
+            { class: 'note' },
+            arena
+              ? 'Play money only: the coins are pretend, there is nothing to buy and nothing to cash out. Everyone plays the same rounds, and every round is decided by the arcade’s server, which shows a fingerprint of its secret before each round and the secret after, so your browser can check it. Every game pays back about 99 of every 100 coins bet over many rounds.'
+              : 'Play money only: the coins are pretend, there is nothing to buy and nothing to cash out. Every game pays back about 99 of every 100 coins bet over many rounds, and every round is decided by your browser’s secure random numbers.',
+          ),
+          this.renameEl,
+          h('p', { class: 'a-foot-row' }, this.soundBtn, arena ? this.nameBtn : this.resetBtn),
         ),
       ),
       this.toastEl,
@@ -96,6 +128,16 @@ class ArcadePage {
     );
     wallet.onChange(() => this.render());
     this.render();
+    if (arena) {
+      for (const e of ['players', 'status', 'snapshot']) arena.sky.on(e, () => this.renderSky());
+      // Somebody else's big win on Hammy Slots, for a few seconds. Nothing else the machines do is announced.
+      arena.slots.onBig((w) => {
+        setText(this.tickerEl, bigText(w));
+        this.tickerEl.hidden = false;
+        clearTimeout(this.tickerTimer);
+        this.tickerTimer = window.setTimeout(() => (this.tickerEl.hidden = true), 9000);
+      });
+    }
 
     // Browsers only allow sound after a first tap.
     const firstTouch = () => {
@@ -136,8 +178,49 @@ class ArcadePage {
     setText(this.soundBtn, w.sound ? '🔊 Sound on' : '🔇 Sound off');
     this.soundBtn.setAttribute('aria-pressed', String(w.sound));
     if (!this.resetting) setText(this.resetBtn, 'Start over');
+    this.renderSky();
     this.paintPortrait();
     this.syncOffer();
+  }
+
+  /** Who's here: how many are in the sky and who you are, or that you're on your own. */
+  private renderSky(): void {
+    const a = this.arena;
+    this.skyEl.className = `a-sky ${a ? (a.sky.up ? 'live' : 'down') : 'offline'}`;
+    if (!a) {
+      setText(this.skyEl, 'offline');
+      this.skyEl.title = 'The arcade’s server isn’t there, so you’re playing alone. Your coins are saved on this device.';
+      return;
+    }
+    const w = this.wallet as unknown as OnlineWallet;
+    const n = a.sky.players;
+    setText(this.skyEl, a.sky.up ? `${n} ${n === 1 ? 'player' : 'players'} in the sky · you’re ${w.emoji} ${w.name}` : 'Lost the sky. Reconnecting…');
+    this.skyEl.title = '';
+    setText(this.nameBtn, 'Change name');
+  }
+
+  /** The small "change name" link: a box in the footer; your coins stay. */
+  private askRename(): void {
+    const w = this.wallet as unknown as OnlineWallet;
+    const input = h('input', { class: 'a-join-name', type: 'text', maxlength: 16, 'aria-label': 'New name', autocomplete: 'nickname' });
+    input.value = w.name;
+    const err = h('span', { class: 'a-join-err', role: 'alert' });
+    const save = h('button', { class: 'btn btn-cheese', type: 'submit' }, 'Save');
+    const cancel = h('button', { class: 'a-link', type: 'button', onclick: () => ((this.renameEl.hidden = true), this.renameEl.replaceChildren()) }, 'Cancel');
+    this.renameEl.onsubmit = async (e) => {
+      e.preventDefault();
+      save.disabled = true;
+      const r = await w.rename(input.value.trim());
+      save.disabled = false;
+      if (!r.ok) return void setText(err, r.message);
+      this.renameEl.hidden = true;
+      this.renameEl.replaceChildren();
+      this.say(`You’re ${w.name} now. Your coins came with you.`);
+    };
+    this.renameEl.replaceChildren(input, save, cancel, err);
+    this.renameEl.hidden = false;
+    input.focus();
+    input.select();
   }
 
   private card(g: ArcadeDef): HTMLElement {
@@ -173,7 +256,7 @@ class ArcadePage {
     }
     clearTimeout(this.resetTimer);
     this.resetting = false;
-    this.wallet.reset();
+    if (this.wallet instanceof Wallet) this.wallet.reset();
     this.say('Fresh start. Hammy has forgotten everything.');
   }
 
@@ -211,8 +294,10 @@ class ArcadePage {
   }
 
   private takeTopUp(): void {
-    if (!this.wallet.topUp()) return;
-    this.say(`+${coinsText(TOP_UP_COINS)} coins. ${pick(TOP_UP_THANKS)}`);
+    void Promise.resolve(this.wallet.topUp()).then((got) => {
+      if (!got) return;
+      this.say(`+${coinsText(got)} coins. ${pick(TOP_UP_THANKS)}`);
+    });
   }
 
   // The games ----------------------------------------------------------------
@@ -220,12 +305,14 @@ class ArcadePage {
   private openGame(id: ArcadeGame, push = true): void {
     if (this.screen) return;
     const close = () => this.leave();
+    // With the server there: the shared rounds. Without: the same screens on rounds rolled here.
+    const a = this.arena;
     const make: Record<ArcadeGame, () => ArcadeScreen> = {
-      rocket: () => new RocketApp(this.wallet, close),
-      mines: () => new MinesApp(this.wallet, close),
-      crossing: () => new CrossingApp(this.wallet, close),
-      plinko: () => new PlinkoApp(this.wallet, close),
-      slots: () => new SlotsApp(this.wallet, close),
+      rocket: () => new RocketApp(this.wallet, close, a?.rocket),
+      mines: () => new MinesApp(this.wallet, close, a?.mines),
+      crossing: () => new CrossingApp(this.wallet, close, a?.crossing),
+      plinko: () => new PlinkoApp(this.wallet, close, a?.plinko),
+      slots: () => new SlotsApp(this.wallet, close, a?.slots),
     };
     const app = make[id]();
     // The way back to the front page, where the ✕ would be.
@@ -295,4 +382,21 @@ class ArcadePage {
   }
 }
 
-new ArcadePage(new Wallet());
+/** Start: look for the arcade's server (a moment), come in with a name if it's there, and fall back to playing alone if not. */
+async function start(): Promise<void> {
+  const root = document.getElementById('app')!;
+  const wanted = location.protocol !== 'file:' && !new URLSearchParams(location.search).has('offline');
+  if (wanted) {
+    root.replaceChildren(h('p', { class: 'a-connecting', role: 'status' }, 'Finding the arcade…'));
+    const arena = new Arena();
+    if (await goOnline(arena, root)) {
+      root.replaceChildren();
+      new ArcadePage(arena.wallet, arena);
+      return;
+    }
+  }
+  root.replaceChildren();
+  new ArcadePage(new Wallet(), null);
+}
+
+void start();

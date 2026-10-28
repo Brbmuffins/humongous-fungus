@@ -92,3 +92,36 @@
     animation: none;
   }
 }
+
+/* The arcade's server tells everyone about big wins: a line for a few seconds, and a short list. */
+.slots-ticker {
+  margin: 6px 0 0;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 211, 77, 0.45);
+  border-radius: 999px;
+  background: rgba(255, 211, 77, 0.1);
+  color: #ffd34d;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  animation: slots-ticker-in 0.4s ease-out;
+}
+.slots-ticker[hidden] {
+  display: none;
+}
+@keyframes slots-ticker-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slots-ticker {
+    animation: none;
+  }
+}
+
+/* One win a line: the name and "HUGE WIN · 137.00× on 10" don't both fit a 150 px column. */
+.slots-bigs {
+  grid-template-columns: 1fr;
+}

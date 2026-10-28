@@ -8,6 +8,7 @@ import { h, setDisabled, setText } from '@shared/dom';
 import { fmt } from '@shared/format';
 import { BetPicker, Choice, DISPLAY_FONT, Ledger, UI_FONT, arcadeCard, fairRoll, fitCanvas, loud, pick, x2, type ArcadeHost, type ArcadeScreen, type ArcadeSession } from './arcadeview';
 import { isAlive } from './alive';
+import type { LiveBig, SlotsSource } from './roundsource';
 import { defaultLook, drawHammy, type Face } from './hammy';
 import { buzz } from './haptics';
 import {
@@ -71,6 +72,12 @@ const history: number[] = [];
 let spinsThisPage = 0;
 
 const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** "🦊 Pixel hit 52× on Hammy Slots", for the ticker (here and on the arcade's front page). */
+export function bigText(w: { emoji: string; name: string; mult: number }): string {
+  const m = w.mult >= 100 ? String(Math.floor(w.mult)) : String(Math.floor(w.mult * 10) / 10);
+  return `${w.emoji} ${w.name} hit ${m}× on Hammy Slots`;
+}
 
 /** A win at least this big stops an auto-spin. */
 const AUTO_STOP_AT = 20;
@@ -189,6 +196,8 @@ interface Run {
   /** Seconds skipped ahead. */
   skip: number;
   paid: boolean;
+  /** From the server: what it already paid for this spin (kept back until the reels stop). */
+  won?: number;
   done: boolean;
   /** Each reel's starting distance from where it will stop, in cells. */
   y0: number[];
@@ -254,6 +263,12 @@ export class SlotsApp implements ArcadeScreen {
   /** What the banner shows when nothing's happening: the last result. */
   private resting = 0;
   private linesOpen = false;
+  /** Online: a spin has been asked for and the server hasn't answered yet. */
+  private pending = false;
+  private stopBigs: (() => void) | null = null;
+  private tickerTimer = 0;
+  private bigKey = '';
+  private wasOnline = true;
 
   private canvas = h('canvas', { class: 'slots-machine', role: 'img', 'aria-label': 'Hammy Slots: five reels, three rows' });
   private historyEl = h('ol', { class: 'arcade-history', 'aria-label': 'The last spins' });
@@ -263,11 +278,16 @@ export class SlotsApp implements ArcadeScreen {
   private linesBtn = h('button', { class: 'arcade-opt slots-lines-btn', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'slots-lines' }, 'Lines');
   private linesCanvas = h('canvas', { class: 'slots-lines-canvas', role: 'img', 'aria-label': 'The twenty paylines' });
   private paytable = h('ul', { class: 'slots-pays' });
+  private tickerEl = h('p', { class: 'slots-ticker', role: 'status', 'aria-live': 'polite', hidden: true });
+  private bigsEl = h('ul', { class: 'rocket-crowd slots-bigs', 'aria-label': 'Big wins on the machines' });
+  private fairEl = h('p', { class: 'fair-line' });
   private linesPanel = h('div', { class: 'slots-lines', id: 'slots-lines', hidden: true }, this.linesCanvas, this.paytable);
 
   constructor(
     private host: ArcadeHost,
     close: () => void,
+    /** `src`: spins rolled and paid on the arcade's server (and its big wins told to everybody), instead of rolled here. */
+    private src?: SlotsSource,
   ) {
     this.ledger = new Ledger(host, 'slots');
     this.picker = new BetPicker(() => host.state.coins);
@@ -285,7 +305,21 @@ export class SlotsApp implements ArcadeScreen {
     });
     this.linesBtn.addEventListener('click', () => this.toggleLines());
     const row = h('div', { class: 'arcade-row slots-opts' }, this.autoChoice.el, this.turboBtn, this.linesBtn);
-    const { card, syncCoins } = arcadeCard('slots', close, this.historyEl, this.canvas, this.status, this.go, row, this.linesPanel, this.picker.el);
+    const { card, syncCoins } = arcadeCard(
+      'slots',
+      close,
+      this.historyEl,
+      this.canvas,
+      this.status,
+      this.go,
+      row,
+      this.linesPanel,
+      this.picker.el,
+      src ? this.tickerEl : null,
+      src ? h('h3', { class: 'arcade-sub' }, 'Big wins on the machines') : null,
+      src ? this.bigsEl : null,
+      src ? this.fairEl : null,
+    );
     this.card = card;
     this.syncCoins = syncCoins;
     this.card.addEventListener('keydown', (e) => {
@@ -296,6 +330,7 @@ export class SlotsApp implements ArcadeScreen {
     });
     this.buildPaytable();
     setText(this.status, SLOTS_START);
+    if (src) this.stopBigs = src.onBig((w) => this.ticker(w));
     this.renderHistory();
     this.raf = requestAnimationFrame(this.frame);
   }
@@ -309,11 +344,13 @@ export class SlotsApp implements ArcadeScreen {
     this.closed = true;
     cancelAnimationFrame(this.raf);
     clearTimeout(this.autoTimer);
+    clearTimeout(this.tickerTimer);
+    this.stopBigs?.();
     // A spin was decided when you pressed the button: leaving pays what it came to.
     const r = this.run;
     if (r && !r.paid) {
       r.paid = true;
-      this.ledger.pay(r.bet, payMultiplier(r.bet, r.sp.units));
+      this.settle(r);
     }
     return this.ledger.session;
   }
@@ -321,7 +358,7 @@ export class SlotsApp implements ArcadeScreen {
   // Buttons ---------------------------------------------------------------------
 
   private get busy(): boolean {
-    return !!this.run && !this.run.done;
+    return this.pending || (!!this.run && !this.run.done);
   }
 
   /** The big button: spin, or hurry the spin along, or stop the auto-spins. */
@@ -364,13 +401,43 @@ export class SlotsApp implements ArcadeScreen {
 
   private spin(): void {
     if (this.closed || this.busy) return;
+    if (this.src) return this.spinRemote(this.src);
     const amount = this.ledger.bet(this.picker.amount);
     if (!amount) {
       this.setAuto(0);
       setText(this.status, isAlive(this.host.state) ? 'Not enough coins for that bet.' : 'Hammy is dead. The machine is unplugged.');
       return;
     }
-    const sp = rollSpin(rollFor(spinsThisPage++));
+    this.play(amount, rollSpin(rollFor(spinsThisPage++)));
+  }
+
+  /** Spin on the server: it takes the bet, rolls the spin and pays it, and we play back what it says. */
+  private spinRemote(src: SlotsSource): void {
+    const amount = this.picker.amount;
+    if (!this.picker.affordable) {
+      this.setAuto(0);
+      return void setText(this.status, 'Not enough coins for that bet.');
+    }
+    this.pending = true;
+    this.picker.lock(true);
+    sfx.send();
+    void src.spin(amount).then((r) => {
+      this.pending = false;
+      if (!r.ok) {
+        this.setAuto(0);
+        this.picker.lock(false);
+        return void setText(this.status, r.message);
+      }
+      // Closed meanwhile: the spin is real and paid, so just hand its winnings back to the wallet.
+      if (this.closed) return src.release(r.won);
+      this.ledger.session.rounds += 1;
+      this.ledger.session.net -= amount;
+      this.play(amount, r.spin, r.won);
+    });
+  }
+
+  /** Start playing a decided spin: the reels, the lines, the orb. */
+  private play(amount: number, sp: SlotSpin, won?: number): void {
     const k = prefs.turbo ? 0.45 : 1;
     const tl = buildTimeline(sp, k);
     const prev = this.rest;
@@ -381,7 +448,7 @@ export class SlotsApp implements ArcadeScreen {
       const want = 16 * tl.reelStop[r] + EASE_D;
       return base < want ? base + Math.ceil((want - base) / len) * len : base;
     });
-    const run: Run = { bet: amount, sp, tl, start: performance.now(), skip: 0, paid: false, done: false, y0, cues: [], cue: 0 };
+    const run: Run = { bet: amount, sp, tl, start: performance.now(), skip: 0, paid: false, won, done: false, y0, cues: [], cue: 0 };
     run.cues = this.cuesFor(run);
     this.run = run;
     this.lastSp = sp;
@@ -392,6 +459,26 @@ export class SlotsApp implements ArcadeScreen {
     setText(this.status, '');
     this.face = null;
     sfx.send();
+  }
+
+  /** Pay a spin out: from the server's already-paid win (held back until now), or to the local wallet. */
+  private settle(r: Run): number {
+    if (this.src) {
+      const won = r.won ?? 0;
+      this.src.release(won);
+      this.ledger.session.net += won;
+      return won;
+    }
+    return this.ledger.pay(r.bet, payMultiplier(r.bet, r.sp.units));
+  }
+
+  /** Somebody else's big win: a line in the ticker for a few seconds, and in the list. */
+  private ticker(w: LiveBig): void {
+    if (this.closed) return;
+    setText(this.tickerEl, bigText(w));
+    this.tickerEl.hidden = false;
+    clearTimeout(this.tickerTimer);
+    this.tickerTimer = window.setTimeout(() => (this.tickerEl.hidden = true), 9000);
   }
 
   private elapsed(now: number): number {
@@ -500,7 +587,7 @@ export class SlotsApp implements ArcadeScreen {
   private finish(r: Run): void {
     r.done = true;
     const mult = r.sp.mult;
-    const won = r.paid ? 0 : this.ledger.pay(r.bet, payMultiplier(r.bet, r.sp.units));
+    const won = r.paid ? 0 : this.settle(r);
     r.paid = true;
     history.unshift(mult);
     if (history.length > 14) history.pop();
@@ -604,13 +691,35 @@ export class SlotsApp implements ArcadeScreen {
     this.floaters = this.floaters.filter((f) => now - f.born < 1100);
   }
 
+  /** The machines' news: the list of big wins (everybody's), the fair line, and the connection. */
+  private followRemote(src: SlotsSource): void {
+    const online = src.online();
+    if (online !== this.wasOnline) {
+      this.wasOnline = online;
+      if (!this.busy) setText(this.status, online ? 'Back on the machines.' : 'Lost the machines. Reconnecting…');
+    }
+    const feed = src.feed();
+    const key = feed.map((w) => `${w.who}:${w.at}:${w.n}`).join('|');
+    if (key !== this.bigKey) {
+      this.bigKey = key;
+      this.bigsEl.replaceChildren(
+        ...feed.slice(0, 5).map((w) =>
+          h('li', { class: `${w.real ? 'real ' : ''}${w.who === src.me ? 'you ' : ''}won`.trim() }, h('span', { class: 'rocket-who' }, `${w.emoji} ${w.who === src.me ? 'You' : w.name}`), h('span', { class: 'rocket-bet' }, `${w.tier} · ${x2(w.mult)} on ${fmt(w.bet)}`)),
+        ),
+      );
+      if (!feed.length) this.bigsEl.append(h('li', { class: 'none' }, 'No big wins yet'));
+    }
+    setText(this.fairEl, src.fair());
+  }
+
   private sync(): void {
     const s = this.host.state;
     this.syncCoins(s.coins);
+    if (this.src) this.followRemote(this.src);
     const auto = this.autoPick > 0;
     setText(this.go, auto ? `Stop auto · ${this.autoLeft} left` : this.busy ? 'Skip' : `Spin · ${fmt(this.picker.amount)} ${this.picker.amount === 1 ? 'coin' : 'coins'}`);
     this.go.classList.toggle('bail', auto);
-    setDisabled(this.go, !auto && !this.busy && (!isAlive(s) || !this.picker.affordable));
+    setDisabled(this.go, !auto && !this.busy && (!isAlive(s) || !this.picker.affordable || (!!this.src && !this.src.online())));
   }
 
   /** The grid's geometry for a canvas of this size. */

@@ -22,6 +22,7 @@ import { isAlive } from './alive';
 import { EXTENTS, defaultLook, drawHammy, type Face } from './hammy';
 import { buzz } from './haptics';
 import {
+  CRASHES,
   FLIGHT_LINES,
   MILESTONES,
   ROCKET_BET_SECONDS,
@@ -34,6 +35,7 @@ import {
   type CrashDef,
   type Punter,
 } from './rocket';
+import type { RocketSource } from './roundsource';
 import { engine, sfx, type Engine } from './sound';
 
 type Phase = 'bet' | 'fly' | 'crash';
@@ -135,6 +137,14 @@ export class RocketApp implements ArcadeScreen {
   private closed = false;
   private crowdKey = '';
   private dpr = 1;
+  // Only when the rounds come from a server (see roundsource.ts).
+  private roundId = -1;
+  /** A request to the server is out: don't send another yet. */
+  private pending = false;
+  private seenOut = new Set<string>();
+  /** The bet already counted into this sitting's tally. */
+  private counted = 0;
+  private wasOnline = true;
 
   private canvas = h('canvas', { class: 'rocket-sky', role: 'img', 'aria-label': 'Hammy riding his own fart into the sky' });
   private historyEl = h('ol', { class: 'rocket-history', 'aria-label': 'Where the last rounds ended' });
@@ -143,10 +153,13 @@ export class RocketApp implements ArcadeScreen {
   private autoAt = h('input', { class: 'rocket-auto-at', type: 'number', min: 1.01, step: 0.1, inputmode: 'decimal', 'aria-label': 'Bail out at this multiplier' });
   private go = h('button', { class: 'btn btn-cheese rocket-go', type: 'button' });
   private crowdEl = h('ul', { class: 'rocket-crowd', 'aria-label': 'Who else is betting on him' });
+  private fairEl = h('p', { class: 'fair-line' });
 
+  /** `src`: rounds from a server, shared with everyone, instead of rolled here. */
   constructor(
     private host: ArcadeHost,
     close: () => void,
+    private src?: RocketSource,
   ) {
     this.ledger = new Ledger(host, 'rocket');
     this.picker = new BetPicker(() => host.state.coins);
@@ -171,6 +184,7 @@ export class RocketApp implements ArcadeScreen {
       this.go,
       h('h3', { class: 'arcade-sub' }, 'Also riding'),
       this.crowdEl,
+      src ? this.fairEl : null,
     );
     this.card = card;
     this.syncCoins = syncCoins;
@@ -221,20 +235,27 @@ export class RocketApp implements ArcadeScreen {
     this.bet = 0;
     this.cashedAt = null;
     this.won = 0;
-    this.crash = crashPoint(fairRoll());
-    this.cause = crashCause(this.crash);
-    this.punters = crowd();
+    if (this.src) {
+      this.crash = 1;
+      this.punters = [];
+      this.seenOut.clear();
+    } else {
+      this.crash = crashPoint(fairRoll());
+      this.cause = crashCause(this.crash);
+      this.punters = crowd();
+    }
     this.milestone = 0;
     this.bubble = null;
     this.lineDue = null;
     this.jumpers = [];
     this.clouds = Array.from({ length: 18 }, () => ({ x: Math.random() * 1.2 - 0.1, l: 0.1 + Math.random() * 0.85, s: 0.6 + Math.random() * 0.9, v: (Math.random() - 0.5) * 0.02 }));
     this.gulls = Array.from({ length: 5 }, () => ({ x: Math.random(), l: 0.14 + Math.random() * 0.24, v: 0.05 + Math.random() * 0.08 }));
-    if (this.queued) {
+    const wasQueued = this.queued;
+    if (wasQueued) {
       this.queued = false;
       this.placeBet();
     }
-    if (!this.bet) setText(this.status, 'Place your bet. He launches in a few seconds.');
+    if (!this.bet && !(this.src && wasQueued)) setText(this.status, 'Place your bet. He launches in a few seconds.');
   }
 
   private launch(now: number): void {
@@ -255,8 +276,10 @@ export class RocketApp implements ArcadeScreen {
     this.mult = this.crash;
     this.engine?.stop();
     this.engine = null;
-    history.unshift(this.crash);
-    if (history.length > 14) history.pop();
+    if (!this.src) {
+      history.unshift(this.crash);
+      if (history.length > 14) history.pop();
+    }
     this.renderHistory();
     const id = this.cause.id;
     if (id === 'sneeze') sfx.pow();
@@ -278,6 +301,7 @@ export class RocketApp implements ArcadeScreen {
   }
 
   private placeBet(): void {
+    if (this.src) return this.placeRemote(this.src);
     const amount = this.ledger.bet(this.picker.amount);
     if (!amount) {
       setText(this.status, isAlive(this.host.state) ? 'Not enough coins for that bet.' : 'No pilot. Hammy is dead.');
@@ -289,11 +313,42 @@ export class RocketApp implements ArcadeScreen {
   }
 
   private refund(): void {
+    if (this.src) {
+      void this.src.unbet().then((r) => setText(this.status, r.ok ? 'Bet taken back.' : r.message));
+      return;
+    }
     this.ledger.refund(this.bet);
     this.bet = 0;
   }
 
+  /** Bet on the shared flight. The server answers; the round it sends back shows the bet. */
+  private placeRemote(src: RocketSource): void {
+    const amount = this.picker.amount;
+    if (!this.picker.affordable) {
+      setText(this.status, 'Not enough coins for that bet.');
+      return;
+    }
+    this.pending = true;
+    void src.bet(amount, prefs.auto ? prefs.autoAt : null).then((r) => {
+      this.pending = false;
+      if (r.ok) {
+        sfx.coin();
+        setText(this.status, `You’re in for ${fmt(amount)}. Bail out before it ends.`);
+      } else setText(this.status, r.message);
+    });
+  }
+
   private cashOut(mult: number): void {
+    if (this.src) {
+      // The server picks the moment: its clock, when your request lands. Our screen follows.
+      if (this.pending) return;
+      this.pending = true;
+      void this.src.bail().then((r) => {
+        this.pending = false;
+        if (!r.ok) setText(this.status, r.message);
+      });
+      return;
+    }
     const at = Math.floor(mult * 100) / 100;
     this.won = this.ledger.pay(this.bet, at);
     this.cashedAt = at;
@@ -305,12 +360,12 @@ export class RocketApp implements ArcadeScreen {
 
   /** The big button: bet, take it back, bail out, or bet on the next one. */
   private action(): void {
-    if (this.closed) return;
+    if (this.closed || this.pending) return;
     if (this.phase === 'fly' && this.bet && this.cashedAt === null) this.cashOut(this.mult);
     else if (this.phase === 'bet') {
       if (this.bet) {
         this.refund();
-        setText(this.status, 'Bet taken back.');
+        if (!this.src) setText(this.status, 'Bet taken back.');
       } else this.placeBet();
     } else this.queued = !this.queued;
   }
@@ -336,8 +391,11 @@ export class RocketApp implements ArcadeScreen {
   };
 
   private step(now: number, dt: number): void {
+    if (this.src) this.follow(now);
     const secs = (now - this.phaseAt) / 1000;
-    if (this.phase === 'bet') {
+    if (this.src) {
+      // The server's round is the clock; nothing to time here.
+    } else if (this.phase === 'bet') {
       if (secs >= ROCKET_BET_SECONDS) this.launch(now);
     } else if (this.phase === 'fly') {
       const m = multiplierAt(secs);
@@ -346,16 +404,7 @@ export class RocketApp implements ArcadeScreen {
         this.mult = m;
         if (this.bet && this.cashedAt === null && prefs.auto && m >= prefs.autoAt) this.cashOut(prefs.autoAt);
         for (const p of cashCrowd(this.punters, m, this.crash)) this.jump(p.emoji, p.name);
-        while (this.milestone < MILESTONES.length && m >= MILESTONES[this.milestone][0]) {
-          this.say(MILESTONES[this.milestone][1], 1800, now);
-          this.milestone += 1;
-          this.nextLine = now + 3500;
-        }
-        if (now > this.nextLine && (!this.bubble || now > this.bubble.until)) {
-          this.say(pick(FLIGHT_LINES), 1800, now);
-          this.nextLine = now + 3500 + Math.random() * 2500;
-        }
-        this.engine?.set(Math.log10(m));
+        this.flyTick(m, now);
       }
     } else if (secs >= ROCKET_PAUSE_SECONDS) this.newRound(now);
 
@@ -378,6 +427,82 @@ export class RocketApp implements ArcadeScreen {
     this.puffs = this.puffs.filter((p) => now - p.born < 1400);
     for (const j of this.jumpers) j.l -= 0.03 * dt;
     this.jumpers = this.jumpers.filter((j) => now - j.born < 4000);
+  }
+
+  /** One moment of the flight at multiplier `m`: what he shouts on the way, and the engine's note. */
+  private flyTick(m: number, now: number): void {
+    while (this.milestone < MILESTONES.length && m >= MILESTONES[this.milestone][0]) {
+      this.say(MILESTONES[this.milestone][1], 1800, now);
+      this.milestone += 1;
+      this.nextLine = now + 3500;
+    }
+    if (now > this.nextLine && (!this.bubble || now > this.bubble.until)) {
+      this.say(pick(FLIGHT_LINES), 1800, now);
+      this.nextLine = now + 3500 + Math.random() * 2500;
+    }
+    this.engine?.set(Math.log10(m));
+  }
+
+  /** Follow the shared round: the phase, the multiplier and who is in come from the server's clock and word. */
+  private follow(now: number): void {
+    const src = this.src;
+    if (!src) return;
+    const online = src.online();
+    if (online !== this.wasOnline) {
+      this.wasOnline = online;
+      setText(this.status, online ? 'Back in the sky.' : 'Lost the sky. Reconnecting…');
+    }
+    const r = src.round();
+    if (!r) {
+      if (online) setText(this.status, 'Waiting for the next flight…');
+      return;
+    }
+    const srv = src.now();
+    if (r.id !== this.roundId) {
+      this.roundId = r.id;
+      this.counted = 0;
+      this.newRound(now);
+      this.phaseAt = now - Math.max(0, srv - r.startedAt);
+      this.renderHistory();
+    }
+    const mine = r.riders.find((x) => x.id === src.me);
+    this.bet = mine?.bet ?? 0;
+    if (this.bet !== this.counted) {
+      const s = this.ledger.session;
+      if (this.bet && !this.counted) s.rounds += 1;
+      else if (!this.bet && this.counted) s.rounds -= 1;
+      s.net -= this.bet - this.counted;
+      this.counted = this.bet;
+    }
+    if (mine && mine.out !== null && this.cashedAt === null) {
+      this.cashedAt = mine.out;
+      this.won = Math.floor(mine.bet * mine.out);
+      this.ledger.session.net += this.won;
+      sfx.kaching();
+      buzz.success();
+      this.jump('🙋', 'You');
+      setText(this.status, `You bailed at ${x2(mine.out)} for ${fmt(this.won)} coins.`);
+    }
+    for (const x of r.riders) {
+      if (x.id === src.me || x.out === null || this.seenOut.has(x.id)) continue;
+      this.seenOut.add(x.id);
+      if (this.phase === 'fly') this.jump(x.emoji, x.name);
+    }
+    if (this.phase === 'bet' && r.phase === 'fly') {
+      this.launch(now);
+      this.phaseAt = now - Math.max(0, srv - r.flightAt);
+      const m = multiplierAt((srv - r.flightAt) / 1000);
+      while (this.milestone < MILESTONES.length && m >= MILESTONES[this.milestone][0]) this.milestone += 1;
+    }
+    if (r.phase === 'crash' && this.phase !== 'crash') {
+      this.crash = r.crash ?? this.mult;
+      this.cause = CRASHES.find((c) => c.id === r.cause) ?? crashCause(this.crash);
+      this.boom(now);
+    } else if (this.phase === 'fly') {
+      const m = multiplierAt((srv - r.flightAt) / 1000);
+      this.mult = m;
+      this.flyTick(m, now);
+    }
   }
 
   /** Where he is across the sky, as a fraction of the width. */
@@ -403,15 +528,15 @@ export class RocketApp implements ArcadeScreen {
           : `Bet ${fmt(this.picker.amount)} on the next one`;
     setText(this.go, label);
     this.go.classList.toggle('bail', riding);
-    setDisabled(this.go, !alive || (!riding && !this.bet && !this.queued && !this.picker.affordable));
+    setDisabled(this.go, !alive || this.pending || (!!this.src && !this.src.online()) || (!riding && !this.bet && !this.queued && !this.picker.affordable));
+    if (this.src) setText(this.fairEl, this.src.fair());
     this.renderCrowd();
   }
 
   private renderHistory(): void {
-    this.historyEl.replaceChildren(
-      ...(history.length ? history : []).map((m) => h('li', { class: m >= 10 ? 'hi' : m >= 2 ? 'mid' : 'lo' }, x2(m))),
-    );
-    if (!history.length) this.historyEl.append(h('li', { class: 'none' }, 'First flight of the day'));
+    const list = this.src ? this.src.history() : history;
+    this.historyEl.replaceChildren(...list.map((m) => h('li', { class: m >= 10 ? 'hi' : m >= 2 ? 'mid' : 'lo' }, x2(m))));
+    if (!list.length) this.historyEl.append(h('li', { class: 'none' }, 'First flight of the day'));
   }
 
   private renderCrowd(): void {
@@ -421,9 +546,16 @@ export class RocketApp implements ArcadeScreen {
       const how = this.cashedAt !== null ? `bailed ${x2(this.cashedAt)}` : crashed ? 'lost it' : 'riding';
       rows.push({ e: '🙋', name: 'You', bet: this.bet, how, cls: `you ${this.cashedAt !== null ? 'won' : crashed ? 'lost' : ''}` });
     }
-    for (const p of this.punters) {
+    // Other players first, then the cast.
+    const others: { emoji: string; name: string; bet: number; out: number | null; target: number | null; real: boolean }[] = this.src
+      ? (this.src.round()?.riders ?? [])
+          .filter((x) => x.id !== this.src?.me)
+          .map((x) => ({ emoji: x.emoji, name: x.name, bet: x.bet, out: x.out, target: x.never ? null : 1, real: x.real }))
+          .sort((a, b) => Number(b.real) - Number(a.real))
+      : this.punters.map((p) => ({ ...p, real: false }));
+    for (const p of others) {
       const how = p.out !== null ? `bailed ${x2(p.out)}` : p.target === null ? (crashed ? 'went down with him' : 'is a plant') : crashed ? 'lost it' : 'riding';
-      rows.push({ e: p.emoji, name: p.name, bet: p.bet, how, cls: p.out !== null ? 'won' : crashed ? 'lost' : '' });
+      rows.push({ e: p.emoji, name: p.name, bet: p.bet, how, cls: `${p.real ? 'real ' : ''}${p.out !== null ? 'won' : crashed ? 'lost' : ''}` });
     }
     const key = rows.map((r) => `${r.name}:${r.how}`).join('|');
     if (key === this.crowdKey) return;

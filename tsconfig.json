@@ -34,6 +34,7 @@
     "tests",
     "scripts",
     "vite.config.ts",
+    "vite.arcade-server.config.ts",
     "vitest.config.ts"
   ]
 }
