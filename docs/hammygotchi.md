@@ -285,7 +285,8 @@ crypto random numbers.
 - **Your coins.** Bets come out up front; wins pay `floor(bet × multiplier)`.
   A bet on a round that hasn't started comes back, and closing a game or
   leaving the page squares you up the way the round was going: bailed out
-  at the current multiplier, or paid where the poop was going to land. Back
+  at the current multiplier, or paid where the poop was going to land (Pizza
+  Boxes: the offer on the table, or your box). Back
   in the unit he says something about how it went. The Life tab keeps each
   game's rounds, coins up or down and best multiplier.
 - **On its own page.** The same five games are also a standalone page,

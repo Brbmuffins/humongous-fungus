@@ -1,7 +1,7 @@
 // The online arcade as one thing: the connection, who you are, your wallet
 // and the five games' shared rounds. Built at start-up if the server answers.
 import { Api, keepSaved, loadSaved } from './api';
-import { BoardMirror, CrossingMirror, MinesMirror, PlinkoMirror, RocketMirror, SlotsMirror } from './mirrors';
+import { BoardMirror, CrossingMirror, DealMirror, MinesMirror, PlinkoMirror, RocketMirror, SlotsMirror } from './mirrors';
 import { Sky } from './sky';
 import { TriviaMirror } from './trivia';
 import { OnlineWallet } from './wallet';
@@ -17,6 +17,7 @@ export class Arena {
   readonly slots = new SlotsMirror(this.sky, this.api, this.wallet);
   readonly board = new BoardMirror(this.sky, this.api, this.wallet);
   readonly trivia = new TriviaMirror(this.sky, this.api, this.wallet);
+  readonly deal = new DealMirror(this.sky, this.api, this.wallet);
 
   /** Whether this device has been here before (so the name box can be skipped). */
   get known(): boolean {
@@ -38,6 +39,7 @@ export class Arena {
     this.api.secret = secret;
     keepSaved({ secret, name: r.me.name });
     this.wallet.applyMe(r.me);
+    void this.deal.resume();
     return { ok: true };
   }
 

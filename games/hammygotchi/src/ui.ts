@@ -57,6 +57,7 @@ import { CrossingApp } from './crossingview';
 import { MinesApp } from './minesview';
 import { PlinkoApp } from './plinkoview';
 import { SlotsApp } from './slotsview';
+import { DealApp } from './dealview';
 import { RocketApp } from './rocketview';
 import { paintToyIcon } from './toys';
 import { sfx } from './sound';
@@ -1113,6 +1114,7 @@ export class GameUI {
       crossing: () => new CrossingApp(this.c, close),
       plinko: () => new PlinkoApp(this.c, close),
       slots: () => new SlotsApp(this.c, close),
+      deal: () => new DealApp(this.c, close),
     };
     const app = screens[game]();
     this.open(app.card, () => onClose(app.close()), app.focus);

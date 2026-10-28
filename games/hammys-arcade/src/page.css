@@ -274,6 +274,14 @@
   }
 }
 
+/* An odd number of cards: the last one gets a row to itself on a phone. */
+@media (max-width: 999px) {
+  .a-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    min-height: 0;
+  }
+}
+
 @media (min-width: 640px) {
   .a-page {
     padding-top: 28px;

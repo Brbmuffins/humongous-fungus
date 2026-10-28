@@ -1,11 +1,12 @@
 // What this page knows about each game's shared round: a copy kept up to date
 // from the sky's events, and the calls that send your choices to the server.
 // They are the "round sources" the screens in games/hammygotchi/src draw from.
-import type { CrossingSource, LiveBig, LiveCrossing, LiveDrop, LiveMines, LiveRocket, MinesSource, PlinkoSource, RocketSource, SlotsSource, SourceReply } from '@hammygotchi/roundsource';
+import type { DealEvent } from '@hammygotchi/deal';
+import type { CrossingSource, DealReaction, DealSource, LiveBig, LiveCrossing, LiveDealTable, LiveDrop, LiveMines, LiveRocket, MinesSource, PlinkoSource, RocketSource, SlotsSource, SourceReply } from '@hammygotchi/roundsource';
 import type { SlotSpin } from '@hammygotchi/slots';
-import { causeOf, crashOf, floorOf, laneRoll, plinkoPathOf, slotsSpinOf, truckOf } from '../../shared/derive';
+import { causeOf, crashOf, dealLayoutOf, floorOf, laneRoll, plinkoPathOf, slotsSpinOf, truckOf } from '../../shared/derive';
 import { shortHash, verifySeed } from '../../shared/fair';
-import type { BoardKind, BoardMine, BoardPeriod, BoardRow, BoardState, Snapshot } from '../../shared/protocol';
+import { DEAL_REACTS, type BoardKind, type BoardMine, type BoardPeriod, type BoardRow, type BoardState, type DealTable, type Snapshot } from '../../shared/protocol';
 import type { Api, Answer } from './api';
 import type { Sky } from './sky';
 import type { OnlineWallet } from './wallet';
@@ -511,5 +512,203 @@ export class BoardMirror extends Mirror {
       this.standing = r.mine as BoardMine;
       this.changed();
     }, wait);
+  }
+}
+
+// Pizza Boxes ----------------------------------------------------------------------
+
+/** How long winnings from a kept box stay out of the coin count if the screen never says the reveal is over. */
+const HOLD_MAX_MS = 5000;
+/** Rounds that just ended, kept so a page that is looking at one can still show how it came out. */
+const ENDED_KEPT = 12;
+
+export class DealMirror extends Mirror implements DealSource {
+  readonly reacts: readonly string[] = DEAL_REACTS;
+  private tables = new Map<number, LiveDealTable>();
+  private ended = new Map<number, LiveDealTable>();
+  private seen = new Map<number, string>();
+  private mineId = 0;
+  private held = 0;
+  private holdTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Requests of ours in flight: their answers carry the coins, so the sky need not ask. */
+  private acting = 0;
+  private steps = new Set<(t: LiveDealTable, events: DealEvent[]) => void>();
+  private cheers = new Set<(r: DealReaction) => void>();
+  private changes = new Set<() => void>();
+
+  constructor(sky: Sky, api: Api, wallet: OnlineWallet) {
+    super(sky, api, wallet);
+    sky.on('snapshot', (d: Snapshot) => {
+      const mine = this.tables.get(this.mineId);
+      this.tables = new Map(d.deal.live.map((t) => [t.id, { ...t }]));
+      if (mine && !this.tables.has(mine.id) && mine.phase !== 'done') this.tables.set(mine.id, mine);
+      const own = d.deal.live.find((t) => t.who === this.wallet.id && t.phase !== 'done');
+      if (own) this.mineId = own.id;
+      this.changed();
+      void this.resume();
+    });
+    sky.on('deal.step', (d: { table: DealTable; events?: DealEvent[] }) => this.take(d.table, d.events ?? [], false));
+    sky.on('deal.react', (d: DealReaction) => {
+      for (const f of [...this.cheers]) f(d);
+    });
+  }
+
+  private changed(): void {
+    for (const f of [...this.changes]) f();
+  }
+
+  /** A step of some round, from the sky or from the answer to our own request. */
+  private take(t: DealTable, events: DealEvent[], fromReply: boolean): void {
+    const known = this.tables.get(t.id) ?? this.ended.get(t.id);
+    if (known && t.v <= known.v) {
+      // Nothing new, but a snapshot may have brought a round of ours that we have not yet claimed (a page that came back).
+      if (t.who === this.wallet.id && t.phase !== 'done' && this.mineId !== t.id) {
+        this.mineId = t.id;
+        this.changed();
+      }
+      return;
+    }
+    const lt: LiveDealTable = { ...t };
+    if (t.phase === 'done') this.verify(lt);
+    if (t.phase === 'done') {
+      this.tables.delete(t.id);
+      this.ended.set(t.id, lt);
+      for (const k of [...this.ended.keys()].slice(0, Math.max(0, this.ended.size - ENDED_KEPT))) this.ended.delete(k);
+    } else {
+      this.tables.set(t.id, lt);
+    }
+    const mine = t.who === this.wallet.id;
+    if (mine) {
+      this.mineId = t.phase === 'done' ? 0 : t.id;
+      // Settled by the server on its own (the clock ran out): the coins changed without us asking.
+      if (t.phase === 'done' && !fromReply && !this.acting) this.wallet.refresh();
+    }
+    for (const f of [...this.steps]) f(lt, events);
+    this.changed();
+  }
+
+  /** The seed is out: check it is the one that was promised, and lay the whole floor out again. */
+  private verify(t: LiveDealTable): void {
+    if (!t.seed) return;
+    let good = verifySeed(t.seed, t.hash);
+    if (good) {
+      const all = dealLayoutOf(t.seed).prizes;
+      const o = t.outcome;
+      good = t.opened.every((x) => all[x.box] === x.prize) && (!o || o.box === null || all[o.box] === o.boxPrize);
+      if (good) t.all = all;
+    }
+    this.seen.set(t.id, good ? `${OK} the seed matches, and every box was laid out again here` : BAD);
+  }
+
+  /** Ask for our own round (we may have one from before the page was closed or the server restarted). */
+  async resume(): Promise<void> {
+    if (!this.api.secret) return;
+    const r = await this.api.post('deal/mine');
+    if (!r.ok) return;
+    if (r.table) this.take(r.table as DealTable, [], true);
+    else if (this.mineId) {
+      // It ended while we were away.
+      this.mineId = 0;
+      this.wallet.refresh();
+      this.changed();
+    }
+  }
+
+  live(): readonly LiveDealTable[] {
+    return [...this.tables.values()].sort((a, b) => b.startedAt - a.startedAt);
+  }
+
+  mineTable(): LiveDealTable | null {
+    return this.tables.get(this.mineId) ?? null;
+  }
+
+  table(id: number): LiveDealTable | null {
+    return this.tables.get(id) ?? this.ended.get(id) ?? null;
+  }
+
+  fair(): string {
+    return this.fairOf(this.mineId);
+  }
+
+  fairOf(id: number): string {
+    const t = this.table(id);
+    if (!t) return '';
+    return `Round ${t.id} · committed ${shortHash(t.hash)} · ${this.seen.get(id) || 'the seed is shown when it ends'}`;
+  }
+
+  onStep(f: (t: LiveDealTable, events: DealEvent[]) => void): () => void {
+    this.steps.add(f);
+    return () => this.steps.delete(f);
+  }
+
+  onReact(f: (r: DealReaction) => void): () => void {
+    this.cheers.add(f);
+    return () => this.cheers.delete(f);
+  }
+
+  onChange(f: () => void): () => void {
+    this.changes.add(f);
+    return () => this.changes.delete(f);
+  }
+
+  /** Keep winnings out of the coin count until the box has been opened on screen. */
+  private hold(coins: number): void {
+    if (coins <= 0) return;
+    this.release();
+    this.held = coins;
+    this.wallet.hold(coins);
+    this.holdTimer = setTimeout(() => this.release(), HOLD_MAX_MS);
+  }
+
+  release(): void {
+    clearTimeout(this.holdTimer);
+    if (!this.held) return;
+    const n = this.held;
+    this.held = 0;
+    this.wallet.release(n);
+  }
+
+  private async act(path: string, body: Record<string, unknown> = {}): Promise<Answer> {
+    this.acting += 1;
+    try {
+      const r = await this.api.post(path, body);
+      const ok = r.ok ? r : null;
+      const t = ok?.table as DealTable | undefined;
+      // A box that is kept pays at once on the server, but is only opened on screen a moment later.
+      const how = t?.outcome?.how;
+      if (t && t.phase === 'done' && how && how !== 'deal' && how !== 'left-offer' && how !== 'refund') this.hold(Number(ok?.won) || 0);
+      if (r.me) this.wallet.applyMe(r.me);
+      if (t) this.take(t, (ok?.events as DealEvent[] | undefined) ?? [], true);
+      return r;
+    } finally {
+      this.acting -= 1;
+    }
+  }
+
+  async bet(amount: number): Promise<SourceReply<{ table: LiveDealTable; won: number }>> {
+    const r = await this.act('deal/bet', { amount });
+    const t = r.ok ? this.table(Number((r.table as DealTable | undefined)?.id)) : null;
+    return r.ok && t ? { ok: true, table: t, won: 0 } : { ok: false, message: r.ok ? 'The arcade did not answer properly.' : r.message };
+  }
+  async pick(box: number): Promise<SourceReply> {
+    return this.plain(await this.act('deal/pick', { box }));
+  }
+  async open(box: number): Promise<SourceReply> {
+    return this.plain(await this.act('deal/open', { box }));
+  }
+  async answer(deal: boolean): Promise<SourceReply<{ won: number }>> {
+    const r = await this.act('deal/answer', { deal });
+    return r.ok ? { ok: true, won: Number(r.won) || 0 } : { ok: false, message: r.message };
+  }
+  async swap(swapIt: boolean): Promise<SourceReply<{ won: number }>> {
+    const r = await this.act('deal/swap', { swap: swapIt });
+    return r.ok ? { ok: true, won: Number(r.won) || 0 } : { ok: false, message: r.message };
+  }
+  async leave(): Promise<SourceReply<{ won: number }>> {
+    const r = await this.act('deal/leave');
+    return r.ok ? { ok: true, won: Number(r.won) || 0 } : { ok: false, message: r.message };
+  }
+  async react(table: number, r: number): Promise<SourceReply> {
+    return this.plain(await this.send('deal/react', { table, r }));
   }
 }

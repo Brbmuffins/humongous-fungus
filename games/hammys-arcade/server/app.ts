@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { API, type BoardState, type Snapshot } from '../shared/protocol';
 import type { BoardChange } from './board';
 import { CrossingGame } from './crossing';
+import { DealGame } from './deal';
 import { newSeed, type Env, type Game, type Res } from './engine';
 import { Buckets } from './limits';
 import { MinesGame } from './mines';
@@ -52,7 +53,7 @@ const STATUS: Record<string, number> = { bad_request: 400, unauthorized: 401, no
 
 export class App {
   readonly store: Store;
-  readonly games: { rocket: RocketGame; crossing: CrossingGame; mines: MinesGame; plinko: PlinkoGame; slots: SlotsGame };
+  readonly games: { rocket: RocketGame; crossing: CrossingGame; mines: MinesGame; plinko: PlinkoGame; slots: SlotsGame; deal: DealGame };
   readonly trivia: TriviaGame;
   readonly env: Env;
   readonly server: Server;
@@ -87,7 +88,7 @@ export class App {
       wake: () => this.wake(),
     };
     this.store.onBoard = (changes) => this.boardChanged(changes);
-    this.games = { rocket: new RocketGame(this.env), crossing: new CrossingGame(this.env), mines: new MinesGame(this.env), plinko: new PlinkoGame(this.env), slots: new SlotsGame(this.env) };
+    this.games = { rocket: new RocketGame(this.env), crossing: new CrossingGame(this.env), mines: new MinesGame(this.env), plinko: new PlinkoGame(this.env), slots: new SlotsGame(this.env), deal: new DealGame(this.env) };
     this.trivia = new TriviaGame(this.env, { file: opts.dataDir ? join(opts.dataDir, 'hammys-arcade-trivia.json') : null, timeScale: opts.triviaTimeScale });
     if (opts.staticDir) this.staticHtml = readFileSync(join(opts.staticDir, 'index.html'), 'utf8');
     this.server = createServer((req, res) => {
@@ -101,7 +102,7 @@ export class App {
   }
 
   private all(): Game[] {
-    return [this.games.rocket, this.games.crossing, this.games.mines, this.games.plinko, this.games.slots, this.trivia];
+    return [this.games.rocket, this.games.crossing, this.games.mines, this.games.plinko, this.games.slots, this.games.deal, this.trivia];
   }
 
   async listen(): Promise<{ host: string; port: number }> {
@@ -223,6 +224,7 @@ export class App {
       slots: this.games.slots.snapshot(),
       board: this.board(),
       trivia: this.trivia.snapshot(),
+      deal: this.games.deal.snapshot(),
     };
   }
 
@@ -377,9 +379,9 @@ export class App {
       const r = this.trivia.handle(t[1], player, body);
       if (r) return this.reply(res, { ...r, me: this.store.me(player) } as Res);
     }
-    const m = /^(rocket|crossing|mines|plinko|slots)\/([a-z]+)$/.exec(rest);
+    const m = /^(rocket|crossing|mines|plinko|slots|deal)\/([a-z]+)$/.exec(rest);
     if (m) {
-      const r = this.games[m[1] as 'rocket' | 'crossing' | 'mines' | 'plinko' | 'slots'].handle(m[2], player, body);
+      const r = this.games[m[1] as 'rocket' | 'crossing' | 'mines' | 'plinko' | 'slots' | 'deal'].handle(m[2], player, body);
       if (r) return this.reply(res, r.ok ? { ...r, me: this.store.me(player) } : { ...r, me: this.store.me(player) } as Res);
     }
     return this.send(res, 404, { ok: false, error: 'not_found', message: 'Nothing here.' });

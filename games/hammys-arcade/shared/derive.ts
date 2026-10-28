@@ -3,6 +3,7 @@
 import { crashCause, crashPoint } from '@hammygotchi/rocket';
 import { VEHICLES } from '@hammygotchi/crossing';
 import { clampMines, layMines } from '@hammygotchi/mines';
+import { layBoxes, type DealLayout } from '@hammygotchi/deal';
 import { dropPath, binOf, plinkoTable, type PlinkoRisk, type PlinkoRows } from '@hammygotchi/plinko';
 import { spin as slotsSpin, type SlotSpin } from '@hammygotchi/slots';
 import { rollAt, stream } from './fair';
@@ -36,3 +37,5 @@ export function plinkoResult(path: readonly boolean[], rows: PlinkoRows, risk: P
 
 /** Hammy Slots: spin number `nonce` under a seed, worked out from the seed's rolls alone (the rules are pure). */
 export const slotsSpinOf = (seed: string, nonce: number): SlotSpin => slotsSpin(stream(seed, `slots:${nonce}`));
+/** Pizza Boxes: which prize is under which box, and the wobble in each offer, from the round's seed. */
+export const dealLayoutOf = (seed: string): DealLayout => layBoxes(stream(seed, 'deal'));

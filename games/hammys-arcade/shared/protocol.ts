@@ -2,6 +2,7 @@
 // is the only thing that rolls dice, holds coins or keeps time; the page draws what it's told.
 import type { ArcadeGame, BetStats } from '@hammygotchi/arcade';
 import type { TriviaSnapshot } from './trivia';
+import type { LiveDealTable } from '@hammygotchi/roundsource';
 
 /** Everything lives under this path, on the same origin as the page. */
 export const API = '/arcade/api/';
@@ -33,9 +34,15 @@ export const PLINKO_EPOCH_MS = 15 * 60_000;
 /** Hammy Slots seeds rotate the same way: after this many spins or this long. */
 export const SLOTS_EPOCH_SPINS = 100;
 export const SLOTS_EPOCH_MS = 15 * 60_000;
+/** A Pizza Boxes round nobody has touched for this long settles itself (the same as walking away). */
+export const DEAL_IDLE_MS = 120_000;
+/** The most live rounds a page is told about at once. */
+export const DEAL_LIVE_MAX = 40;
+/** What a watcher can say: the page sends a number, never words. */
+export const DEAL_REACTS: readonly string[] = ['No deal!', 'Take it!', 'Open that one!', 'Bold.', 'Ouch.', 'Nice box!'];
 
 /** The games with rounds the server holds coins in until they finish. */
-export type StakeGame = 'rocket' | 'crossing' | 'mines';
+export type StakeGame = 'rocket' | 'crossing' | 'mines' | 'deal';
 
 export interface Me {
   id: string;
@@ -189,6 +196,8 @@ export interface BoardState {
 
 /** Where one player stands on each list: null if they aren't on it. */
 export type BoardMine = Record<BoardKind, Record<BoardPeriod, BoardRow | null>>;
+/** A Pizza Boxes round as the sky shows it: no box contents that are still shut. */
+export type DealTable = Omit<LiveDealTable, 'all'>;
 
 /** Everything a page needs the moment it connects. */
 export interface Snapshot {
@@ -202,6 +211,7 @@ export interface Snapshot {
   slots: { hash: string; epoch: number; first: number; feed: SlotsBig[] };
   board: BoardState;
   trivia: TriviaSnapshot;
+  deal: { live: DealTable[] };
 }
 
 /** The answer to every POST. */

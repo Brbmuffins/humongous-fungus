@@ -6,6 +6,7 @@
 import type { SlotSpin } from './slots';
 
 // Types only: the server and its client live in games/hammys-arcade.
+import type { DealEvent, DealOutcome, DealPhase } from './deal';
 
 export type SourceReply<T extends object = object> = ({ ok: true } & T) | { ok: false; message: string };
 
@@ -173,4 +174,82 @@ export interface SlotsSource extends SourceBase {
   spin(amount: number): Promise<SourceReply<{ spin: SlotSpin; won: number }>>;
   /** A spin's winnings are on the server already; the wallet keeps them back until the reels have stopped. */
   release(coins: number): void;
+}
+
+// Pizza Boxes -------------------------------------------------------------------
+
+/**
+ * One Pizza Boxes round, as everyone may see it. Nothing in it says what is
+ * under a box that is still shut; the layout comes out once, in `seed`, when
+ * the round ends.
+ */
+export interface LiveDealTable {
+  id: number;
+  /** Whose round: a player's id, or one of the made-up cast's. */
+  who: string;
+  name: string;
+  emoji: string;
+  real: boolean;
+  bet: number;
+  /** Published before a box is picked. */
+  hash: string;
+  /** Counts every step; a copy with a lower number is out of date. */
+  v: number;
+  phase: DealPhase;
+  /** The box being kept. */
+  mine: number | null;
+  /** Round being played, 0-based. */
+  round: number;
+  toOpen: number;
+  /** Dr. Moss's offer (a multiple of the bet), while the phone is ringing. */
+  offer: number | null;
+  /** Boxes opened so far, in order, with what was in them. */
+  opened: { box: number; prize: number }[];
+  /** The one other box left, while the swap is on offer. */
+  lastBox: number | null;
+  startedAt: number;
+  /** When the round settles itself if nobody does anything. */
+  expiresAt: number;
+  /** Only once it's over. */
+  outcome?: DealOutcome;
+  seed?: string;
+  /** Filled in by the page once the seed has checked out: the prize under every box. */
+  all?: number[];
+}
+
+export interface DealReaction {
+  table: number;
+  who: string;
+  name: string;
+  /** Index into `DealSource.reacts`. */
+  r: number;
+}
+
+export interface DealSource extends SourceBase {
+  /** The fixed phrases a watcher can send. */
+  readonly reacts: readonly string[];
+  /** The rounds on now, newest first. */
+  live(): readonly LiveDealTable[];
+  /** Your own round, if one is going. */
+  mineTable(): LiveDealTable | null;
+  /** A round by number: a live one, or one that just ended. */
+  table(id: number): LiveDealTable | null;
+  /** The fairness line for a round. */
+  fairOf(id: number): string;
+  /** Called with every step of every round (and with an empty list of events for a round's start). Returns a way to stop. */
+  onStep(f: (t: LiveDealTable, events: DealEvent[]) => void): () => void;
+  onReact(f: (r: DealReaction) => void): () => void;
+  /** The list of live rounds changed, or the connection came back. */
+  onChange(f: () => void): () => void;
+  bet(amount: number): Promise<SourceReply<{ table: LiveDealTable; won: number }>>;
+  pick(box: number): Promise<SourceReply>;
+  open(box: number): Promise<SourceReply>;
+  answer(deal: boolean): Promise<SourceReply<{ won: number }>>;
+  swap(swapIt: boolean): Promise<SourceReply<{ won: number }>>;
+  leave(): Promise<SourceReply<{ won: number }>>;
+  react(table: number, r: number): Promise<SourceReply>;
+  /** Ask the server for your own round again (after the page comes back). */
+  resume(): Promise<void>;
+  /** The reveal is over: let go of winnings that were held back so the coins didn't give the box away. */
+  release(): void;
 }

@@ -1,7 +1,7 @@
 # Hammy's Arcade (standalone)
 
 Hammy's Arcade as a game of its own: a front page with Fart Rocket, Hammy
-Mines, Hammy Crossing, Poop Plinko and Hammy Slots as five big cards, your coins, and how
+Mines, Hammy Crossing, Poop Plinko, Hammy Slots and Pizza Boxes as six big cards, your coins, and how
 each game has gone (rounds, net, best multiplier). Tap a card to play; the
 `‹ Arcade` button on the card (or Escape, or the browser's Back) goes back to the
 front page. It's meant to be hosted as a plain static page at
@@ -107,13 +107,14 @@ body over 2 KB, `429` slow down.
 | `POST /arcade/api/plinko/drop` | `{secret, amount, rows, risk}` |
 | `POST /arcade/api/slots/spin` | `{secret, amount}`; answers `{n, spin, won}` |
 | `POST /arcade/api/board` | `{secret}`; answers `{mine}`: your own best row (with its rank) on each of the four lists, or null |
+| `POST /arcade/api/deal/{bet,pick,open,answer,swap,leave,mine,react}` | `{secret, amount}`, `{secret, box}`, `{secret, deal}`, `{secret, swap}`, `{secret}`, `{secret, table, r}` (see Pizza Boxes) |
 
 **The sky.** The first event is `snapshot` (the whole state: `cid`,
 `players`, each game's round, the last rocket flights, plinko's hash and last
 drops, slots' hash and last big wins, the leaderboard's top tens). After it: `players`, `renamed`, and per game `rocket.betting / bet /
 left / start / bail / crash / reveal`, `crossing.betting / bet / left / start /
 lane / cash / end`, `mines.round / run / left / progress / end`, and
-`plinko.drop / epoch / reveal`, `slots.big / epoch / reveal`, and `board` (a leaderboard list's new top ten). Every event carries `serverNow`. A comment
+`plinko.drop / epoch / reveal`, `slots.big / epoch / reveal`, `deal.step / react`, and `board` (a leaderboard list's new top ten). Every event carries `serverNow`. A comment
 (`: keep-alive`) goes out every 15 s. `retry: 2000` is sent, so the browser
 reconnects by itself and gets a fresh `snapshot` (the page replaces its state
 with it). A client with more than 256 KB unsent is hung up on, closed
@@ -139,7 +140,7 @@ There is no login: the `secret` the server hands back at the first `hello` is
 kept in the browser (`hammys-arcade.player.v1`) and is the only way back to
 that wallet. The server stores only its SHA-256 and never sends it again.
 
-### The five games online
+### The six games online (Pizza Boxes has its own section below)
 
 All five: stakes are held on the server until the round settles, one wallet
 per player for the whole arcade, every outcome decided on the server from a
@@ -249,6 +250,7 @@ Plinko:   seeds rotate after 100 drops or 15 minutes; drop n of a seed:
           path = stream(seed, "plinko:<n>") -> left/right per row
 Slots:    seeds rotate after 100 spins or 15 minutes; spin n of a seed:
           spin = slotsSpin(stream(seed, "slots:<n>"))   (the pure rules in slots.ts)
+Pizza Boxes: boxes = layBoxes(stream(seed, "deal"))  (shuffle of the 20 prizes, then the offers' wobble)
 ```
 
 Plinko and Slots have no rounds, so their seeds is committed for an *epoch*: the hash is
@@ -272,6 +274,11 @@ Known gaps, written down rather than fixed:
   exploit, only a default worth knowing about (it is not a way to skip a bad roll:
   the roll for a lane is drawn when the lane is decided, after the last chance to
   press Go).
+- **Pizza Boxes seeds are in the wallet file.** A round that survives a restart
+  has to keep its seed, so the seed of every live real round is saved (server
+  side, in `hammys-arcade-wallets.json`, which is never served). Anyone who could
+  read that file could read ahead in a live round; it has the same protection as
+  the wallets (and the players' secret hashes) themselves.
 - The wallet file is one JSON file for the whole arcade (up to 50,000
   players); a database would be next if it ever grows past that.
 
@@ -291,9 +298,9 @@ may still pay. "Start over" on the front page resets coins and stats.
 ## How it reuses Hammygotchi
 
 Nothing from the games is copied. `games/hammys-arcade/src/main.ts` imports the
-rules (`arcade.ts`, `rocket.ts`, `mines.ts`, `crossing.ts`, `plinko.ts`, `slots.ts`), the
+rules (`arcade.ts`, `rocket.ts`, `mines.ts`, `crossing.ts`, `plinko.ts`, `slots.ts`, `deal.ts`), the
 screens (`rocketview.ts`, `minesview.ts`, `crossingview.ts`, `plinkoview.ts`,
-`slotsview.ts`, `arcadeview.ts`), Hammy himself (`hammy.ts`), the sounds and the games' styles
+`slotsview.ts`, `dealview.ts`, `arcadeview.ts`), Hammy himself (`hammy.ts`), the sounds and the games' styles
 (`arcade.css`, `slots.css`) from `games/hammygotchi/src` through the `@hammygotchi` alias
 (set in `vite.config.ts`, `vitest.config.ts` and `tsconfig.json`).
 
@@ -456,6 +463,124 @@ reveal. Answers are judged on the server by arrival time (a short allowance past
 zero for the trip). Routes: `POST /arcade/api/trivia/{join,volunteer,leave,answer,take,go,status}`,
 rate-limited like the others. Events: `trivia.round`, `.crowd`, `.ask`, `.tally`,
 `.closing`, `.reveal`, `.decide`, `.end`; the `snapshot` has a `trivia` part.
+## Pizza Boxes
+
+An original keep-your-box game (no show, no briefcases, no banker): Hammy hides
+prizes under twenty of his pizza boxes, drawn on canvas, greasy and numbered,
+with a prize board down each side that crosses off as boxes open. Rules and
+content in `games/hammygotchi/src/deal.ts`, the screen in `dealview.ts`, the
+box drawing in `dealart.ts`, its styles in `deal.css`.
+
+**A round.** Bet, pick the one box you're keeping, then open the others in
+rounds of 5, 4, 3, 2, 1, 1, 1, 1 (`ROUNDS`). After each round Dr. Moss rings
+with an offer for your box: Deal (take it, the round is over, then your box is
+opened for the "ooh" or the "ouch") or Keep going. After the last round two
+boxes are left: swap for the other one or keep yours, and you win what's in it.
+Hammy comments on big boxes, on offers and on the reveal.
+
+**The prizes** (`PRIZES`, multiples of the bet): 0.01, 0.05, 0.1, 0.15, 0.2,
+0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.75, 0.9, 0.99, 1.1, 1.2, 1.25, 2.25 and
+8. They sum to exactly 19.8, so their mean is exactly 0.99 (`RTP`). That mean
+is also what caps the top prize: with twenty boxes averaging 0.99 there are
+19.8 bets in the whole board, so a 50× or 100× prize can't exist (a bigger
+top prize needs a bigger board, or a rare jackpot board whose mean is
+balanced by poorer ordinary ones).
+
+**The offer.** After round *r* the offer is `floor2(average × share)`, where
+`average` is the mean of the prizes under the boxes still shut (yours
+included) and `share` starts low and rises toward fair: `OFFER_SHARE` =
+0.34, 0.44, 0.54, 0.64, 0.74, 0.84, 0.92, 0.96, plus the layout's seeded wobble
+(a number in [-1, 1) per round, times `OFFER_WOBBLE`: ±0.07 in round 1 down to
+±0.02 in round 8) so it feels like a person. The share is clamped to
+`OFFER_MAX` = 0.98 and the offer to the average itself, so **no offer is ever
+above the expected value of what's left**. Your box's value to you is exactly
+that average (it is equally likely to be any shut box), so the offers can only
+lose against standing pat, and by the usual stopping argument no strategy,
+deal early or late, swap or keep, can average above 0.99. Seeded simulation
+(400,000 rounds each, `tests/hammygotchi/deal.test.ts` runs 25,000):
+always deal at the first call 0.33; deal at 80% of average or better 0.85; deal
+at 90% or better 0.93; deal at 95% or better 0.96; deal in the last round 0.94;
+never deal 0.99 (keep 0.988, swap 0.991, standard error 0.003).
+
+**Fairness plumbing.** `layBoxes(roll)` is the only randomness: it shuffles the
+prizes under the boxes and draws the wobble, from the browser's crypto numbers
+(`fairRoll`) in the screen. `DealRound` is the whole game with no DOM and no
+clock (`pick`, `open`, `answer`, `swap`, `leave`), so a server can run it later.
+Every move returns events (`picked`, `opened` with the prize, `offer`, `dealt`,
+`declined`, `final`, `reveal`, `left`) and keeps them in `round.events`, for a
+spectator feed. Nothing you do changes what's where.
+
+**Leaving mid-round**, offline (closing the card, Back, or the page's `pagehide`),
+settles the way the round was going: with an offer on the table you take it; with
+no offer out you keep your box and get what's in it (it was decided at bet time,
+so leaving tells you nothing); before you've picked a box the bet is refunded.
+None of these can pay more than the average of what was in play.
+
+Stats are the arcade's own: rounds, net and best multiplier under `deal`.
+
+### Pizza Boxes online (and watching)
+
+Offline the round is rolled on the phone, as above. With the server up
+(`server/deal.ts`, the page side `online/mirrors.ts` `DealMirror` feeding
+`dealview.ts`'s `DealSource`, typed in `roundsource.ts`) it works like Poop
+Plinko, a solo round decided on the server, but every round is on a table other
+players can watch.
+
+- **The server decides.** A bet (`deal/bet`) takes the stake from the wallet,
+  draws a 256-bit seed, publishes `hash = SHA-256(seed)` and lays the boxes from
+  the seed with `dealLayoutOf(seed) = layBoxes(stream(seed, "deal"))`
+  (`shared/derive.ts`, the same function the page uses). The server runs
+  `DealRound` unchanged; the page only sends choices (`pick`, `open`, `answer`,
+  `swap`, `leave`) and draws what it is told. Winnings are paid from the server
+  wallet when the round ends; a refund (left before picking a box) gives the
+  stake back as if it was never placed.
+- **No leaks.** Everything that goes out (replies, the sky, the snapshot) is a
+  `DealTable`: who, the bet, the hash, the phase, your box number, the offer, the
+  boxes opened so far **with** their prizes, and the one box left at the swap.
+  Prizes under shut boxes, the layout and the seed never leave until the round
+  is over, when the seed comes out (`seed` in the final table). The page checks
+  `SHA-256(seed) == hash`, lays the floor out again and checks it against every
+  opened box and the outcome, and shows a check mark (or `DOES NOT MATCH`).
+  The average of what is in play, which the page needs to judge the offer, is
+  worked out from the fixed prize set less what has been opened.
+- **Watching.** Every step is a `deal.step` event `{table, events}` where
+  `events` are `DealRound`'s own (`picked`, `opened`, `offer`, `dealt`, `declined`,
+  `final`, `reveal`, `left`); `table.v` counts steps, so a page that hears a step
+  twice (the reply and the sky) ignores the second. A snapshot carries every
+  live table (up to 40, newest first), and a "Watching now" list on the game's
+  screen lists the other players' rounds: tap one to follow it. A spectator's
+  screen is read-only (no bet, no boxes, no Deal button); it plays each opening, the
+  phone ringing, Dr. Moss's offer and the answer as they come. The page replays
+  them with the same sounds and lines as the player's.
+- **Reactions.** A watcher can send one of six fixed phrases (`DEAL_REACTS`: No
+  deal!, Take it!, Open that one!, Bold., Ouch., Nice box!) by number
+  (`deal/react {table, r}`); the player and the other watchers see "Name: phrase".
+  No free text, no emoji. One per player per 3 seconds, and at most 6 in a burst
+  per table (then one every 2 seconds). Reactions are not saved.
+- **Stalled rounds.** A round nobody has touched for `DEAL_IDLE_MS` (2 minutes)
+  settles itself by the leave rule above (`DealRound.leave`): the offer on the
+  table if the phone is ringing, otherwise the box's value, and before a box is
+  picked the stake is refunded. The server's clock sees to it, so it happens
+  whether or not anyone is connected. Closing the screen or the tab does **not**
+  settle it: it carries on, and opening the game again picks it up (`deal/mine`,
+  and the snapshot) until the timeout.
+- **Restarts.** The seed and the list of moves of every live real round are
+  saved in the same file write as the wallets (`Store.keep`), and on start each
+  round is played again from its moves (the rules are deterministic), the stake
+  stays held (`KEPT_STAKES` in `store.ts`; other games' stakes are still given
+  back), and every round gets a full two minutes again (the time the server was
+  down isn't the player's fault). A stake with no round to go with it, or a
+  round whose stake isn't there, is squared up on start (the stake goes back /
+  the round is dropped). A crash loses at most the last second and a half of
+  moves (the save delay).
+- **Quiet times.** If a page is connected and nobody real has a round, one of the
+  cast (`ROCKET_CROWD`) sits down with a made-up bet, picks, opens and answers on
+  a timer, takes the deal sooner or later depending on their nerve, and then goes
+  home; another sits down some seconds later while it stays quiet. They use real
+  seeds, publish and reveal like anyone, never touch a wallet and are not saved.
+- **Limits.** Rounds start at most 4 in a burst and then one per 15 s per player
+  (every start is broadcast); one live round per player; the usual 30 burst /
+  10 a second per player and 60 / 20 per address on top.
 
 ## Tests
 
@@ -496,3 +621,20 @@ rate-limited like the others. Events: `trivia.round`, `.crowd`, `.ask`, `.tally`
 The games' rules are tested in `tests/hammygotchi/` (Hammy Slots in `slots.test.ts`:
 the paylines, wilds, left-to-right matching, the orb's values, the exact RTP, the
 cap and settling a spin into the wallet).
+
+- `deal.test.ts`: Pizza Boxes on the server (stake, hash first, seed explains the
+  boxes, payout, validation, refunds, no leaks, the timeout in every phase, restart
+  from a saved file, orphan stakes, step events, reactions and their limits, the
+  made-up player).
+- `deal-mirror.test.ts`: the page's `DealMirror` against the real server game
+  (every step once and in order for a player and a spectator, the seed check and its
+  failure, holding a kept box's winnings back, coming back to a round, reactions).
+- `deal-live.test.ts`: the server in this process on a free port: two players and a
+  spectator over real HTTP and SSE, a restart in the middle of a round, a round
+  settling itself after the timeout across a restart, the cast playing for a page
+  that is watching. Takes about 10 s.
+
+The games' rules are tested in `tests/hammygotchi/`; Pizza Boxes is in
+`tests/hammygotchi/deal.test.ts` (prize mean, offers never above the average in
+any state, the rounds and the swap, settle-on-leave, a seeded simulation of
+several strategies, and the payout through the wallet).

@@ -18,7 +18,7 @@ export interface ArcadeSeat {
   stats: { arcade: Record<ArcadeGame, BetStats> };
 }
 
-export type ArcadeGame = 'rocket' | 'mines' | 'crossing' | 'plinko' | 'slots';
+export type ArcadeGame = 'rocket' | 'mines' | 'crossing' | 'plinko' | 'slots' | 'deal';
 
 /**
  * Betting coins is simulated gambling, which raises an app's store age
@@ -47,6 +47,7 @@ export const ARCADE: readonly ArcadeDef[] = [
   { id: 'crossing', name: 'Hammy Crossing', emoji: '🚚', color: '#3d8bff', blurb: 'Walk him across the road. Lane by lane.' },
   { id: 'plinko', name: 'Poop Plinko', emoji: '🚽', color: '#ff6fa8', blurb: 'He drops one. It bounces. Somewhere.' },
   { id: 'slots', name: 'Hammy Slots', emoji: '🎰', color: '#a56bff', blurb: 'Zig-zag lines, a pinball orb, and a sneeze.' },
+  { id: 'deal', name: 'Pizza Boxes', emoji: '🍕', color: '#e8483a', blurb: 'Keep one box. Dr. Moss calls with offers.' },
 ];
 
 export const ARCADE_BY_ID = Object.fromEntries(ARCADE.map((g) => [g.id, g])) as Record<ArcadeGame, ArcadeDef>;
@@ -121,5 +122,10 @@ export const HOME_LINES: Record<ArcadeGame, { won: readonly string[]; lost: read
     won: ['The machine owes me one. Now it owes you.', 'Did you see the orb? The ORB.', 'Quit while you’re ahead. (Don’t.)'],
     lost: ['The machine is a liar and a thief. Spin again?', 'It ate everything. I tried to stop it.', 'The orb hates me personally.'],
     even: ['Even. Suspiciously even.', 'The orb and I are at peace.'],
+  },
+  deal: {
+    won: ['Dr. Moss paid up. She’s mad. Good.', 'Told you that box was the one.', 'Pizza night. On me. Well, on you.'],
+    lost: ['She lowballed us. I felt it.', 'It was a crust. It was always a crust.', 'Dr. Moss hung up on me.'],
+    even: ['We split the pizza. Fine.', 'Dr. Moss says “interesting” and writes something down.'],
   },
 };
