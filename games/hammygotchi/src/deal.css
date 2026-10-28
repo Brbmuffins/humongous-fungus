@@ -1,0 +1,227 @@
+/* Hammy's Pizza Boxes: the boxes, the two prize boards and Dr. Moss's call.
+   Imported by dealview.ts; sits inside the .arcade-card from arcade.css. */
+.deal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.deal-face {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 50%;
+  background: #3b2d55;
+}
+.deal-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.modal-card .deal-says {
+  min-height: 2.6em;
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.modal-card .deal-head-text .deal-status {
+  min-height: 2.6em;
+  text-align: left;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.3;
+}
+.modal-card .deal-hint {
+  color: #ffd34d;
+  font-weight: 700;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* --- The floor: prize board, boxes, prize board --------------------------- */
+.deal-stage {
+  display: grid;
+  grid-template-columns: minmax(46px, 60px) minmax(0, 1fr) minmax(46px, 60px);
+  gap: 6px;
+  width: min(100%, calc(100dvh - 430px));
+  min-width: min(100%, 320px);
+  margin-inline: auto;
+  padding: 6px;
+  border-radius: 14px;
+  background: #5a4630;
+  box-shadow: inset 0 0 0 2px #3d2f20;
+}
+.deal-board {
+  display: grid;
+  grid-template-rows: repeat(10, minmax(0, 1fr));
+  gap: 2px;
+  padding: 3px;
+  margin: 0;
+  list-style: none;
+  border-radius: 10px;
+  background: #140c20;
+}
+.deal-prize {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0 2px;
+  border-radius: 6px;
+  background: #1f5e4c;
+  color: #d8fff0;
+  font: 800 clamp(10px, 3vw, 13px) / 1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.deal-prize.hot {
+  background: #8a2a1c;
+  color: #ffe6de;
+}
+.deal-prize.big {
+  background: #d4431f;
+  color: #fff;
+  box-shadow: 0 0 0 1px #ffd34d;
+}
+.deal-prize.gone {
+  background: #2a2038;
+  color: #6c5b86;
+  text-decoration: line-through;
+  box-shadow: none;
+}
+.deal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: min-content;
+  align-content: space-between;
+  gap: 4px;
+}
+.deal-box {
+  display: block;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: default;
+}
+.deal-box.can {
+  cursor: pointer;
+}
+.deal-box.can:hover canvas,
+.deal-box.can:focus-visible canvas {
+  transform: translateY(-2px) rotate(-2deg);
+}
+.deal-box canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.12s ease-out;
+  pointer-events: none;
+}
+.deal-box.pop canvas {
+  animation: box-pop 0.35s ease-out;
+}
+@keyframes box-pop {
+  from {
+    transform: scale(0.6) rotate(-12deg);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+}
+
+/* --- Dr. Moss on the phone ------------------------------------------------- */
+.deal-call,
+.deal-final {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid var(--cheese);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #3a2658, #2a1b44);
+}
+.deal-call-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.deal-phone {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  background: #34c759;
+  font-size: 22px;
+}
+.deal-call.ringing {
+  animation: ring-card 0.5s ease-in-out infinite;
+}
+.deal-call.ringing .deal-phone {
+  animation: ring-phone 0.35s ease-in-out infinite;
+}
+@keyframes ring-phone {
+  0%,
+  100% {
+    transform: rotate(-16deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+}
+@keyframes ring-card {
+  0%,
+  100% {
+    border-color: var(--cheese);
+  }
+  50% {
+    border-color: #34c759;
+  }
+}
+.deal-call-who {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.deal-call-who b {
+  font-size: 16px;
+}
+.modal-card .deal-call-title {
+  font-size: 13px;
+  color: var(--muted);
+}
+.modal-card .deal-call-line {
+  color: var(--text);
+  font-style: italic;
+  line-height: 1.35;
+}
+.modal-card .deal-call-offer {
+  color: #ffd34d;
+  font-weight: 800;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.deal-call-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.deal-call-buttons .btn {
+  margin-top: 0;
+  min-width: 0;
+}
+.modal-card .deal-final-title {
+  color: var(--text);
+  font-weight: 700;
+  text-align: center;
+}
+.modal-card .deal-result {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #3b2d55;
+  color: var(--text);
+  font-weight: 600;
+  text-align: center;
+}

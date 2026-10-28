@@ -18,7 +18,7 @@ export interface ArcadeSeat {
   stats: { arcade: Record<ArcadeGame, BetStats> };
 }
 
-export type ArcadeGame = 'rocket' | 'mines' | 'crossing' | 'plinko';
+export type ArcadeGame = 'rocket' | 'mines' | 'crossing' | 'plinko' | 'deal';
 
 /**
  * Betting coins is simulated gambling, which raises an app's store age
@@ -46,6 +46,7 @@ export const ARCADE: readonly ArcadeDef[] = [
   { id: 'mines', name: 'Hammy Mines', emoji: '💩', color: '#ff9a2e', blurb: 'Dorkitos under his pizza boxes. And poop.' },
   { id: 'crossing', name: 'Hammy Crossing', emoji: '🚚', color: '#3d8bff', blurb: 'Walk him across the road. Lane by lane.' },
   { id: 'plinko', name: 'Poop Plinko', emoji: '🚽', color: '#ff6fa8', blurb: 'He drops one. It bounces. Somewhere.' },
+  { id: 'deal', name: 'Pizza Boxes', emoji: '🍕', color: '#e8483a', blurb: 'Keep one box. Dr. Moss calls with offers.' },
 ];
 
 export const ARCADE_BY_ID = Object.fromEntries(ARCADE.map((g) => [g.id, g])) as Record<ArcadeGame, ArcadeDef>;
@@ -115,5 +116,10 @@ export const HOME_LINES: Record<ArcadeGame, { won: readonly string[]; lost: read
     won: ['That one was worth it.', 'Best poop of my life.', 'Gold. Pure gold.'],
     lost: ['Clogged. Again.', 'That one hurt, and it didn’t even pay.', 'I need more fiber.'],
     even: ['I’m all out. For now.', 'That’s enough plinking.'],
+  },
+  deal: {
+    won: ['Dr. Moss paid up. She’s mad. Good.', 'Told you that box was the one.', 'Pizza night. On me. Well, on you.'],
+    lost: ['She lowballed us. I felt it.', 'It was a crust. It was always a crust.', 'Dr. Moss hung up on me.'],
+    even: ['We split the pizza. Fine.', 'Dr. Moss says “interesting” and writes something down.'],
   },
 };

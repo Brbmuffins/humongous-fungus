@@ -1,7 +1,7 @@
 # Hammy's Arcade (standalone)
 
 Hammy's Arcade as a game of its own: a front page with Fart Rocket, Hammy
-Mines, Hammy Crossing and Poop Plinko as four big cards, your coins, and how
+Mines, Hammy Crossing, Poop Plinko and Pizza Boxes as big cards, your coins, and how
 each game has gone (rounds, net, best multiplier). Tap a card to play; the
 `‹ Arcade` button on the card (or Escape, or the browser's Back) goes back to the
 front page. It's meant to be hosted as a plain static page at
@@ -238,9 +238,9 @@ may still pay. "Start over" on the front page resets coins and stats.
 ## How it reuses Hammygotchi
 
 Nothing from the games is copied. `games/hammys-arcade/src/main.ts` imports the
-rules (`arcade.ts`, `rocket.ts`, `mines.ts`, `crossing.ts`, `plinko.ts`), the
-screens (`rocketview.ts`, `minesview.ts`, `crossingview.ts`, `plinkoview.ts`,
-`arcadeview.ts`), Hammy himself (`hammy.ts`), the sounds and the games' styles
+rules (`arcade.ts`, `rocket.ts`, `mines.ts`, `crossing.ts`, `plinko.ts`,
+`deal.ts`), the screens (`rocketview.ts`, `minesview.ts`, `crossingview.ts`,
+`plinkoview.ts`, `dealview.ts`, `arcadeview.ts`), Hammy himself (`hammy.ts`), the sounds and the games' styles
 (`arcade.css`) from `games/hammygotchi/src` through the `@hammygotchi` alias
 (set in `vite.config.ts`, `vitest.config.ts` and `tsconfig.json`).
 
@@ -290,6 +290,61 @@ round, kept up to date from the sky, and the calls; `sky.ts`: the stream and the
 clock; `wallet.ts`: the server's coins as the front page sees them; `join.ts`:
 the name box).
 
+## Pizza Boxes
+
+An original keep-your-box game (no show, no briefcases, no banker): Hammy hides
+prizes under twenty of his pizza boxes, drawn on canvas, greasy and numbered,
+with a prize board down each side that crosses off as boxes open. Rules and
+content in `games/hammygotchi/src/deal.ts`, the screen in `dealview.ts`, the
+box drawing in `dealart.ts`, its styles in `deal.css`.
+
+**A round.** Bet, pick the one box you're keeping, then open the others in
+rounds of 5, 4, 3, 2, 1, 1, 1, 1 (`ROUNDS`). After each round Dr. Moss rings
+with an offer for your box: Deal (take it, the round is over, then your box is
+opened for the "ooh" or the "ouch") or Keep going. After the last round two
+boxes are left: swap for the other one or keep yours, and you win what's in it.
+Hammy comments on big boxes, on offers and on the reveal.
+
+**The prizes** (`PRIZES`, multiples of the bet): 0.01, 0.05, 0.1, 0.15, 0.2,
+0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.75, 0.9, 0.99, 1.1, 1.2, 1.25, 2.25 and
+8. They sum to exactly 19.8, so their mean is exactly 0.99 (`RTP`). That mean
+is also what caps the top prize: with twenty boxes averaging 0.99 there are
+19.8 bets in the whole board, so a 50× or 100× prize can't exist (a bigger
+top prize needs a bigger board, or a rare jackpot board whose mean is
+balanced by poorer ordinary ones).
+
+**The offer.** After round *r* the offer is `floor2(average × share)`, where
+`average` is the mean of the prizes under the boxes still shut (yours
+included) and `share` starts low and rises toward fair: `OFFER_SHARE` =
+0.34, 0.44, 0.54, 0.64, 0.74, 0.84, 0.92, 0.96, plus the layout's seeded wobble
+(a number in [-1, 1) per round, times `OFFER_WOBBLE`: ±0.07 in round 1 down to
+±0.02 in round 8) so it feels like a person. The share is clamped to
+`OFFER_MAX` = 0.98 and the offer to the average itself, so **no offer is ever
+above the expected value of what's left**. Your box's value to you is exactly
+that average (it is equally likely to be any shut box), so the offers can only
+lose against standing pat, and by the usual stopping argument no strategy,
+deal early or late, swap or keep, can average above 0.99. Seeded simulation
+(400,000 rounds each, `tests/hammygotchi/deal.test.ts` runs 25,000):
+always deal at the first call 0.33; deal at 80% of average or better 0.85; deal
+at 90% or better 0.93; deal at 95% or better 0.96; deal in the last round 0.94;
+never deal 0.99 (keep 0.988, swap 0.991, standard error 0.003).
+
+**Fairness plumbing.** `layBoxes(roll)` is the only randomness: it shuffles the
+prizes under the boxes and draws the wobble, from the browser's crypto numbers
+(`fairRoll`) in the screen. `DealRound` is the whole game with no DOM and no
+clock (`pick`, `open`, `answer`, `swap`, `leave`), so a server can run it later.
+Every move returns events (`picked`, `opened` with the prize, `offer`, `dealt`,
+`declined`, `final`, `reveal`, `left`) and keeps them in `round.events`, for a
+spectator feed. Nothing you do changes what's where.
+
+**Leaving mid-round** (closing the card, Back, or the page's `pagehide`)
+settles the way the round was going: with an offer on the table you take it; with
+no offer out you keep your box and get what's in it (it was decided at bet time,
+so leaving tells you nothing); before you've picked a box the bet is refunded.
+None of these can pay more than the average of what was in play.
+
+Stats are the arcade's own: rounds, net and best multiplier under `deal`.
+
 ## Tests
 
 `tests/hammys-arcade/`:
@@ -312,4 +367,7 @@ the name box).
   games, then checks the seeds, stops it with SIGTERM and restarts it. Takes about
   45 s because rounds run on the real clock.
 
-The games' rules are tested in `tests/hammygotchi/`.
+The games' rules are tested in `tests/hammygotchi/`; Pizza Boxes is in
+`tests/hammygotchi/deal.test.ts` (prize mean, offers never above the average in
+any state, the rounds and the swap, settle-on-leave, a seeded simulation of
+several strategies, and the payout through the wallet).

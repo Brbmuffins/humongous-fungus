@@ -20,6 +20,7 @@ import { fmt } from '@shared/format';
 import { ARCADE, HOME_LINES, type ArcadeDef, type ArcadeGame } from '@hammygotchi/arcade';
 import type { ArcadeHost, ArcadeScreen } from '@hammygotchi/arcadeview';
 import { CrossingApp } from '@hammygotchi/crossingview';
+import { DealApp } from '@hammygotchi/dealview';
 import { paintPortrait, type Face } from '@hammygotchi/hammy';
 import { MinesApp } from '@hammygotchi/minesview';
 import { PlinkoApp } from '@hammygotchi/plinkoview';
@@ -101,7 +102,7 @@ class ArcadePage {
           'header',
           { class: 'a-top' },
           this.portrait,
-          h('div', { class: 'a-title' }, h('h1', null, 'Hammy’s Arcade'), h('p', null, 'Four ways to lose imaginary coins on a cube.'), this.skyEl),
+          h('div', { class: 'a-title' }, h('h1', null, 'Hammy’s Arcade'), h('p', null, 'Five ways to lose imaginary coins on a cube.'), this.skyEl),
           h('p', { class: 'coins', 'aria-label': 'Your coins' }, h('span', { class: 'coin', 'aria-hidden': 'true' }, 'H'), this.balance),
         ),
         h('h2', { class: 'a-pick' }, 'Pick a game'),
@@ -302,6 +303,7 @@ class ArcadePage {
       mines: () => new MinesApp(this.wallet, close, a?.mines),
       crossing: () => new CrossingApp(this.wallet, close, a?.crossing),
       plinko: () => new PlinkoApp(this.wallet, close, a?.plinko),
+      deal: () => new DealApp(this.wallet, close),
     };
     const app = make[id]();
     // The way back to the front page, where the ✕ would be.

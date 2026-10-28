@@ -229,7 +229,7 @@ nothing sent anywhere. `src/talk.ts` does the speaking and listening.
 
 ### Hammy's Arcade
 
-A row of apps on his phone (top of the Phone tab): four betting games on his
+A row of apps on his phone (top of the Phone tab): five betting games on his
 coins, modelled on the casino originals. They share their coins, stats and
 switches through `src/arcade.ts` and the bet picker, option buttons and card
 in `src/arcadeview.ts`; each game's rules are in its own file, its screen in
@@ -277,10 +277,11 @@ crypto random numbers.
 - **Your coins.** Bets come out up front; wins pay `floor(bet × multiplier)`.
   A bet on a round that hasn't started comes back, and closing a game or
   leaving the page squares you up the way the round was going: bailed out
-  at the current multiplier, or paid where the poop was going to land. Back
+  at the current multiplier, or paid where the poop was going to land (Pizza
+  Boxes: the offer on the table, or your box). Back
   in the unit he says something about how it went. The Life tab keeps each
   game's rounds, coins up or down and best multiplier.
-- **On its own page.** The same four games are also a standalone page,
+- **On its own page.** The same five games are also a standalone page,
   Hammy's Arcade (`games/hammys-arcade`, see [hammys-arcade.md](hammys-arcade.md)),
   which reuses these rules and screens with a wallet of its own.
 - **Not in the store apps.** Simulated gambling raises an app's age rating,
