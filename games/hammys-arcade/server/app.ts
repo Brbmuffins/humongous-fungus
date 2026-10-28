@@ -16,6 +16,7 @@ import { PlinkoGame } from './plinko';
 import { RocketGame } from './rocket';
 import { SlotsGame } from './slots';
 import { Store } from './store';
+import { TriviaGame } from './trivia';
 
 export interface AppOptions {
   host?: string;
@@ -27,6 +28,8 @@ export interface AppOptions {
   now?: () => number;
   newSeed?: () => string;
   saveDelayMs?: number;
+  /** Run The Damp Seat this many times faster (tests only). */
+  triviaTimeScale?: number;
   log?: (line: string) => void;
 }
 
@@ -50,6 +53,7 @@ const STATUS: Record<string, number> = { bad_request: 400, unauthorized: 401, no
 export class App {
   readonly store: Store;
   readonly games: { rocket: RocketGame; crossing: CrossingGame; mines: MinesGame; plinko: PlinkoGame; slots: SlotsGame };
+  readonly trivia: TriviaGame;
   readonly env: Env;
   readonly server: Server;
   private clients = new Map<string, Client>();
@@ -84,6 +88,7 @@ export class App {
     };
     this.store.onBoard = (changes) => this.boardChanged(changes);
     this.games = { rocket: new RocketGame(this.env), crossing: new CrossingGame(this.env), mines: new MinesGame(this.env), plinko: new PlinkoGame(this.env), slots: new SlotsGame(this.env) };
+    this.trivia = new TriviaGame(this.env, { file: opts.dataDir ? join(opts.dataDir, 'hammys-arcade-trivia.json') : null, timeScale: opts.triviaTimeScale });
     if (opts.staticDir) this.staticHtml = readFileSync(join(opts.staticDir, 'index.html'), 'utf8');
     this.server = createServer((req, res) => {
       this.route(req, res).catch((e: unknown) => {
@@ -96,7 +101,7 @@ export class App {
   }
 
   private all(): Game[] {
-    return [this.games.rocket, this.games.crossing, this.games.mines, this.games.plinko, this.games.slots];
+    return [this.games.rocket, this.games.crossing, this.games.mines, this.games.plinko, this.games.slots, this.trivia];
   }
 
   async listen(): Promise<{ host: string; port: number }> {
@@ -217,6 +222,7 @@ export class App {
       plinko: this.games.plinko.snapshot(),
       slots: this.games.slots.snapshot(),
       board: this.board(),
+      trivia: this.trivia.snapshot(),
     };
   }
 
@@ -322,7 +328,7 @@ export class App {
         return this.send(res, 200, {
           ok: true,
           round: this.games.rocket.current,
-          rounds: { rocket: this.games.rocket.current, crossing: this.games.crossing.current, mines: this.games.mines.current },
+          rounds: { rocket: this.games.rocket.current, crossing: this.games.crossing.current, mines: this.games.mines.current, trivia: this.trivia.current },
           players: this.clients.size,
         });
       }
@@ -365,6 +371,11 @@ export class App {
       const given = this.store.topUp(player);
       if (!given) return this.reply(res, { ok: false, error: 'not_broke', message: 'You still have coins, or some are riding on a round.' });
       return this.reply(res, { ok: true, given, me: this.store.me(player) });
+    }
+    const t = /^trivia\/([a-z]+)$/.exec(rest);
+    if (t) {
+      const r = this.trivia.handle(t[1], player, body);
+      if (r) return this.reply(res, { ...r, me: this.store.me(player) } as Res);
     }
     const m = /^(rocket|crossing|mines|plinko|slots)\/([a-z]+)$/.exec(rest);
     if (m) {

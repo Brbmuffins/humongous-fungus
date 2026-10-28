@@ -3,6 +3,7 @@
 import { Api, keepSaved, loadSaved } from './api';
 import { BoardMirror, CrossingMirror, MinesMirror, PlinkoMirror, RocketMirror, SlotsMirror } from './mirrors';
 import { Sky } from './sky';
+import { TriviaMirror } from './trivia';
 import { OnlineWallet } from './wallet';
 
 export class Arena {
@@ -15,6 +16,7 @@ export class Arena {
   readonly plinko = new PlinkoMirror(this.sky, this.api, this.wallet);
   readonly slots = new SlotsMirror(this.sky, this.api, this.wallet);
   readonly board = new BoardMirror(this.sky, this.api, this.wallet);
+  readonly trivia = new TriviaMirror(this.sky, this.api, this.wallet);
 
   /** Whether this device has been here before (so the name box can be skipped). */
   get known(): boolean {

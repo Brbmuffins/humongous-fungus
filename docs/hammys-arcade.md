@@ -47,6 +47,7 @@ PORT=8731 DATA_DIR=/var/lib/hammys-arcade node dist/hammys-arcade-server/server.
 | `PORT` | required (`0` picks a free one; the `listening` line it prints says which) |
 | `HOST` | default `127.0.0.1` |
 | `DATA_DIR` | where `hammys-arcade-wallets.json` goes (default `./data`) |
+| `TRIVIA_TIME_SCALE` | tests only: run The Damp Seat this many times faster |
 | `STATIC_DIR` | optional: also serve that folder's `index.html` at `/`, `/arcade` and `/arcade/`. For local testing only; in production nginx serves the page |
 
 `SIGTERM`/`SIGINT` stop it cleanly: open stakes are given back, the wallet
@@ -417,6 +418,45 @@ For the browser smoke test, a build made with `VITE_SLOTS_TEST=1` accepts
 and a winning line or the orb can be put on screen on purpose. In every other
 build `TEST` is a compile-time `false` and the code is removed.
 
+## The Damp Seat (one against the crowd)
+
+A fifth thing in the arcade that is not a betting game: a shared quiz, free to
+join, with prizes paid by the house. `server/trivia.ts` (the game),
+`shared/trivia.ts` (types, timings, prize numbers, Hammy's lines, the made-up
+names), `src/online/trivia.ts` (the page's copy of the round) and
+`src/online/triviaview.ts` + `src/trivia.css` (the screen). Online only: the
+front page shows its card when the server is there. It is deliberately not in
+`ARCADE` or `ArcadeGame`, which hold the betting games.
+
+Questions come from `games/hammygotchi/src/trivia/questions.json` (362 checked
+questions, each with a fact and a source link). Rounds: a 15 s lobby, then up to
+eight questions (difficulty 1, 1, 1, 2, 2, 2, 3, 3), 12 s each (6 s when only
+made-up players are left to wait for; early close once every real player has
+answered, never under 4 s). One player is in the hot seat (the first to
+volunteer in the lobby; a made-up contestant if nobody does), everyone else is the
+crowd, plus 80 made-up players whose answers depend on difficulty and a
+per-player skill (about 82 % right on easy, 65 % on medium, 51 % on hard, and
+fooled by the same wrong answer more often than chance). Wrong crowd members are
+out; each one adds 3 x difficulty coins to the pot (cap 400). After a right answer
+the hot seat takes the pot and leaves (8 s to decide, then it is taken) or keeps
+going; clearing all eight adds 100. A wrong answer in the hot seat loses the pot:
+the crowd still standing shares max(pot, 50) (each real player 5 to 60). A wiped
+crowd leaves the pot to the hot seat.
+
+Money: the house pays, nothing comes from other players. At most 600 coins a day
+per player and 20,000 a day for everyone, kept in
+`DATA_DIR/hammys-arcade-trivia.json` with which questions were asked lately (the
+next question is picked from the less recently asked half of its difficulty, so a
+question does not come back for a long while, restarts included). The bank is
+public, so the answers are knowable; the caps are what keeps that from mattering.
+
+Fairness: the page is sent the question and the three answers in this round's
+shuffled order; the right one, the fact and the source link only arrive with the
+reveal. Answers are judged on the server by arrival time (a short allowance past
+zero for the trip). Routes: `POST /arcade/api/trivia/{join,volunteer,leave,answer,take,go,status}`,
+rate-limited like the others. Events: `trivia.round`, `.crowd`, `.ask`, `.tally`,
+`.closing`, `.reveal`, `.decide`, `.end`; the `snapshot` has a `trivia` part.
+
 ## Tests
 
 `tests/hammys-arcade/`:
@@ -442,6 +482,11 @@ build `TEST` is a compile-time `false` and the code is removed.
 - `store.test.ts`: wallet bounds, the top-up rule, names, the save file round trip
   (secrets not in it, stakes given back on load, a damaged file kept aside), the
   rate-limit buckets.
+- `trivia.test.ts`: The Damp Seat with a fake clock (who sits, nothing leaks before a
+  question closes, shuffling, the clock and the allowance, pot and prizes, the caps,
+  the made-up crowd's difficulty curve, no repeats for a long while, restarts).
+  `trivia-integration.test.ts`: the bundle at four times speed, one player in the hot
+  seat and one in the crowd over real SSE.
 - `integration.test.ts`: builds the bundle, starts `server.mjs` on a free port with a
   temp `DATA_DIR`, and drives two players over real HTTP and SSE through all five
   games, then checks the seeds, a slots spin, and the leaderboard (a win lands on it, is pushed

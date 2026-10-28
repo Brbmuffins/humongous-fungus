@@ -148,9 +148,10 @@ afterAll(async () => {
 });
 
 describe('the bundled server, over real HTTP and SSE', () => {
+  // Only real import lines count: the question bank inside the bundle is full of prose.
   it('is one file with no installs needed, and answers health', async () => {
     expect(existsSync(join(bundleDir, 'server.mjs'))).toBe(true);
-    expect(readFileSync(join(bundleDir, 'server.mjs'), 'utf8')).not.toMatch(/from ["'](?!node:)[^."'/@][^"']*["']/);
+    expect(readFileSync(join(bundleDir, 'server.mjs'), 'utf8')).not.toMatch(/^(?:import|export)\b[^\n]*\bfrom ["'](?!node:)[^."'/@][^"']*["']/m);
     const h = await (await fetch(`${base}/arcade/api/health`)).json();
     expect(h).toMatchObject({ ok: true, players: 0 });
   });

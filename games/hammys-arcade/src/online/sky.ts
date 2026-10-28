@@ -32,6 +32,7 @@ export const EVENTS = [
   'slots.epoch',
   'slots.reveal',
   'board',
+  ...['round', 'crowd', 'ask', 'tally', 'closing', 'reveal', 'decide', 'end'].map((e) => `trivia.${e}`),
 ] as const;
 
 type Handler = (data: any) => void;
