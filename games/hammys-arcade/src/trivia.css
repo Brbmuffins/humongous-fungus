@@ -49,14 +49,10 @@
   gap: 10px;
 }
 .ds-avatar {
-  display: grid;
-  place-items: center;
+  display: block;
   flex: none;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: var(--cheese);
-  font-size: 26px;
+  width: 52px;
+  height: 52px;
 }
 .ds-line {
   flex: 1;

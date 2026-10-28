@@ -113,8 +113,8 @@ class ArcadePage {
         ),
         h('h2', { class: 'a-pick' }, 'Pick a game'),
         this.cardsEl,
-        arena ? new BoardPanel(arena).el : null,
         this.triviaEl,
+        arena ? new BoardPanel(arena).el : null,
         h(
           'footer',
           { class: 'a-foot' },

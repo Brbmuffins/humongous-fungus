@@ -3,6 +3,7 @@
 // the mirror (online/trivia.ts) knows; the server decides everything.
 import { h, setDisabled, setText } from '@shared/dom';
 import type { ArcadeScreen, ArcadeSession } from '@hammygotchi/arcadeview';
+import { paintPortrait } from '@hammygotchi/hammy';
 import { TRIVIA_NAME, type TriviaRevealPub, type TriviaRoundPub } from '../../shared/trivia';
 import '../trivia.css';
 import type { TriviaMirror } from './trivia';
@@ -18,6 +19,8 @@ export class TriviaApp implements ArcadeScreen {
   readonly focus: HTMLElement;
   private coinsEl = h('span', { class: 'arcade-coins' });
   private lineEl = h('p', { class: 'ds-line', role: 'status' });
+  /** Cube Hammy hosts, in his classic fit. */
+  private host = h('canvas', { class: 'ds-avatar', 'aria-hidden': 'true' }) as HTMLCanvasElement;
   private metaEl = h('p', { class: 'ds-meta' });
   private stage = h('div', { class: 'ds-stage' });
   private wall = h('div', { class: 'ds-wall', role: 'img' });
@@ -43,7 +46,7 @@ export class TriviaApp implements ArcadeScreen {
       'section',
       { class: 'arcade-card ds-card', 'aria-label': TRIVIA_NAME },
       h('div', { class: 'arcade-top' }, h('h2', null, TRIVIA_NAME), this.coinsEl, x),
-      h('div', { class: 'ds-host' }, h('span', { class: 'ds-avatar', 'aria-hidden': 'true' }, '🐹'), this.lineEl),
+      h('div', { class: 'ds-host' }, this.host, this.lineEl),
       this.metaEl,
       this.stage,
       this.notice,
@@ -57,6 +60,7 @@ export class TriviaApp implements ArcadeScreen {
     this.stops.push(m.onChange(() => this.render()));
     wallet.onChange(() => !this.dead && this.paintCoins());
     this.ticker = window.setInterval(() => this.tickTimer(), 100);
+    requestAnimationFrame(() => !this.dead && paintPortrait(this.host, 'classic', 'happy', 0, 'cube'));
     void m.refresh();
     this.render();
   }
