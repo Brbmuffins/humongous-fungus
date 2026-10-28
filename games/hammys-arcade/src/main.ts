@@ -26,6 +26,7 @@ import { PlinkoApp } from '@hammygotchi/plinkoview';
 import { RocketApp } from '@hammygotchi/rocketview';
 import { SlotsApp, bigText } from '@hammygotchi/slotsview';
 import { setSound, unlock } from '@hammygotchi/sound';
+import { BoardPanel } from './boardview';
 import { Arena } from './online/arena';
 import { goOnline } from './online/join';
 import type { OnlineWallet } from './online/wallet';
@@ -109,6 +110,7 @@ class ArcadePage {
         ),
         h('h2', { class: 'a-pick' }, 'Pick a game'),
         this.cardsEl,
+        arena ? new BoardPanel(arena).el : null,
         h(
           'footer',
           { class: 'a-foot' },

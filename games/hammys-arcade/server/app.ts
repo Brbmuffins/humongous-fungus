@@ -6,7 +6,8 @@ import { readFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
-import { API, type Snapshot } from '../shared/protocol';
+import { API, type BoardState, type Snapshot } from '../shared/protocol';
+import type { BoardChange } from './board';
 import { CrossingGame } from './crossing';
 import { newSeed, type Env, type Game, type Res } from './engine';
 import { Buckets } from './limits';
@@ -81,6 +82,7 @@ export class App {
       newSeed: opts.newSeed ?? newSeed,
       wake: () => this.wake(),
     };
+    this.store.onBoard = (changes) => this.boardChanged(changes);
     this.games = { rocket: new RocketGame(this.env), crossing: new CrossingGame(this.env), mines: new MinesGame(this.env), plinko: new PlinkoGame(this.env), slots: new SlotsGame(this.env) };
     if (opts.staticDir) this.staticHtml = readFileSync(join(opts.staticDir, 'index.html'), 'utf8');
     this.server = createServer((req, res) => {
@@ -135,11 +137,23 @@ export class App {
     });
   }
 
+  private board(): BoardState {
+    return this.store.board.state((id) => this.store.players.get(id));
+  }
+
+  /** A list's top ten moved (a payout, or the week turning over): tell the pages the new one. */
+  private boardChanged(changes: BoardChange[]): void {
+    const state = this.board();
+    for (const c of changes) this.broadcast('board', { board: c.kind, period: c.period, rows: state.lists[c.kind][c.period], weekStart: state.weekStart, weekEnd: state.weekEnd });
+  }
+
   private arm(): void {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     if (this.closed) return;
     let next: number | null = null;
+    // The week turning over is the one thing the board does on its own.
+    if (this.clients.size) next = this.store.board.nextAt();
     for (const g of this.all()) {
       const t = g.nextAt();
       if (t !== null && (next === null || t < next)) next = t;
@@ -149,6 +163,8 @@ export class App {
       () => {
         this.timer = null;
         for (const g of this.all()) g.tick();
+        const turned = this.store.board.tick();
+        if (turned.length) this.boardChanged(turned);
         this.arm();
       },
       Math.min(2 ** 31 - 1, Math.max(1, next - this.now())),
@@ -200,6 +216,7 @@ export class App {
       mines: this.games.mines.snapshot(),
       plinko: this.games.plinko.snapshot(),
       slots: this.games.slots.snapshot(),
+      board: this.board(),
     };
   }
 
@@ -337,6 +354,7 @@ export class App {
     if (!this.playerLimit.take(player.id)) return this.send(res, 429, { ok: false, error: 'rate', message: 'Slow down.' });
 
     if (rest === 'me') return this.reply(res, { ok: true, me: this.store.me(player) });
+    if (rest === 'board') return this.reply(res, { ok: true, mine: this.store.board.mine(player.id, (id) => this.store.players.get(id)) });
     if (rest === 'rename') {
       const r = this.store.rename(player, body.name);
       if (!r.ok) return this.reply(res, { ok: false, error: r.error, message: nameMessage(r.error) });

@@ -16,6 +16,8 @@ const dataDir = join(tmp, 'data');
 let proc: ChildProcess | null = null;
 let base = '';
 let output = '';
+/** The leaderboard row the board test left, to check it survives the restart. */
+let boarded: any = null;
 
 async function startServer(): Promise<void> {
   proc = spawn(process.execPath, [join(bundleDir, 'server.mjs')], { env: { ...process.env, PORT: '0', DATA_DIR: dataDir, HOST: '127.0.0.1' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -395,6 +397,46 @@ describe('the bundled server, over real HTTP and SSE', () => {
     b.sky.close();
   });
 
+  it('the leaderboard: a win lands on it for real players only, live, with the current name, and is asked for by secret', { timeout: 60_000 }, async () => {
+    const a = await join_('Boarder', '198.51.100.23');
+    const b = await join_('Onlooker', '198.51.100.24');
+    expect(b.sky.snapshot.board.lists.win.all.some((r: any) => r.who === a.id)).toBe(false);
+    expect(b.sky.snapshot.board.weekEnd).toBeGreaterThan(b.sky.snapshot.board.weekStart);
+    expect((await act(b, 'board')).json.mine.win.all).toBeNull();
+    let paid: any = null;
+    for (let i = 0; i < 60 && !paid; i++) {
+      const r = await act(a, 'slots/spin', { amount: 40 });
+      if (r.json.error === 'rate') {
+        await new Promise((ok) => setTimeout(ok, 450));
+        continue;
+      }
+      expect(r.json.ok).toBe(true);
+      if (r.json.won > 40) paid = r.json;
+    }
+    expect(paid).not.toBeNull();
+    // Pushed to everyone connected: this player's own best, their game and what it paid.
+    const ev = await b.sky.find((e) => e.name === 'board' && e.data.board === 'win' && e.data.period === 'all' && e.data.rows.some((r: any) => r.who === a.id), 5000);
+    const row = ev.data.rows.find((r: any) => r.who === a.id);
+    expect(row).toMatchObject({ name: 'Boarder', game: 'slots', bet: 40 });
+    expect(row.won).toBeGreaterThan(40);
+    expect(ev.data.rows.map((r: any, i: number) => r.rank - i)).toEqual(ev.data.rows.map(() => 1));
+    expect(ev.data.weekEnd).toBeGreaterThan(ev.data.weekStart);
+    const mine = (await act(a, 'board')).json.mine;
+    expect(mine.win.all).toMatchObject({ who: a.id, name: 'Boarder', won: row.won });
+    expect(mine.mult.week).toMatchObject({ who: a.id, game: 'slots' });
+    expect((await act(b, 'board')).json.mine.win.all).toBeNull();
+    // Renamed: shown by the new name, from the snapshot of anyone who comes in after.
+    expect((await act(a, 'rename', { name: 'Boarder Two' })).json.ok).toBe(true);
+    const late = await new Sky().open();
+    expect(late.snapshot.board.lists.win.all.map((r: any) => r.name)).toContain('Boarder Two');
+    expect(JSON.stringify(late.snapshot.board)).not.toContain(a.secret);
+    boarded = late.snapshot.board.lists.win.all.find((r: any) => r.who === a.id);
+    late.close();
+    expect((await post('board', {})).status).toBe(401);
+    a.sky.close();
+    b.sky.close();
+  });
+
   it('stops cleanly on SIGTERM, gives back what was riding, and remembers everyone', { timeout: 90_000 }, async () => {
     const a = await join_('Survivor', '198.51.100.21');
     await openRound(a, 'rocket', 2500);
@@ -415,6 +457,11 @@ describe('the bundled server, over real HTTP and SSE', () => {
     const again = await post('hello', { secret: a.secret });
     expect(again.json).toMatchObject({ ok: true, created: false });
     expect(again.json.me).toMatchObject({ id: a.id, name: 'Survivor', coins: START_COINS });
+    // The leaderboard was saved with the wallets.
+    expect(boarded).not.toBeNull();
+    const back = await new Sky().open();
+    expect(back.snapshot.board.lists.win.all.find((r: any) => r.who === boarded.who)).toEqual(boarded);
+    back.close();
   });
 
   it('after a crash, not a clean stop, a stake that was riding is given back on the next boot', { timeout: 90_000 }, async () => {

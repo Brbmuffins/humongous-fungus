@@ -105,13 +105,14 @@ body over 2 KB, `429` slow down.
 | `POST /arcade/api/mines/{start,open,cash}` | `{secret, amount, grid, mines}`, `{secret, index}` |
 | `POST /arcade/api/plinko/drop` | `{secret, amount, rows, risk}` |
 | `POST /arcade/api/slots/spin` | `{secret, amount}`; answers `{n, spin, won}` |
+| `POST /arcade/api/board` | `{secret}`; answers `{mine}`: your own best row (with its rank) on each of the four lists, or null |
 
 **The sky.** The first event is `snapshot` (the whole state: `cid`,
 `players`, each game's round, the last rocket flights, plinko's hash and last
-drops, slots' hash and last big wins). After it: `players`, `renamed`, and per game `rocket.betting / bet /
+drops, slots' hash and last big wins, the leaderboard's top tens). After it: `players`, `renamed`, and per game `rocket.betting / bet /
 left / start / bail / crash / reveal`, `crossing.betting / bet / left / start /
 lane / cash / end`, `mines.round / run / left / progress / end`, and
-`plinko.drop / epoch / reveal`, `slots.big / epoch / reveal`. Every event carries `serverNow`. A comment
+`plinko.drop / epoch / reveal`, `slots.big / epoch / reveal`, and `board` (a leaderboard list's new top ten). Every event carries `serverNow`. A comment
 (`: keep-alive`) goes out every 15 s. `retry: 2000` is sent, so the browser
 reconnects by itself and gets a fresh `snapshot` (the page replaces its state
 with it). A client with more than 256 KB unsent is hung up on, closed
@@ -192,6 +193,40 @@ own retry and resyncs from the `snapshot`. Open bets are **refunded**, never
 settled either way: a round can't survive a restart, so what was riding goes
 back to the wallet, on boot if the file still has it as riding, and on a clean
 stop. The page shows "Lost the sky. Reconnecting…" meanwhile.
+
+### The leaderboard
+
+Two boards, **Biggest win** (the most coins one payout paid) and **Best multiplier**
+(the highest multiplier a game paid, at any bet), each **this week** and **all-time**.
+A top-10 panel on the front page, under the game cards, with a tab for the board and
+one for the period; your own row is highlighted, and if you are below the top ten your
+row (with its rank) is shown under it. Offline, it isn't there.
+
+- **One place feeds it.** `Store.win` (a round paying out) and `Store.instant` (Plinko,
+  Slots) both end in `Store.settled`, which calls `Board.record`. A new game that settles
+  its payouts through the store is on the boards with no wiring of its own. A refund
+  (`giveBack`) never gets there, and neither does a loss.
+- **What counts.** Only a win: more than the stake came back, at a multiplier above 1 (the
+  multiplier the game paid, floored to two decimals, as the page shows it). A cash-out at
+  1.00x, a payout under the bet, or nothing is not an entry.
+- **Who.** Only real players: only they have a wallet here, so the made-up cast can't be on
+  it. One line per player per board: their best. The two boards can hold different
+  spins (a big payout isn't always the best multiplier).
+- **Order.** Higher value first; a tie goes to whoever got there first (an arrival counter,
+  which is kept in the file), and a later equal value does not take a place.
+- **The week** starts Monday 00:00 in US Eastern (`America/New_York`, daylight saving
+  included: a week can be 167 or 169 hours). The weekly lists empty when it turns over, on
+  the server's own timer if anyone is connected, otherwise on the next payout or read, and
+  a file saved in an earlier week loses its weekly lists on load. All-time is kept.
+- **Names** are looked up when a row is sent, so a renamed player shows as the new name.
+- **Kept with the wallets**, in the same file (`board` next to `players`), written the same
+  atomic way, bounded: each list remembers only its best 500 (`BOARD_KEEP`); someone below
+  that has no rank until they climb above it. A damaged `board` in the file is ignored.
+- **Live.** When a list's top ten changes the server sends `board` (`{board, period, rows,
+  weekStart, weekEnd}`); a win that lands below the top ten says nothing to everyone. The
+  page asks `POST /arcade/api/board` for its own standing when it connects, when a `board`
+  event arrives, and a couple of seconds after its own coins change (so a rank
+  below the top ten can be a little behind until you next play).
 
 ### Fairness
 
@@ -398,12 +433,19 @@ build `TEST` is a compile-time `false` and the code is removed.
   a fixed seed and its rate limit, slots' spin from the committed seed, paid at once,
   quiet unless a big win, the epoch's reveal checking every spin, the cast bragging only
   when it's quiet, refunds when a round can't finish.
+- `board.test.ts`: the leaderboard: the Eastern week boundary (both ways through daylight
+  saving), only wins counting (not a loss, a refund, 1.00x or a payout under the bet),
+  real players only (the cast plays 40 minutes and appears nowhere), one entry per player per
+  board, ties to whoever was first (also after a restart), the weekly rollover at midnight
+  (and lazily on a payout), a rename, saved with the wallets and surviving a restart, a
+  damaged board, the bound, and when the sky is told.
 - `store.test.ts`: wallet bounds, the top-up rule, names, the save file round trip
   (secrets not in it, stakes given back on load, a damaged file kept aside), the
   rate-limit buckets.
 - `integration.test.ts`: builds the bundle, starts `server.mjs` on a free port with a
   temp `DATA_DIR`, and drives two players over real HTTP and SSE through all five
-  games, then checks the seeds, stops it with SIGTERM and restarts it. Takes about
+  games, then checks the seeds, a slots spin, and the leaderboard (a win lands on it, is pushed
+  live, survives the restart), stops it with SIGTERM and restarts it. Takes about
   45 s because rounds run on the real clock.
 
 The games' rules are tested in `tests/hammygotchi/` (Hammy Slots in `slots.test.ts`:

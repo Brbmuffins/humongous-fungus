@@ -8,6 +8,7 @@ import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { ARCADE, MIN_BET, noBets, payOut, placeBet, refundBet, type ArcadeGame, type ArcadeSeat, type BetStats } from '@hammygotchi/arcade';
 import type { FitId } from '@hammygotchi/defs';
+import { Board, type BoardChange } from './board';
 import { checkName, NAME_MAX, type NameCheck, type NameError } from '../shared/names';
 import { MAX_COINS, START_COINS, TOP_UP_COINS, type Me, type StakeGame } from '../shared/protocol';
 
@@ -46,6 +47,10 @@ export interface StoreOptions {
 
 export class Store {
   readonly players = new Map<string, Player>();
+  /** The leaderboard: fed by every payout that settles here. */
+  readonly board: Board;
+  /** Told when a leaderboard's top ten moved. */
+  onBoard: ((changes: BoardChange[]) => void) | null = null;
   private bySecret = new Map<string, Player>();
   private names = new Map<string, string>();
   private file: string | null;
@@ -59,6 +64,7 @@ export class Store {
     this.file = opts.file ?? null;
     this.now = opts.now ?? Date.now;
     this.delay = opts.saveDelayMs ?? 1500;
+    this.board = new Board(this.now);
   }
 
   // Loading and saving ----------------------------------------------------------
@@ -67,9 +73,9 @@ export class Store {
   load(): { players: number; refunded: number } {
     let refunded = 0;
     if (this.file && existsSync(this.file)) {
-      let raw: { players?: Partial<Saved>[] } | null = null;
+      let raw: { players?: Partial<Saved>[]; board?: unknown } | null = null;
       try {
-        raw = JSON.parse(readFileSync(this.file, 'utf8')) as { players?: Partial<Saved>[] };
+        raw = JSON.parse(readFileSync(this.file, 'utf8')) as { players?: Partial<Saved>[]; board?: unknown };
       } catch {
         // A damaged file: keep it (renamed) rather than overwrite it, and start empty.
         try {
@@ -88,6 +94,7 @@ export class Store {
         }
         this.add(p);
       }
+      this.board.load(raw?.board);
     }
     return { players: this.players.size, refunded };
   }
@@ -127,7 +134,7 @@ export class Store {
       const { fit: _f, fresh: _r, diedAt: _d, stats, ...rest } = p;
       return { ...rest, stats: stats.arcade };
     });
-    return JSON.stringify({ v: FILE_VERSION, savedAt: this.now(), players });
+    return JSON.stringify({ v: FILE_VERSION, savedAt: this.now(), players, board: this.board.save() });
   }
 
   /** Something changed: save soon. */
@@ -294,6 +301,7 @@ export class Store {
     delete p.stakes[game];
     const won = payOut(p, game, bet, mult);
     this.clamp(p, game);
+    this.settled(p, game, bet, won, mult);
     this.touch();
     return won;
   }
@@ -319,8 +327,15 @@ export class Store {
     if (!Number.isSafeInteger(amount) || !placeBet(p, game, amount)) return null;
     const won = payOut(p, game, amount, mult);
     this.clamp(p, game);
+    this.settled(p, game, amount, won, mult);
     this.touch();
     return won;
+  }
+
+  /** Every payout, of every game, passes here: the one place the leaderboard hears of it. A refund never does (it isn't a payout). */
+  private settled(p: Player, game: ArcadeGame, bet: number, won: number, mult: number): void {
+    const changes = this.board.record(p.id, game, bet, won, mult);
+    if (changes.length) this.onBoard?.(changes);
   }
 
   private clamp(p: Player, game: ArcadeGame): void {

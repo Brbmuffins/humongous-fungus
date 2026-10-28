@@ -5,7 +5,7 @@ import type { CrossingSource, LiveBig, LiveCrossing, LiveDrop, LiveMines, LiveRo
 import type { SlotSpin } from '@hammygotchi/slots';
 import { causeOf, crashOf, floorOf, laneRoll, plinkoPathOf, slotsSpinOf, truckOf } from '../../shared/derive';
 import { shortHash, verifySeed } from '../../shared/fair';
-import type { Snapshot } from '../../shared/protocol';
+import type { BoardKind, BoardMine, BoardPeriod, BoardRow, BoardState, Snapshot } from '../../shared/protocol';
 import type { Api, Answer } from './api';
 import type { Sky } from './sky';
 import type { OnlineWallet } from './wallet';
@@ -455,5 +455,61 @@ export class SlotsMirror extends Mirror implements SlotsSource {
       if (this.spins.length > 300) this.spins.shift();
     }
     return { ok: true, spin: ctl.spin as SlotSpin, won: Number(ctl.won) || 0 };
+  }
+}
+
+// The leaderboard -------------------------------------------------------------------
+
+/** The top ten of every list, kept up to date from the sky, and where this player stands (asked of the server). */
+export class BoardMirror extends Mirror {
+  state: BoardState | null = null;
+  standing: BoardMine | null = null;
+  private listeners = new Set<() => void>();
+  private timer = 0;
+  private last = 0;
+
+  constructor(sky: Sky, api: Api, wallet: OnlineWallet) {
+    super(sky, api, wallet);
+    sky.on('snapshot', (d: Snapshot) => {
+      this.state = d.board ?? null;
+      this.changed();
+      this.ask(0);
+    });
+    sky.on('board', (d: { board: BoardKind; period: BoardPeriod; rows: BoardRow[]; weekStart: number; weekEnd: number }) => {
+      if (!this.state) return;
+      this.state.lists[d.board][d.period] = d.rows;
+      this.state.weekStart = d.weekStart;
+      this.state.weekEnd = d.weekEnd;
+      this.changed();
+      this.ask();
+    });
+    sky.on('renamed', (d: { id: string; name: string }) => {
+      const each = (rows: (BoardRow | null)[]) => rows.forEach((r) => r && r.who === d.id && (r.name = d.name));
+      if (this.state) for (const k of Object.values(this.state.lists)) each([...k.week, ...k.all]);
+      if (this.standing) for (const k of Object.values(this.standing)) each([k.week, k.all]);
+      this.changed();
+    });
+  }
+
+  onChange(f: () => void): void {
+    this.listeners.add(f);
+  }
+
+  private changed(): void {
+    for (const f of [...this.listeners]) f();
+  }
+
+  /** Ask where this player stands, soon, and no more than every couple of seconds. */
+  ask(delay = 600): void {
+    if (this.timer) return;
+    const wait = Math.max(delay, this.last + 2500 - Date.now());
+    this.timer = window.setTimeout(async () => {
+      this.timer = 0;
+      this.last = Date.now();
+      const r = await this.api.post('board');
+      if (!r.ok || !r.mine) return;
+      this.standing = r.mine as BoardMine;
+      this.changed();
+    }, wait);
   }
 }

@@ -31,6 +31,7 @@ export const EVENTS = [
   'slots.big',
   'slots.epoch',
   'slots.reveal',
+  'board',
 ] as const;
 
 type Handler = (data: any) => void;

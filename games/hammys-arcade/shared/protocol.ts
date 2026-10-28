@@ -155,6 +155,40 @@ export interface SlotsBig {
   at: number;
 }
 
+/** The leaderboard: two boards, each kept for this week and for all time. */
+export type BoardKind = 'win' | 'mult';
+export type BoardPeriod = 'week' | 'all';
+export const BOARD_KINDS: readonly BoardKind[] = ['win', 'mult'];
+export const BOARD_PERIODS: readonly BoardPeriod[] = ['week', 'all'];
+/** How many rows the page shows (and the sky carries) per list. */
+export const BOARD_TOP = 10;
+
+/** One player's best on a board: the payout, the bet, and what multiplier the game paid. */
+export interface BoardRow {
+  rank: number;
+  who: string;
+  /** Their name now, not when they hit it. */
+  name: string;
+  emoji: string;
+  game: ArcadeGame;
+  bet: number;
+  won: number;
+  mult: number;
+  at: number;
+}
+
+export type BoardLists = Record<BoardKind, Record<BoardPeriod, BoardRow[]>>;
+
+/** Top ten of every list, and when "this week" began and ends (Monday 00:00 US Eastern). */
+export interface BoardState {
+  weekStart: number;
+  weekEnd: number;
+  lists: BoardLists;
+}
+
+/** Where one player stands on each list: null if they aren't on it. */
+export type BoardMine = Record<BoardKind, Record<BoardPeriod, BoardRow | null>>;
+
 /** Everything a page needs the moment it connects. */
 export interface Snapshot {
   serverNow: number;
@@ -165,6 +199,7 @@ export interface Snapshot {
   mines: { round: MinesRound | null };
   plinko: { hash: string; epoch: number; first: number; recent: PlinkoDrop[] };
   slots: { hash: string; epoch: number; first: number; feed: SlotsBig[] };
+  board: BoardState;
 }
 
 /** The answer to every POST. */

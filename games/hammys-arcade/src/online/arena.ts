@@ -1,7 +1,7 @@
 // The online arcade as one thing: the connection, who you are, your wallet
 // and the five games' shared rounds. Built at start-up if the server answers.
 import { Api, keepSaved, loadSaved } from './api';
-import { CrossingMirror, MinesMirror, PlinkoMirror, RocketMirror, SlotsMirror } from './mirrors';
+import { BoardMirror, CrossingMirror, MinesMirror, PlinkoMirror, RocketMirror, SlotsMirror } from './mirrors';
 import { Sky } from './sky';
 import { OnlineWallet } from './wallet';
 
@@ -14,6 +14,7 @@ export class Arena {
   readonly mines = new MinesMirror(this.sky, this.api, this.wallet);
   readonly plinko = new PlinkoMirror(this.sky, this.api, this.wallet);
   readonly slots = new SlotsMirror(this.sky, this.api, this.wallet);
+  readonly board = new BoardMirror(this.sky, this.api, this.wallet);
 
   /** Whether this device has been here before (so the name box can be skipped). */
   get known(): boolean {

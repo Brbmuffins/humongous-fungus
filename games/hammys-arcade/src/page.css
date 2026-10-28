@@ -470,3 +470,133 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* --- The leaderboard --------------------------------------------------------- */
+
+.a-board {
+  margin-top: 22px;
+  padding: 14px var(--gutter) 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+}
+.a-board .a-pick {
+  margin-top: 0;
+}
+.a-board-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+.a-board-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--room);
+}
+.a-board-tab {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 13px/1 var(--font-ui);
+  cursor: pointer;
+}
+.a-board-tab.on {
+  background: var(--cheese);
+  color: var(--cheese-ink);
+}
+.a-board-note {
+  margin: 10px 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.a-board-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.a-board-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'rank who val'
+    'rank sub sub';
+  column-gap: 8px;
+  align-items: baseline;
+  padding: 8px 8px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 8px;
+}
+.a-board-row.me {
+  background: color-mix(in srgb, var(--cheese) 16%, transparent);
+  border-bottom-color: transparent;
+}
+.a-board-rank {
+  grid-area: rank;
+  align-self: center;
+  font: 400 18px/1 var(--font-display);
+  color: var(--muted);
+  text-align: center;
+}
+.a-board > .a-board-list > .a-board-row:nth-child(-n + 3) .a-board-rank {
+  color: var(--cheese);
+}
+.a-board-who {
+  grid-area: who;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.a-board-who em {
+  color: var(--cheese);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+.a-board-val {
+  grid-area: val;
+  font: 400 18px/1 var(--font-display);
+  color: var(--mint);
+  font-variant-numeric: tabular-nums;
+}
+.a-board-val small {
+  font: 500 11px/1 var(--font-ui);
+  color: var(--muted);
+}
+.a-board-sub {
+  grid-area: sub;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.a-board-none {
+  padding: 14px 4px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.a-board-me {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.a-board-me[hidden] {
+  display: none;
+}
+.a-board-gap {
+  display: block;
+  padding: 2px 0 2px 10px;
+  letter-spacing: 3px;
+}
+@media (min-width: 1000px) {
+  .a-board {
+    padding: 18px 22px 20px;
+  }
+}
